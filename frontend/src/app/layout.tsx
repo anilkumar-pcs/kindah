@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import "./globals.css";
 
@@ -27,7 +28,7 @@ const navItems = [
   { href: "/sign-in", label: "Sign in" },
 ];
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className="flex min-h-screen flex-col">
