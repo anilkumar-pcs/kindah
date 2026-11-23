@@ -2,6 +2,32 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-23 — Phase 1 complete: foundation and runnable skeleton
+
+### Added
+
+- FastAPI application factory with typed settings, request IDs, security headers, CORS allow-list, structured JSON logs and deny-by-default PII/secret redaction.
+- `GET /healthz`, `GET /readyz` (PostgreSQL required; Redis optional/degraded) and `GET /api/v1/meta`; RFC 9457 `problem+json` error handling with spec-style machine codes.
+- SQLAlchemy 2 engine/session lifecycle, psycopg 3, Alembic baseline migration and real-PostgreSQL integration tests.
+- Optional Redis health probe that never affects API availability.
+- Next.js 16 App Router shell with responsive landing, wish-detail and sign-in placeholders, error/loading/not-found states, PWA manifest, typed API client and service-status check.
+- Vitest/Testing Library tests for the API client and health component.
+- Root `.env.example`, local env documentation, `.gitignore`, `.editorconfig`, Makefile, README and GitHub Actions CI.
+- Phase 1 evidence records VE-007–VE-015.
+
+### Fixed
+
+- Frontend type-checking no longer depends on Next.js generated `LayoutProps` types that do not exist before a build (commit `2991941`), so a fresh clone can run `tsc` before `next build`.
+
+### Verification
+
+- Backend: 27 pytest tests pass; Ruff, format check and mypy pass.
+- Frontend: ESLint, Prettier, TypeScript, 6 Vitest tests and production build pass.
+- Alembic upgrade → downgrade → upgrade verified.
+- Full-stack browser check: page 200, backend meta fetch 200, no console errors, responsive desktop/mobile layouts.
+- Fresh clone: `make setup`, `make migrate`, `make check` and `npm run build` pass.
+- CI workflow validated with `actionlint`; remote execution is pending a GitHub remote.
+
 ## 2026-11-23 — Phase 0 approved; Phase 1 started
 
 ### Approved

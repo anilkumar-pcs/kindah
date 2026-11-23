@@ -174,6 +174,18 @@
 | Output/artefact | Workflow defines backend PostgreSQL-service lint/format/type/test and frontend lint/format/type/test/build jobs |
 | Known limitation | The workflow has not executed on GitHub Actions because the repository has no remote/runner yet. All equivalent steps pass locally. |
 
+### VE-015 — Fresh-clone setup and validation
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-23 |
+| Phase/task | P1.1, P1.10 (Phase 1 exit criteria) |
+| Procedure | `git clone` the repository to a new `/tmp/kindah-phase1-verify-*` directory; `cp .env.example .env`; `cp frontend/.env.example frontend/.env.local`; `make setup`; `make migrate`; `make check`; `cd frontend && npm run build` |
+| Environment | macOS 15.8.3 arm64; Python 3.12.16; Node 26.13.1; PostgreSQL 16.16; Redis 8.12.0 |
+| Result | **PASS** — dependency installation, migration, Ruff, ESLint, Prettier, mypy, TypeScript, 27 backend tests, 6 frontend tests and production build all pass from a clean clone |
+| Output/artefact | Fresh clone at `/tmp/kindah-phase1-verify-20261123-230455` |
+| Known limitation | This first fresh-clone run found and fixed a generated-type dependency in `layout.tsx` (commit `2991941`). GitHub Actions execution still requires a remote runner; `actionlint` passes and every CI step passes locally. |
+
 ## Summary
 
 | Verification | Result |
@@ -183,7 +195,14 @@
 | Toolchain probe | PASS (findings: missing Python 3.12+, PostgreSQL, Redis, Docker) |
 | Specification reviewed | PASS (943 lines extracted) |
 | Phase 0 documents created | PASS |
-| Application tests | N/A — no code |
+| Application tests (Phase 0) | N/A — no code at that time |
+| Phase 1 backend tests | PASS — 27 passed |
+| Phase 1 frontend tests | PASS — 6 passed |
+| Phase 1 lint/format/type/build | PASS |
+| Phase 1 Alembic up/down/up | PASS |
+| Phase 1 browser full-stack check | PASS |
+| Phase 1 fresh-clone setup | PASS |
+| Phase 1 CI syntax | PASS (`actionlint`); remote run pending |
 
 ## Rule for future entries
 
