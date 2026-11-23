@@ -150,24 +150,24 @@ reliably.
 
 **In scope**
 
--   [ ] P1.1 Establish or confirm repository layout for frontend,
+-   [x] P1.1 Establish or confirm repository layout for frontend,
     backend, shared docs and deployment.
--   [ ] P1.2 Create reproducible local development setup and
+-   [x] P1.2 Create reproducible local development setup and
     `.env.example`; never commit secrets.
--   [ ] P1.3 Configure FastAPI application factory, settings management,
+-   [x] P1.3 Configure FastAPI application factory, settings management,
     health/readiness endpoints and structured error handling.
--   [ ] P1.4 Configure frontend application shell, routing, responsive
+-   [x] P1.4 Configure frontend application shell, routing, responsive
     layout and API client.
--   [ ] P1.5 Configure PostgreSQL connectivity, SQLAlchemy 2 session
+-   [x] P1.5 Configure PostgreSQL connectivity, SQLAlchemy 2 session
     lifecycle and Alembic migrations.
--   [ ] P1.6 Configure Redis only for justified ephemeral needs (rate
+-   [x] P1.6 Configure Redis only for justified ephemeral needs (rate
     limits/cache); application must still handle Redis outage safely.
--   [ ] P1.7 Add linting, formatting, type checking and unit-test
+-   [x] P1.7 Add linting, formatting, type checking and unit-test
     commands for each application.
--   [ ] P1.8 Add CI checks for install/build/lint/type-check/tests.
--   [ ] P1.9 Add structured logging, correlation/request IDs and
+-   [x] P1.8 Add CI checks for install/build/lint/type-check/tests.
+-   [x] P1.9 Add structured logging, correlation/request IDs and
     secret/PII redaction.
--   [ ] P1.10 Document local startup, test and migration commands.
+-   [x] P1.10 Document local startup, test and migration commands.
 
 **Exit criteria**
 

@@ -78,6 +78,102 @@
 | Output/artefact | None |
 | Known limitation | No runtime, API, migration, concurrency, security or privacy test has been executed. Phase 1 establishes the test harness. |
 
+### VE-007 — Phase 1 dependency installation
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-23 |
+| Phase/task | P1.1, P1.2 |
+| Command | `brew install uv postgresql@16 redis actionlint`; `uv python install 3.12` |
+| Environment | macOS 15.8.3, arm64 |
+| Result | **PASS** |
+| Output/artefact | uv 0.13.9; Python 3.12.16; PostgreSQL 16.16; Redis 8.12.0; actionlint 1.7.12; `kindah_dev` and `kindah_test` created |
+| Known limitation | Docker/Colima is not installed; container image builds are deferred to a later phase. |
+
+### VE-008 — Backend test suite
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-23 |
+| Phase/task | P1.3, P1.5, P1.7, P1.9 |
+| Command | `cd backend && uv run pytest` |
+| Environment | Python 3.12.16; PostgreSQL 16.16 `kindah_test` |
+| Result | **PASS** — 27 passed |
+| Output/artefact | `tests/{unit,integration}`; warnings: one Starlette TestClient deprecation notice (non-blocking) |
+| Known limitation | GitHub Actions execution not yet observed; local equivalent passes. |
+
+### VE-009 — Backend lint, format and type checks
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-23 |
+| Phase/task | P1.7 |
+| Command | `cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy app tests` |
+| Environment | Python 3.12.16 |
+| Result | **PASS** — Ruff all checks passed; 21 files formatted; mypy no issues in 20 source files |
+| Output/artefact | Terminal output recorded in session |
+| Known limitation | None. |
+
+### VE-010 — Alembic migration cycle
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-23 |
+| Phase/task | P1.5 |
+| Command | `cd backend && uv run alembic upgrade head && uv run alembic downgrade base && uv run alembic upgrade head && uv run alembic current` |
+| Environment | PostgreSQL 16.16 `kindah_dev` |
+| Result | **PASS** — `0001_baseline (head)` after up/down/up |
+| Output/artefact | Alembic output; migration test `test_upgrade_downgrade_upgrade` also passes |
+| Known limitation | Baseline migration creates only Alembic bookkeeping; domain tables arrive with their owning phases. |
+
+### VE-011 — API smoke test
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-23 |
+| Phase/task | P1.3, P1.6, P1.9 |
+| Command | Start `uv run uvicorn app.main:app --port 8000`; `curl /healthz`, `/readyz`, `/api/v1/meta`, an unknown route |
+| Environment | Local; PostgreSQL and Redis running |
+| Result | **PASS** — health 200; readiness `{"status":"ok","checks":{"database":"ok","redis":"ok"}}`; meta returns service/version/environment; 404 is `application/problem+json` with request ID and security headers |
+| Output/artefact | JSON responses; structured logs with no sensitive values |
+| Known limitation | Manual smoke check, not an automated E2E suite. |
+
+### VE-012 — Frontend quality gate
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-23 |
+| Phase/task | P1.4, P1.7 |
+| Command | `cd frontend && npm run lint && npm run format && npm run typecheck && npm test && npm run build` |
+| Environment | Node 26.13.1, npm 11.20.0, Next.js 16.4.6 |
+| Result | **PASS** — ESLint clean; Prettier clean; TypeScript clean; 6 Vitest tests pass; production build succeeds |
+| Output/artefact | Build routes `/`, `/sign-in`, `/wishes/[id]`, `/manifest.webmanifest`, `/_not-found` |
+| Known limitation | CI uses Node 22 while local validation used Node 26; both are within the project’s supported range and should be exercised when a remote CI runner exists. |
+
+### VE-013 — Full-stack browser verification
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-23 |
+| Phase/task | P1.4 |
+| Procedure | Started API on 8000 and Next.js production server on 3000; opened `http://localhost:3000` in Chrome DevTools; inspected network/console; screenshotted desktop and 390 px mobile |
+| Environment | Chrome; local services |
+| Result | **PASS** — page HTTP 200 and correct title; manifest served; `GET http://localhost:8000/api/v1/meta` returned 200; no console errors/warnings; service status rendered “Service online — kindly-api v0.1.0 (local)”; mobile layout has no horizontal overflow |
+| Output/artefact | `.artifacts/phase1-desktop.png`, `.artifacts/phase1-mobile.png` (gitignored) |
+| Known limitation | Screenshots are local artefacts and not committed. |
+
+### VE-014 — CI workflow syntax
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-23 |
+| Phase/task | P1.8 |
+| Command | `actionlint .github/workflows/ci.yml` |
+| Environment | actionlint 1.7.12 |
+| Result | **PASS** |
+| Output/artefact | Workflow defines backend PostgreSQL-service lint/format/type/test and frontend lint/format/type/test/build jobs |
+| Known limitation | The workflow has not executed on GitHub Actions because the repository has no remote/runner yet. All equivalent steps pass locally. |
+
 ## Summary
 
 | Verification | Result |

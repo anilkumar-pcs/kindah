@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-kindly-ink: #1f2937;
+  --color-kindly-muted: #4b5563;
+  --color-kindly-cream: #fff7ed;
+  --color-kindly-card: #ffffff;
+  --color-kindly-accent: #c2410c;
+  --color-kindly-accent-soft: #ffedd5;
+  --color-kindly-border: #fed7aa;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: var(--color-kindly-cream);
+  color: var(--color-kindly-ink);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+}
+
+*:focus-visible {
+  outline: 3px solid var(--color-kindly-accent);
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -100%;
+  z-index: 50;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  color: var(--color-kindly-accent);
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
