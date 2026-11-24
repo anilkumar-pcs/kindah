@@ -7,8 +7,8 @@ from uuid import UUID
 from pydantic import Field
 
 from app.core.schemas import ApiModel
-from app.modules.admin.models import AppealStatus
-from app.modules.identity.models import UserRole
+from app.modules.admin.models import AppealStatus, DeletionRequestStatus
+from app.modules.identity.models import UserRole, UserStatus
 
 
 class AdminMfaStatusResponse(ApiModel):
@@ -119,6 +119,32 @@ class AdminAppealList(ApiModel):
 class AppealResolveRequest(ApiModel):
     outcome: Literal["ACCEPTED", "REJECTED"]
     resolution_note: str = Field(min_length=5, max_length=1000)
+
+
+class DeletionRequestCreate(ApiModel):
+    reason: str | None = Field(default=None, max_length=500)
+
+
+class DeletionRequestResponse(ApiModel):
+    id: UUID
+    status: DeletionRequestStatus
+    reason: str | None
+    requested_at: datetime
+    cancelled_at: datetime | None
+
+
+class AdminDeletionRequestResponse(ApiModel):
+    id: UUID
+    user_display_name: str | None
+    user_status: UserStatus
+    status: DeletionRequestStatus
+    reason: str | None
+    requested_at: datetime
+    cancelled_at: datetime | None
+
+
+class AdminDeletionRequestList(ApiModel):
+    requests: list[AdminDeletionRequestResponse]
 
 
 class AdminAuditLogResponse(ApiModel):

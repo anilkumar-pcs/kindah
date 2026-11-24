@@ -434,6 +434,19 @@
 | Privacy checks | Appeal and resolution text encrypted; `/me` appeal payloads expose only the user’s own actions; admin queues require role + MFA; no phone/VPA/UTR/payment data in appeals. |
 | Known limitation | Appeals do not automatically reverse account actions; staff must apply a separate audited reactivation. Retention/deletion is P6.8. |
 
+### VE-036 — Phase 6 non-destructive account deletion workflow
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P6.8 |
+| Command | `cd backend && uv run alembic upgrade head && uv run ruff check . && uv run ruff format --check . && uv run mypy app tests && uv run pytest -q`; `cd frontend && npm test && npm run lint && npm run typecheck && npm run build` |
+| Environment | PostgreSQL 16.16; Python 3.12.16; Next.js 16.4.6; Node 26 |
+| Result | **PASS** — `0011_account_deletion_requests (head)`; **161 backend tests**, **47 frontend tests**; all lint, format, type and build checks clean |
+| Automated coverage | Active wish and unresolved gift block requests with `409 ACTIVE_TRANSACTIONS`; request sets `DELETION_PENDING`, duplicate is idempotent, normal wish creation is blocked by account status; cancellation restores `ACTIVE`; admin queue is role+MFA protected and shows display name/status/decrypted reason; no user or financial/audit rows are deleted; database assertion confirms the request reason is encrypted. Frontend covers guest, request, pending, cancel and active-transaction error. |
+| Privacy checks | Optional reason encrypted at rest; admin queue MFA-only; no destructive anonymisation or deletion; financial/audit records preserved. |
+| Known limitation | Actual deletion/anonymisation is intentionally unimplemented until DEC-O8 retention approval. Notifications/outbox/runbooks remain P6.9–P6.11. |
+
 ## Summary
 
 | Verification | Result |
@@ -474,6 +487,7 @@
 | Phase 6 admin/MFA/audit | PASS — 156 total backend tests, 38 frontend tests, full browser admin flow |
 | Phase 6 moderation actions | PASS — 158 total backend tests, 39 frontend tests, browser hide/restore |
 | Phase 6 appeals/disputes | PASS — 159 total backend tests, 43 frontend tests |
+| Phase 6 deletion requests | PASS — 161 total backend tests, 47 frontend tests, non-destructive |
 
 ## Rule for future entries
 

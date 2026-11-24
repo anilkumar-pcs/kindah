@@ -12,6 +12,7 @@ import {
   getAdminMfaStatus,
   listAdminAppeals,
   listAdminAuditLogs,
+  listAdminDeletionRequests,
   listAdminReports,
   listAdminSupportCases,
   resolveSupportCase,
@@ -19,6 +20,7 @@ import {
   verifyAdminMfa,
   type AdminAppeal,
   type AdminAuditLog,
+  type AdminDeletionRequest,
   type AdminMfaStatus,
   type AdminReport,
   type AdminSupportCase,
@@ -30,12 +32,13 @@ import { restoreSession, type UserProfile } from "@/lib/auth/session";
 import { SUPPORT_CASE_LABELS } from "@/lib/gifts/labels";
 
 type PageState = "loading" | "guest" | "denied" | "ready" | "error";
-type AdminTab = "reports" | "support" | "appeals" | "audit";
+type AdminTab = "reports" | "support" | "appeals" | "deletion" | "audit";
 
 type AdminData = {
   reports: AdminReport[];
   supportCases: AdminSupportCase[];
   appeals: AdminAppeal[];
+  deletionRequests: AdminDeletionRequest[];
   auditLogs: AdminAuditLog[];
 };
 
@@ -110,13 +113,14 @@ export function AdminConsole() {
   }, []);
 
   async function loadData(token: string) {
-    const [reports, supportCases, appeals, auditLogs] = await Promise.all([
+    const [reports, supportCases, appeals, deletionRequests, auditLogs] = await Promise.all([
       listAdminReports(token),
       listAdminSupportCases(token),
       listAdminAppeals(token),
+      listAdminDeletionRequests(token),
       listAdminAuditLogs(token),
     ]);
-    setData({ reports, supportCases, appeals, auditLogs });
+    setData({ reports, supportCases, appeals, deletionRequests, auditLogs });
   }
 
   async function handleStartSetup() {
@@ -427,6 +431,7 @@ export function AdminConsole() {
                 ["reports", `Reports (${data.reports.length})`],
                 ["support", `Support cases (${data.supportCases.length})`],
                 ["appeals", `Appeals (${data.appeals.length})`],
+                ["deletion", `Deletion (${data.deletionRequests.length})`],
                 ["audit", `Audit log (${data.auditLogs.length})`],
               ] as Array<[AdminTab, string]>
             ).map(([value, label]) => (
@@ -622,6 +627,44 @@ export function AdminConsole() {
                         </p>
                       )
                     )}
+                  </article>
+                ))
+              )}
+            </section>
+          )}
+
+          {tab === "deletion" && (
+            <section aria-labelledby="admin-deletion-heading" className="space-y-3">
+              <h2 id="admin-deletion-heading" className="text-xl font-semibold">
+                Account deletion requests
+              </h2>
+              <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                Requests are recorded only. Do not delete or anonymise financial/audit records until
+                counsel-approved retention is in place.
+              </p>
+              {data.deletionRequests.length === 0 ? (
+                <p className="rounded-2xl border border-kindly-border bg-white p-5 text-sm text-kindly-muted">
+                  No open deletion requests.
+                </p>
+              ) : (
+                data.deletionRequests.map((item) => (
+                  <article
+                    key={item.id}
+                    className="rounded-2xl border border-kindly-border bg-white p-5 text-sm"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-semibold">
+                        {item.userDisplayName ?? "Unknown user"} · {item.userStatus}
+                      </span>
+                      <span className="rounded-full bg-kindly-accent-soft px-3 py-1 text-xs font-semibold">
+                        {item.status}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-kindly-muted">
+                      Requested {formatDate(item.requestedAt)}
+                      {item.cancelledAt ? ` · cancelled ${formatDate(item.cancelledAt)}` : ""}
+                    </p>
+                    {item.reason && <p className="mt-2">{item.reason}</p>}
                   </article>
                 ))
               )}

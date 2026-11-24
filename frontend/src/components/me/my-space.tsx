@@ -271,6 +271,14 @@ export function MySpace() {
         <p className="mt-2 text-sm text-kindly-muted">
           Your UPI ID is private. Donors only see your pseudonym and wish.
         </p>
+        <div className="mt-2 flex flex-wrap gap-4 text-sm">
+          <Link href="/appeals" className="font-semibold text-kindly-accent underline">
+            Moderation appeals
+          </Link>
+          <Link href="/account-deletion" className="font-semibold text-kindly-accent underline">
+            Account deletion
+          </Link>
+        </div>
       </header>
 
       {error && (

@@ -5,7 +5,7 @@ import uuid
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -22,8 +22,10 @@ from app.core.security import (
 )
 from app.modules.admin.audit import record_admin_audit
 from app.modules.admin.models import (
+    AccountDeletionRequest,
     AdminAuditLog,
     AppealStatus,
+    DeletionRequestStatus,
     ModerationAction,
     ModerationActionType,
     ModerationAppeal,
@@ -35,11 +37,15 @@ from app.modules.admin.schemas import (
     AdminAppealResponse,
     AdminAuditLogList,
     AdminAuditLogResponse,
+    AdminDeletionRequestList,
+    AdminDeletionRequestResponse,
     AdminMfaStatusResponse,
     AppealCreateRequest,
     AppealList,
     AppealResolveRequest,
     AppealResponse,
+    DeletionRequestCreate,
+    DeletionRequestResponse,
     MfaEnableResponse,
     MfaSetupResponse,
     MfaVerifyResponse,
@@ -632,6 +638,194 @@ class AdminService:
             resolved_by_display_name=resolver.display_name if resolver else None,
             created_at=appeal.created_at,
             resolved_at=appeal.resolved_at,
+        )
+
+    # ------------------------------------------------------------------
+    # Account deletion requests (non-destructive)
+    # ------------------------------------------------------------------
+    def get_deletion_request(self, user: User) -> DeletionRequestResponse:
+        request = self.session.scalar(
+            select(AccountDeletionRequest).where(AccountDeletionRequest.user_id == user.id)
+        )
+        if request is None:
+            raise AppError(
+                404,
+                "DELETION_REQUEST_NOT_FOUND",
+                "No deletion request",
+                "No account deletion request is on file.",
+            )
+        return self._deletion_response(request)
+
+    def request_deletion(
+        self,
+        user: User,
+        request: DeletionRequestCreate,
+    ) -> DeletionRequestResponse:
+        if self._has_active_transactions(user.id):
+            raise AppError(
+                409,
+                "ACTIVE_TRANSACTIONS",
+                "Active wishes or gifts",
+                "Finish or withdraw active wishes and gifts before requesting deletion.",
+            )
+        now = datetime.now(UTC)
+        row = self.session.scalar(
+            select(AccountDeletionRequest)
+            .where(AccountDeletionRequest.user_id == user.id)
+            .with_for_update()
+        )
+        if row is not None and row.status == DeletionRequestStatus.COMPLETED:
+            raise AppError(
+                409,
+                "DELETION_ALREADY_COMPLETED",
+                "Deletion already completed",
+                "This account deletion request is already complete.",
+            )
+        if row is not None and row.status == DeletionRequestStatus.REQUESTED:
+            if user.status != UserStatus.DELETION_PENDING:
+                user.status = UserStatus.DELETION_PENDING
+                user.updated_at = now
+                self.session.commit()
+            return self._deletion_response(row)
+        if row is None:
+            row = AccountDeletionRequest(
+                id=uuid.uuid4(),
+                user_id=user.id,
+                status=DeletionRequestStatus.REQUESTED,
+                reason_encrypted=(
+                    self.crypto.encrypt(request.reason, context="deletion.reason")
+                    if request.reason
+                    else None
+                ),
+                requested_at=now,
+                updated_at=now,
+            )
+            self.session.add(row)
+        else:
+            row.status = DeletionRequestStatus.REQUESTED
+            row.reason_encrypted = (
+                self.crypto.encrypt(request.reason, context="deletion.reason")
+                if request.reason
+                else row.reason_encrypted
+            )
+            row.requested_at = now
+            row.cancelled_at = None
+            row.updated_at = now
+        user.status = UserStatus.DELETION_PENDING
+        user.updated_at = now
+        record_audit_event(
+            session=self.session,
+            event_type="DELETION_REQUESTED",
+            user_id=user.id,
+            metadata={"deletionRequestId": str(row.id)},
+        )
+        self.session.commit()
+        return self._deletion_response(row)
+
+    def cancel_deletion(self, user: User) -> DeletionRequestResponse:
+        row = self.session.scalar(
+            select(AccountDeletionRequest)
+            .where(AccountDeletionRequest.user_id == user.id)
+            .with_for_update()
+        )
+        if row is None or row.status != DeletionRequestStatus.REQUESTED:
+            raise AppError(
+                404,
+                "DELETION_REQUEST_NOT_FOUND",
+                "No active deletion request",
+                "There is no active account deletion request to cancel.",
+            )
+        now = datetime.now(UTC)
+        row.status = DeletionRequestStatus.CANCELLED
+        row.cancelled_at = now
+        row.updated_at = now
+        user.status = UserStatus.ACTIVE
+        user.updated_at = now
+        record_audit_event(
+            session=self.session,
+            event_type="DELETION_CANCELLED",
+            user_id=user.id,
+            metadata={"deletionRequestId": str(row.id)},
+        )
+        self.session.commit()
+        return self._deletion_response(row)
+
+    def list_admin_deletion_requests(
+        self,
+        status: DeletionRequestStatus | None = None,
+    ) -> AdminDeletionRequestList:
+        statement = (
+            select(AccountDeletionRequest)
+            .order_by(AccountDeletionRequest.requested_at.desc())
+            .limit(100)
+        )
+        if status is not None:
+            statement = statement.where(AccountDeletionRequest.status == status)
+        rows = list(self.session.scalars(statement))
+        users = {
+            user.id: user
+            for user in self.session.scalars(
+                select(User).where(User.id.in_({row.user_id for row in rows}))
+            )
+        }
+        return AdminDeletionRequestList(
+            requests=[
+                AdminDeletionRequestResponse(
+                    id=row.id,
+                    user_display_name=(
+                        users[row.user_id].display_name if row.user_id in users else None
+                    ),
+                    user_status=(
+                        users[row.user_id].status if row.user_id in users else UserStatus.DELETED
+                    ),
+                    status=row.status,
+                    reason=(
+                        self.crypto.decrypt(
+                            row.reason_encrypted,
+                            context="deletion.reason",
+                        )
+                        if row.reason_encrypted
+                        else None
+                    ),
+                    requested_at=row.requested_at,
+                    cancelled_at=row.cancelled_at,
+                )
+                for row in rows
+            ]
+        )
+
+    def _has_active_transactions(self, user_id: UUID) -> bool:
+        active_wish = self.session.scalar(
+            select(Wish.id)
+            .where(
+                Wish.user_id == user_id,
+                Wish.status.in_([WishStatus.OPEN, WishStatus.LOCKED, WishStatus.PAYMENT_CLAIMED]),
+            )
+            .limit(1)
+        )
+        if active_wish is not None:
+            return True
+        active_gift = self.session.scalar(
+            select(Gift.id)
+            .where(
+                or_(Gift.donor_id == user_id, Gift.recipient_id == user_id),
+                Gift.status.in_(list(_UNRESOLVED_GIFT_STATUSES)),
+            )
+            .limit(1)
+        )
+        return active_gift is not None
+
+    def _deletion_response(self, row: AccountDeletionRequest) -> DeletionRequestResponse:
+        return DeletionRequestResponse(
+            id=row.id,
+            status=row.status,
+            reason=(
+                self.crypto.decrypt(row.reason_encrypted, context="deletion.reason")
+                if row.reason_encrypted
+                else None
+            ),
+            requested_at=row.requested_at,
+            cancelled_at=row.cancelled_at,
         )
 
     def audit_logs(self) -> AdminAuditLogList:

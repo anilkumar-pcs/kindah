@@ -11,6 +11,7 @@ vi.mock("@/lib/api/admin", () => ({
   getAdminMfaStatus: vi.fn(),
   listAdminAppeals: vi.fn(),
   listAdminAuditLogs: vi.fn(),
+  listAdminDeletionRequests: vi.fn(),
   listAdminReports: vi.fn(),
   listAdminSupportCases: vi.fn(),
   moderateUser: vi.fn(),
@@ -26,6 +27,7 @@ import {
   getAdminMfaStatus,
   listAdminAppeals,
   listAdminAuditLogs,
+  listAdminDeletionRequests,
   listAdminReports,
   listAdminSupportCases,
   moderateWish,
@@ -50,6 +52,7 @@ const mockedAudit = vi.mocked(listAdminAuditLogs);
 const mockedResolve = vi.mocked(resolveSupportCase);
 const mockedModerateWish = vi.mocked(moderateWish);
 const mockedAppeals = vi.mocked(listAdminAppeals);
+const mockedDeletionRequests = vi.mocked(listAdminDeletionRequests);
 const mockedResolveAppeal = vi.mocked(resolveAppeal);
 
 function makeUser(role: "USER" | "ADMIN" = "ADMIN"): UserProfile {
@@ -107,6 +110,7 @@ beforeEach(() => {
   mockedReports.mockResolvedValue([]);
   mockedSupport.mockResolvedValue([]);
   mockedAppeals.mockResolvedValue([]);
+  mockedDeletionRequests.mockResolvedValue([]);
   mockedAudit.mockResolvedValue([]);
 });
 

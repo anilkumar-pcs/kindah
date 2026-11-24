@@ -80,6 +80,16 @@ export type ModerationActionResponse = {
   createdAt: string;
 };
 
+export type AdminDeletionRequest = {
+  id: string;
+  userDisplayName: string | null;
+  userStatus: string;
+  status: "REQUESTED" | "CANCELLED" | "COMPLETED";
+  reason: string | null;
+  requestedAt: string;
+  cancelledAt: string | null;
+};
+
 export type AdminAppeal = {
   id: string;
   actionId: string;
@@ -184,6 +194,14 @@ export async function moderateWish(
     headers: { "Content-Type": "application/json", ...mfaHeaders(mfaToken) },
     body: JSON.stringify(input),
   });
+}
+
+export async function listAdminDeletionRequests(mfaToken: string): Promise<AdminDeletionRequest[]> {
+  const data = await apiFetch<{ requests: AdminDeletionRequest[] }>(
+    "/api/v1/admin/deletion-requests",
+    { headers: mfaHeaders(mfaToken) },
+  );
+  return data.requests;
 }
 
 export async function listAdminAppeals(mfaToken: string): Promise<AdminAppeal[]> {

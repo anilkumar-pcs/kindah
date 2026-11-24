@@ -2,6 +2,31 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-24 — Phase 6: non-destructive account deletion requests
+
+### Added
+
+- `0011_account_deletion_requests` migration with one request per user, encrypted optional
+  reason, request/cancel timestamps and status index.
+- `/me/deletion-request` GET/POST/DELETE; requests are blocked while the user has an active
+  wish or unresolved gift, set `DELETION_PENDING`, can be cancelled, and never delete data.
+- MFA-protected `/admin/deletion-requests` queue and admin console tab.
+- `/account-deletion` UI and My Space link explaining retention and non-destruction.
+
+### Verification
+
+- 161 backend tests and 47 frontend tests pass; all lint, format, type and build checks clean.
+- Active-wish/gift guards, idempotent request, cancellation, encryption, admin visibility and
+  record preservation are covered.
+
+### Limitation
+
+- Actual anonymisation/deletion remains blocked on the external DEC-O8 retention decision.
+
+### Open
+
+- P6.9 notifications, P6.10 durable outbox, P6.11 runbooks.
+
 ## 2026-11-24 — Phase 6: moderation appeals and dispute visibility
 
 ### Added

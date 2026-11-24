@@ -390,7 +390,7 @@ handling and auditable moderator actions.
     actions with state guards.
 -   [x] P6.7 Implement basic appeal/support workflow and dispute
     visibility.
--   [ ] P6.8 Implement account deletion request workflow and
+-   [x] P6.8 Implement account deletion request workflow and
     retention-safe anonymisation strategy, subject to counsel-approved
     retention.
 -   [ ] P6.9 Implement in-app notifications for critical gift and safety

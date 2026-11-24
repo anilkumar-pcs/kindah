@@ -120,6 +120,50 @@ class ModerationAppeal(Base):
     )
 
 
+class DeletionRequestStatus(StrEnum):
+    REQUESTED = "REQUESTED"
+    CANCELLED = "CANCELLED"
+    COMPLETED = "COMPLETED"
+
+
+class AccountDeletionRequest(Base):
+    __tablename__ = "account_deletion_requests"
+    __table_args__ = (
+        Index("ix_account_deletion_requests_status_created", "status", "requested_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+        unique=True,
+    )
+    status: Mapped[DeletionRequestStatus] = mapped_column(
+        SAEnum(
+            DeletionRequestStatus,
+            name="deletion_request_status",
+            native_enum=True,
+            values_callable=lambda members: [member.value for member in members],
+        ),
+        nullable=False,
+        server_default=DeletionRequestStatus.REQUESTED.value,
+    )
+    reason_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    requested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
 class AdminAuditLog(Base):
     """Append-only administrative audit trail.
 

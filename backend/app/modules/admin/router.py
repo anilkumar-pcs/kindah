@@ -6,16 +6,19 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db_session
-from app.modules.admin.models import AppealStatus
+from app.modules.admin.models import AppealStatus, DeletionRequestStatus
 from app.modules.admin.schemas import (
     AdminAppealList,
     AdminAppealResponse,
     AdminAuditLogList,
+    AdminDeletionRequestList,
     AdminMfaStatusResponse,
     AppealCreateRequest,
     AppealList,
     AppealResolveRequest,
     AppealResponse,
+    DeletionRequestCreate,
+    DeletionRequestResponse,
     MfaEnableRequest,
     MfaEnableResponse,
     MfaSetupResponse,
@@ -160,6 +163,40 @@ def resolve_appeal(
     service: AdminService = Depends(get_admin_service),
 ) -> AdminAppealResponse:
     return service.resolve_appeal(auth.user, appeal_id, body)
+
+
+@router.get("/me/deletion-request", response_model=DeletionRequestResponse)
+def get_deletion_request(
+    auth: AuthContext = Depends(get_current_auth),
+    service: AdminService = Depends(get_admin_service),
+) -> DeletionRequestResponse:
+    return service.get_deletion_request(auth.user)
+
+
+@router.post("/me/deletion-request", response_model=DeletionRequestResponse)
+def request_deletion(
+    body: DeletionRequestCreate,
+    auth: AuthContext = Depends(get_current_auth),
+    service: AdminService = Depends(get_admin_service),
+) -> DeletionRequestResponse:
+    return service.request_deletion(auth.user, body)
+
+
+@router.delete("/me/deletion-request", response_model=DeletionRequestResponse)
+def cancel_deletion(
+    auth: AuthContext = Depends(get_current_auth),
+    service: AdminService = Depends(get_admin_service),
+) -> DeletionRequestResponse:
+    return service.cancel_deletion(auth.user)
+
+
+@router.get("/admin/deletion-requests", response_model=AdminDeletionRequestList)
+def list_admin_deletion_requests(
+    status: DeletionRequestStatus | None = Query(default=DeletionRequestStatus.REQUESTED),
+    _admin: AuthContext = Depends(require_admin),
+    service: AdminService = Depends(get_admin_service),
+) -> AdminDeletionRequestList:
+    return service.list_admin_deletion_requests(status)
 
 
 @router.get("/admin/audit-logs", response_model=AdminAuditLogList)
