@@ -377,9 +377,9 @@ handling and auditable moderator actions.
 
 **In scope**
 
--   [ ] P6.1 Implement wish/user reporting with duplicate-report
+-   [x] P6.1 Implement wish/user reporting with duplicate-report
     prevention and abuse controls.
--   [ ] P6.2 Implement block/unblock and ensure blocked users cannot
+-   [x] P6.2 Implement block/unblock and ensure blocked users cannot
     discover or interact with each other as specified.
 -   [ ] P6.3 Implement auto-hide threshold and review queue.
 -   [ ] P6.4 Implement minimum protected admin/moderator area in the

@@ -368,6 +368,20 @@
 | Privacy checks | Recipient response omits donor identity and UPI handoff; donor sees recipient pseudonym only; recipient view omits `upiIntentUri`/`qrPayload`; support copy warns against sharing UPI ID or phone. Admin details remain API-only pending Phase 6. |
 | Known limitation | Full admin RBAC/MFA UI, moderation controls and accessibility/browser-matrix sign-off remain Phase 6/8. Real-money handoff remains disabled. |
 
+### VE-031 — Phase 6 reporting, rate limiting and blocking
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P6.1, P6.2 |
+| Command | `cd backend && uv run alembic upgrade head && uv run ruff check . && uv run ruff format --check . && uv run mypy app tests && uv run pytest -q`; `cd frontend && npm test && npm run lint && npm run typecheck && npm run build` |
+| Environment | PostgreSQL 16.16; Python 3.12.16; Next.js 16.4.6; Node 26 |
+| Result | **PASS** — `0007_moderation_reports (head)`; **152 backend tests**, **34 frontend tests**; Ruff, format, mypy, ESLint, Prettier, TypeScript and production build clean |
+| Automated coverage | New `test_safety.py`: duplicate wish report returns the original with one DB row; all reason enum validation; self/missing target rejection; hourly cap returns 429; block idempotency; blocked list; two-way feed/detail/select/gift/report exclusion; self-block rejection; unblock restores discovery; wish-scoped block-owner aliases. Frontend covers report submission, block feedback, blocked-account listing and unblock. |
+| Browser journey | Donor ArjunDonor reported ChaiExplorer's open wish with “Spam or bot”, saw the private-report/no-proof-of-wrongdoing message, blocked the owner, then found ChaiExplorer under My Space → Blocked accounts and unblocked. |
+| Privacy checks | Report responses contain target/reason/status only, no reporter identity or display name; audit metadata has no free text; blocking excludes both users in both directions; no user IDs are added to public wish cards. |
+| Known limitation | The moderator queue/admin UI (P6.3–P6.5) is not built yet; reports remain OPEN and no auto-hide is applied. |
+
 ## Summary
 
 | Verification | Result |
@@ -403,6 +417,7 @@
 | Phase 5 mandatory race suite | PASS — concurrent donors, idempotency, re-reservation, PAID-vs-expiry, confirmation-vs-timeout |
 | Phase 5 frontend gift UI | PASS — 31 tests, build clean, donor/recipient browser journey |
 | Phase 5 overall | `DONE` — 15/15 tasks, pending external launch gates only |
+| Phase 6 reporting/blocking | PASS — 152 total backend tests, 34 frontend tests, report/block browser flow |
 
 ## Rule for future entries
 

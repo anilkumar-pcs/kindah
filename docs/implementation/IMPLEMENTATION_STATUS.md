@@ -3,7 +3,7 @@
 **Last updated:** 2026-11-24
 **Current phase:** Phase 6 — Trust, safety, moderation and operational support
 **Overall status:** `IN_PROGRESS`
-**Repository state:** Phases 0–5 complete. Phase 6 has not started.
+**Repository state:** Phases 0–5 complete. Phase 6 is in progress: reporting, blocks, their UI and tests are complete.
 
 ## Phase dashboard
 
@@ -15,7 +15,7 @@
 | 3. Recipient & wishes | `DONE` | 10 | 10 | 126 backend + 15 frontend tests |
 | 4. Discovery | `DONE` | 7 | 7 | 133 backend + 21 frontend tests |
 | 5. Gift & UPI | `DONE` | 15 | 15 | 149 backend + 31 frontend tests; full-stack gift flow and support report verified |
-| 6. Trust & safety | `NOT_STARTED` | 0 | 11 | Depends on Phase 5 completion |
+| 6. Trust & safety | `IN_PROGRESS` | 2 | 11 | 152 backend + 34 frontend tests; P6.1–P6.2 done |
 | 7. Engagement | `NOT_STARTED` | 0 | 8 | Depends on Phase 5/6 |
 | 8. Hardening & beta | `NOT_STARTED` | 0 | 12 | External gates blocked |
 
@@ -43,6 +43,16 @@ Open:
 
 Approved decisions: `DEC-O2` (10m + 20m max, 24h), `DEC-A02` (encrypt handoff, expose after commit), `DEC-A03` (literal spec post-PAID wish), `DEC-A04` (DONOR_PENDING expires, never reopens), `DEC-O5` (late payment support-only; no refund/reassignment/reopening), `DEC-A06` (admin visibility and audited resolution).
 
+## Phase 6 progress
+
+Completed:
+- P6.1 wish and user reporting with the seven spec reasons, one-report-per-reporter/target uniqueness, DB-backed hourly rate limiting, private responses and redacted audit events.
+- P6.2 block/unblock APIs plus wish-scoped block-owner aliases; two-way discovery/detail/select/gift/report exclusion; My Space blocked-account list with unblock; report/block UI on wish detail.
+
+Open:
+- **P6.3** auto-hide at three unique reports and moderator review queue.
+- **P6.4–P6.11** protected admin area, RBAC/MFA, moderation actions, appeals, deletion workflow, notifications, durable outbox and runbooks.
+
 ## Remaining external blockers
 
 | ID | Description | Status |
@@ -56,6 +66,7 @@ Approved decisions: `DEC-O2` (10m + 20m max, 24h), `DEC-A02` (encrypt handoff, e
 
 | Date | Phase/task | Change | Evidence |
 |---|---|---|---|
+| 2026-11-24 | P6.1, P6.2 | Reporting, rate limits, blocks, two-way exclusions, report/block/unblock UI | `TEST_EVIDENCE.md` VE-031 |
 | 2026-11-24 | P5.14 | Donor/recipient gift UI, handoff, outcome, confirmation, history, support entry point | `TEST_EVIDENCE.md` VE-030 |
 | 2026-11-24 | P5.10, P5.13 | Support cases/admin resolution, runbook, true PAID-vs-expiry and confirmation-vs-timeout races | `TEST_EVIDENCE.md` VE-029 |
 | 2026-11-24 | P5.1–P5.9, P5.11, P5.12, P5.15 | Gift/reservation backend, handoff, outcomes, confirmation, karma, workers | `TEST_EVIDENCE.md` VE-028 |
@@ -67,13 +78,14 @@ Approved decisions: `DEC-O2` (10m + 20m max, 24h), `DEC-A02` (encrypt handoff, e
 
 | Check | Result |
 |---|---|
-| Backend tests | 149 passed (14 gift tests including 2 true race tests; 2 support-case tests) |
-| Frontend tests | 31 passed (8 test files) |
+| Backend tests | 152 passed (14 gift, 2 support-case, 3 reporting/block tests) |
+| Frontend tests | 34 passed (8 test files) |
 | Backend quality | Ruff, format, mypy clean |
 | Frontend quality | ESLint, Prettier, tsc, production build pass |
-| Migrations | 0001–0006 apply; 0006 support-case migration validated at head |
+| Migrations | 0001–0007 apply; 0007 moderation-report migration validated at head |
 | Phase 5 race suite | PASS — concurrent donors, idempotency, PAID-vs-expiry, confirmation-vs-timeout, re-reservation |
 | Phase 5 UI | PASS — full-stack donor gift, recipient confirmation and support report |
+| Phase 6 reporting/blocks | PASS — API and browser report, block, blocked list, unblock |
 | Phase 5 overall | `DONE` — 15/15 tasks |
 
 ## Completed slice — late-payment support and admin visibility
@@ -88,7 +100,7 @@ Implemented: `0006_support_cases`, participant case creation, admin list/detail/
 
 ## Next session handoff
 
-1. Begin Phase 6 with P6.1 wish/user reporting and duplicate-report prevention, then P6.2 block/unblock and interaction exclusions.
+1. Implement P6.3 auto-hide at three unique reports and a moderator-only review queue, including the restore path guard.
 2. Build P6.4/P6.5 protected admin area, role checks, MFA requirement and append-only audit log before exposing moderation actions.
-3. Continue P6.3, P6.6–P6.11 in dependency order; do not bypass PostgreSQL state guards or expose moderation notes publicly.
+3. Continue P6.6–P6.11 in dependency order; do not bypass PostgreSQL state guards or expose moderation notes publicly.
 4. Keep real-money handoff disabled and external gates `BLOCKED`.

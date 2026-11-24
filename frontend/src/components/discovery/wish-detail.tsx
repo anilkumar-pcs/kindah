@@ -2,9 +2,16 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 
 import { ApiError } from "@/lib/api/client";
 import { getPublicWish, selectWish, type PublicWish } from "@/lib/api/discovery";
+import {
+  blockWishOwner,
+  reportWish,
+  REPORT_REASON_LABELS,
+  type ReportReason,
+} from "@/lib/api/safety";
 import type { WishMood } from "@/lib/api/wishes";
 
 const MOOD_LABELS: Record<WishMood, string> = {
@@ -21,6 +28,12 @@ export function WishDetail({ wishId }: { wishId: string }) {
   const [needsAuth, setNeedsAuth] = useState(false);
   const [selected, setSelected] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState<ReportReason>("HARASSMENT_ABUSE");
+  const [reportMessage, setReportMessage] = useState<string | null>(null);
+  const [blockMessage, setBlockMessage] = useState<string | null>(null);
+  const [safetyBusy, setSafetyBusy] = useState(false);
+  const [safetyError, setSafetyError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,6 +81,56 @@ export function WishDetail({ wishId }: { wishId: string }) {
       }
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleReport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSafetyBusy(true);
+    setSafetyError(null);
+    setNeedsAuth(false);
+    try {
+      await reportWish(wishId, reportReason);
+      setReportMessage(
+        "Report received. Reports are private. Three unique reports may temporarily hide a wish pending moderator review; this is not proof of wrongdoing.",
+      );
+      setReportOpen(false);
+    } catch (reportError) {
+      if (reportError instanceof ApiError && reportError.status === 401) {
+        setNeedsAuth(true);
+      } else {
+        setSafetyError(
+          reportError instanceof ApiError
+            ? reportError.message
+            : "Could not submit the report. Try again.",
+        );
+      }
+    } finally {
+      setSafetyBusy(false);
+    }
+  }
+
+  async function handleBlock() {
+    setSafetyBusy(true);
+    setSafetyError(null);
+    setNeedsAuth(false);
+    try {
+      await blockWishOwner(wishId);
+      setBlockMessage(
+        "You blocked this person. You will no longer see their wishes or interact with them.",
+      );
+    } catch (blockError) {
+      if (blockError instanceof ApiError && blockError.status === 401) {
+        setNeedsAuth(true);
+      } else {
+        setSafetyError(
+          blockError instanceof ApiError
+            ? blockError.message
+            : "Could not block this person. Try again.",
+        );
+      }
+    } finally {
+      setSafetyBusy(false);
     }
   }
 
@@ -140,6 +203,93 @@ export function WishDetail({ wishId }: { wishId: string }) {
         </p>
       )}
 
+      <section aria-labelledby="safety-heading" className="mt-6 border-t border-kindly-border pt-5">
+        <h2 id="safety-heading" className="text-lg font-semibold">
+          Report or block
+        </h2>
+        <p className="mt-1 text-sm leading-6 text-kindly-muted">
+          Reports are private and never shown to the person you report. A temporary hide is not
+          proof of wrongdoing.
+        </p>
+        {reportMessage && (
+          <p aria-live="polite" className="mt-3 rounded-xl bg-green-50 p-3 text-sm text-green-900">
+            {reportMessage}
+          </p>
+        )}
+        {blockMessage && (
+          <p aria-live="polite" className="mt-3 rounded-xl bg-green-50 p-3 text-sm text-green-900">
+            {blockMessage}
+          </p>
+        )}
+        {safetyError && (
+          <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+            {safetyError}
+          </p>
+        )}
+
+        {!reportMessage && !blockMessage && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={safetyBusy}
+              onClick={() => {
+                setReportOpen((current) => !current);
+                setSafetyError(null);
+              }}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-4 py-2 text-sm font-semibold hover:bg-kindly-accent-soft disabled:opacity-60"
+            >
+              Report this wish
+            </button>
+            <button
+              type="button"
+              disabled={safetyBusy}
+              onClick={handleBlock}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-4 py-2 text-sm font-semibold hover:bg-kindly-accent-soft disabled:opacity-60"
+            >
+              {safetyBusy ? "Working…" : "Block this person"}
+            </button>
+          </div>
+        )}
+
+        {reportOpen && !reportMessage && !blockMessage && (
+          <form onSubmit={handleReport} className="mt-4 space-y-3">
+            <div>
+              <label htmlFor="report-reason" className="block text-sm font-medium">
+                Why are you reporting this wish?
+              </label>
+              <select
+                id="report-reason"
+                value={reportReason}
+                onChange={(event) => setReportReason(event.target.value as ReportReason)}
+                className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
+              >
+                {(Object.keys(REPORT_REASON_LABELS) as ReportReason[]).map((value) => (
+                  <option key={value} value={value}>
+                    {REPORT_REASON_LABELS[value]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="submit"
+                disabled={safetyBusy}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
+              >
+                {safetyBusy ? "Sending…" : "Send report"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setReportOpen(false)}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-4 py-2 text-sm font-semibold hover:bg-kindly-accent-soft"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+      </section>
+
       {selected ? (
         <div className="mt-6 rounded-xl bg-green-50 p-4 text-sm text-green-800">
           <p className="font-semibold">Wish selected.</p>
@@ -153,12 +303,12 @@ export function WishDetail({ wishId }: { wishId: string }) {
         </div>
       ) : needsAuth ? (
         <div className="mt-6 rounded-xl border border-kindly-border p-4 text-sm">
-          <p>Sign in before selecting a wish or starting a gift.</p>
+          <p>Sign in before selecting, reporting or blocking.</p>
           <Link
             href="/sign-in"
             className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 font-semibold text-white hover:bg-orange-800"
           >
-            Sign in to select
+            Sign in to continue
           </Link>
         </div>
       ) : (

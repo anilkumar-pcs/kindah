@@ -10,6 +10,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Text,
+    UniqueConstraint,
     func,
     text,
 )
@@ -40,6 +41,88 @@ class UserBlock(Base):
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
+    )
+
+
+class ReportTargetType(StrEnum):
+    WISH = "WISH"
+    USER = "USER"
+
+
+class ReportReason(StrEnum):
+    SPAM_BOT = "SPAM_BOT"
+    HARASSMENT_ABUSE = "HARASSMENT_ABUSE"
+    COMMERCIAL_SOLICITATION = "COMMERCIAL_SOLICITATION"
+    INAPPROPRIATE_CONTENT = "INAPPROPRIATE_CONTENT"
+    IMPERSONATION = "IMPERSONATION"
+    PAYMENT_MISDIRECTION = "PAYMENT_MISDIRECTION"
+    OTHER = "OTHER"
+
+
+class ReportStatus(StrEnum):
+    OPEN = "OPEN"
+    UNDER_REVIEW = "UNDER_REVIEW"
+    ACTIONED = "ACTIONED"
+    DISMISSED = "DISMISSED"
+
+
+class ModerationReport(Base):
+    __tablename__ = "moderation_reports"
+    __table_args__ = (
+        UniqueConstraint(
+            "reporter_id",
+            "target_type",
+            "target_id",
+            name="uq_moderation_reports_reporter_target",
+        ),
+        Index("ix_moderation_reports_status_created", "status", "created_at"),
+        Index("ix_moderation_reports_target", "target_type", "target_id"),
+        Index("ix_moderation_reports_reporter_created", "reporter_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    reporter_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    target_type: Mapped[ReportTargetType] = mapped_column(
+        SAEnum(
+            ReportTargetType,
+            name="report_target_type",
+            native_enum=True,
+            values_callable=lambda members: [member.value for member in members],
+        ),
+        nullable=False,
+    )
+    target_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    reason: Mapped[ReportReason] = mapped_column(
+        SAEnum(
+            ReportReason,
+            name="report_reason",
+            native_enum=True,
+            values_callable=lambda members: [member.value for member in members],
+        ),
+        nullable=False,
+    )
+    status: Mapped[ReportStatus] = mapped_column(
+        SAEnum(
+            ReportStatus,
+            name="report_status",
+            native_enum=True,
+            values_callable=lambda members: [member.value for member in members],
+        ),
+        nullable=False,
+        server_default=ReportStatus.OPEN.value,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
 

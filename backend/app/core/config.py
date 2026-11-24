@@ -85,6 +85,7 @@ class Settings(BaseSettings):
     recipient_response_hours: int = Field(default=24, gt=0, le=72)
     unresolved_claim_limit: int = Field(default=2, gt=0, le=10)
     cheer_max_chars: int = Field(default=80, gt=0, le=120)
+    report_rate_limit_per_hour: int = Field(default=10, gt=0, le=100)
     handoff_provider: str = "test"
     admin_user_ids: str = ""
 

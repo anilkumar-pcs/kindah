@@ -2,6 +2,28 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-24 — Phase 6: reporting, rate limits and blocking
+
+### Added
+
+- `0007_moderation_reports` migration with the seven spec report reasons, target type,
+  report status, unique reporter/target constraint and queue/reporter indexes.
+- `POST /wishes/{id}/reports` and `POST /users/{id}/reports` with duplicate replay,
+  hourly per-reporter rate limiting under a row lock, private responses and redacted audit.
+- `POST`/`DELETE /users/{id}/block`, wish-scoped `block-owner` aliases and `GET /me/blocks`.
+- Wish-detail report/block UI with the no-proof-of-wrongdoing copy; My Space blocked-accounts
+  list with unblock.
+
+### Verification
+
+- 152 backend tests and 34 frontend tests pass; all lint, format, type and build checks clean.
+- Browser journey reported and blocked a wish owner, then unblocked from My Space.
+- Two-way discovery, detail, selection, gifting and reporting exclusion tests pass.
+
+### Open
+
+- P6.3 auto-hide/review queue and the protected admin area (P6.4–P6.5).
+
 ## 2026-11-24 — Phase 5 complete: donor/recipient gift UI
 
 ### Added

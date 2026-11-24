@@ -8,7 +8,13 @@ from pydantic import Field
 
 from app.core.schemas import ApiModel
 from app.modules.gifts.models import GiftStatus
-from app.modules.safety.models import SupportCaseStatus, SupportCaseType
+from app.modules.safety.models import (
+    ReportReason,
+    ReportStatus,
+    ReportTargetType,
+    SupportCaseStatus,
+    SupportCaseType,
+)
 from app.modules.wishes.models import WishStatus
 
 
@@ -44,6 +50,29 @@ class AdminSupportCaseResponse(ApiModel):
     resolution_note: str | None
     resolved_at: datetime | None
     created_at: datetime
+
+
+class ReportCreateRequest(ApiModel):
+    reason: ReportReason
+
+
+class ReportResponse(ApiModel):
+    id: UUID
+    target_type: ReportTargetType
+    target_id: UUID
+    reason: ReportReason
+    status: ReportStatus
+    created_at: datetime
+
+
+class BlockedUserResponse(ApiModel):
+    blocked_user_id: UUID
+    display_name: str | None
+    created_at: datetime
+
+
+class BlockedUserList(ApiModel):
+    blocked_users: list[BlockedUserResponse]
 
 
 class AdminSupportCaseList(ApiModel):

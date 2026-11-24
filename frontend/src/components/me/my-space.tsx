@@ -8,6 +8,7 @@ import { ApiError } from "@/lib/api/client";
 import { listMyGifts, type Gift } from "@/lib/api/gifts";
 import { getPaymentMethod, savePaymentMethod, type PaymentMethod } from "@/lib/api/payment-methods";
 import { createWish, listMyWishes, withdrawWish, type Wish, type WishMood } from "@/lib/api/wishes";
+import { listBlocks, unblockUser, type BlockedUser } from "@/lib/api/safety";
 import { giftStatusLabel } from "@/lib/gifts/labels";
 import { restoreSession, type UserProfile } from "@/lib/auth/session";
 
@@ -47,6 +48,7 @@ export function MySpace() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [wishes, setWishes] = useState<Wish[]>([]);
   const [gifts, setGifts] = useState<Gift[]>([]);
+  const [blocks, setBlocks] = useState<BlockedUser[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [reauthRequired, setReauthRequired] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -87,10 +89,11 @@ export function MySpace() {
       }
       setUser(restored);
       try {
-        const [method, history, giftHistory] = await Promise.all([
+        const [method, history, giftHistory, blockedUsers] = await Promise.all([
           getPaymentMethod(),
           listMyWishes(),
           listMyGifts(),
+          listBlocks(),
         ]);
         if (cancelled) {
           return;
@@ -98,6 +101,7 @@ export function MySpace() {
         setPaymentMethod(method);
         setWishes(history);
         setGifts(giftHistory);
+        setBlocks(blockedUsers);
         setEditingVpa(method === null);
         setState("ready");
       } catch (loadError) {
@@ -175,6 +179,19 @@ export function MySpace() {
       setCity("");
     } catch (createError) {
       setError(errorMessage(createError));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleUnblock(userId: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await unblockUser(userId);
+      setBlocks((current) => current.filter((block) => block.blockedUserId !== userId));
+    } catch (unblockError) {
+      setError(errorMessage(unblockError));
     } finally {
       setBusy(false);
     }
@@ -563,6 +580,39 @@ export function MySpace() {
           </ul>
         )}
       </section>
+
+      {blocks.length > 0 && (
+        <section aria-labelledby="blocked-accounts-heading">
+          <h2 id="blocked-accounts-heading" className="text-lg font-semibold">
+            Blocked accounts
+          </h2>
+          <p className="mt-1 text-sm text-kindly-muted">
+            You and these accounts cannot discover or interact with each other.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {blocks.map((block) => {
+              const name = block.displayName ?? "Kindly user";
+              return (
+                <li
+                  key={block.blockedUserId}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-kindly-border bg-white p-4 text-sm"
+                >
+                  <span className="font-semibold">{name}</span>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    aria-label={`Unblock ${name}`}
+                    onClick={() => handleUnblock(block.blockedUserId)}
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-4 py-2 text-sm font-semibold hover:bg-kindly-accent-soft disabled:opacity-60"
+                  >
+                    Unblock
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -21,7 +21,13 @@ vi.mock("@/lib/api/gifts", () => ({
   listMyGifts: vi.fn(),
 }));
 
+vi.mock("@/lib/api/safety", () => ({
+  listBlocks: vi.fn(),
+  unblockUser: vi.fn(),
+}));
+
 import { listMyGifts, type Gift } from "@/lib/api/gifts";
+import { listBlocks, unblockUser } from "@/lib/api/safety";
 import { getPaymentMethod, savePaymentMethod, type PaymentMethod } from "@/lib/api/payment-methods";
 import { createWish, listMyWishes, withdrawWish, type Wish } from "@/lib/api/wishes";
 import { restoreSession, type UserProfile } from "@/lib/auth/session";
@@ -35,6 +41,8 @@ const mockedListWishes = vi.mocked(listMyWishes);
 const mockedCreateWish = vi.mocked(createWish);
 const mockedWithdrawWish = vi.mocked(withdrawWish);
 const mockedListGifts = vi.mocked(listMyGifts);
+const mockedListBlocks = vi.mocked(listBlocks);
+const mockedUnblockUser = vi.mocked(unblockUser);
 
 function makeUser(overrides: Partial<UserProfile> = {}): UserProfile {
   return {
@@ -107,6 +115,7 @@ beforeEach(() => {
   mockedGetPaymentMethod.mockResolvedValue(null);
   mockedListWishes.mockResolvedValue([]);
   mockedListGifts.mockResolvedValue([]);
+  mockedListBlocks.mockResolvedValue([]);
 });
 
 describe("MySpace", () => {
@@ -180,5 +189,28 @@ describe("MySpace", () => {
     expect(await screen.findByText("Awaiting recipient confirmation")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /₹25/i })).toHaveAttribute("href", "/gifts/gift-1");
     expect(screen.getByText(/a kind donor sent this to you/i)).toBeInTheDocument();
+  });
+
+  it("lists blocked accounts and unblocks one", async () => {
+    const user = userEvent.setup();
+    mockedGetPaymentMethod.mockResolvedValue(makePaymentMethod());
+    mockedListBlocks.mockResolvedValue([
+      {
+        blockedUserId: "blocked-user-1",
+        displayName: "BlockedPerson",
+        createdAt: "2026-11-24T00:00:00Z",
+      },
+    ]);
+    mockedUnblockUser.mockResolvedValue(undefined);
+
+    render(<MySpace />);
+
+    expect(await screen.findByText("BlockedPerson")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /unblock blockedperson/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("BlockedPerson")).not.toBeInTheDocument();
+    });
+    expect(mockedUnblockUser).toHaveBeenCalledWith("blocked-user-1");
   });
 });
