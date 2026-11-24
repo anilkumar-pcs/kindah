@@ -25,6 +25,7 @@ export const viewport: Viewport = {
 
 const navItems = [
   { href: "/", label: "Discover" },
+  { href: "/me", label: "My space" },
   { href: "/sign-in", label: "Sign in" },
 ];
 

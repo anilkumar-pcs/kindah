@@ -14,6 +14,7 @@ from jwt import InvalidTokenError
 from app.core.config import Settings
 
 _MOBILE_RE = re.compile(r"^[6-9]\d{9}$")
+_VPA_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{1,49}@[A-Za-z][A-Za-z0-9]{1,30}$")
 _ACCESS_ISSUER = "kindly-api"
 _ACCESS_TYPE = "access"
 
@@ -53,6 +54,20 @@ def normalize_indian_mobile(raw: str) -> str:
 def mask_mobile(e164: str) -> str:
     digits = e164.removeprefix("+91")
     return f"+91 ******{digits[-4:]}"
+
+
+def normalize_vpa(raw: str) -> str:
+    """Validate VPA syntax only. This does not prove ownership or existence."""
+
+    value = raw.strip()
+    if len(value) > 80 or not _VPA_RE.fullmatch(value):
+        raise ValueError("Enter a valid UPI ID in the format name@provider")
+    return value
+
+
+def mask_vpa(vpa: str) -> str:
+    local, _, provider = vpa.partition("@")
+    return f"{local[:2]}***@{provider}"
 
 
 def hmac_sha256_hex(key: str, value: str) -> str:

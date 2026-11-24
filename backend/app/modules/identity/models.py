@@ -73,6 +73,7 @@ class User(Base):
     city: Mapped[str | None] = mapped_column(String(60), nullable=True)
 
     phone_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_authenticated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     age_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     terms_version: Mapped[str | None] = mapped_column(String(32))
     terms_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

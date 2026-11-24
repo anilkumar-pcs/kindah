@@ -71,6 +71,15 @@ class Settings(BaseSettings):
     otp_test_code: str = "123456"
     legal_policy_version: str = "draft-2026-11-23"
 
+    reauth_window_minutes: int = Field(default=10, gt=0, le=60)
+    wish_lifetime_hours: int = Field(default=24, gt=0, le=168)
+    wish_cooldown_hours: int = Field(default=72, gt=0, le=720)
+    wish_message_min: int = Field(default=10, gt=0, le=120)
+    wish_message_max: int = Field(default=120, gt=0, le=500)
+    min_gift_inr: int = Field(default=10, ge=1)
+    max_gift_inr: int = Field(default=100, ge=10)
+    prohibited_wish_terms: str = ""
+
     db_connect_timeout_seconds: int = 3
     redis_timeout_seconds: float = 1.0
 
@@ -109,6 +118,14 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     @property
+    def prohibited_wish_term_list(self) -> list[str]:
+        return [
+            term.strip().casefold()
+            for term in self.prohibited_wish_terms.split(",")
+            if term.strip()
+        ]
+
+    @property
     def is_production(self) -> bool:
         return self.environment == "production"
 
@@ -135,6 +152,10 @@ class Settings(BaseSettings):
         }.items():
             if len(secret.get_secret_value()) < 32:
                 raise ValueError(f"{name} must be at least 32 characters")
+        if self.min_gift_inr > self.max_gift_inr:
+            raise ValueError("MIN_GIFT_INR must be less than or equal to MAX_GIFT_INR")
+        if self.wish_message_min > self.wish_message_max:
+            raise ValueError("WISH_MESSAGE_MIN must be less than or equal to WISH_MESSAGE_MAX")
         if self.environment in {"local", "test"} and self.payments_live_enabled:
             raise ValueError("PAYMENTS_LIVE_ENABLED must be false in local and test environments")
         if self.payments_live_enabled and self.handoff_mode != "live":

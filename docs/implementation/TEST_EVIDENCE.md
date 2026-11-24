@@ -234,6 +234,54 @@
 | Output/artefact | Sign-in flow tests cover OTP → consent → profile, missing-consent rejection and session restore; API client tests cover bearer auth and refresh-and-retry |
 | Known limitation | Local Node 26 vs CI Node 22; both within the documented range. |
 
+### VE-020 — Payment-method and wish migration
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P3.1–P3.9 |
+| Command | `cd backend && uv run alembic upgrade head`; pytest migration test on isolated `kindah_migration_test` (upgrade → downgrade → upgrade) |
+| Environment | PostgreSQL 16.16 |
+| Result | **PASS** — `0003_payment_wishes (head)`; enums/tables/indexes created and dropped cleanly; `users.last_authenticated_at` backfilled |
+| Output/artefact | `test_migrations.py::test_upgrade_downgrade_upgrade` |
+| Known limitation | Migration test requires `CREATE DATABASE` permission in CI. |
+
+### VE-021 — Phase 3 backend tests and quality checks
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P3.1–P3.9 |
+| Command | `cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy app tests && uv run pytest` |
+| Environment | Python 3.12.16; PostgreSQL 16.16 `kindah_test` |
+| Result | **PASS** — 126 tests passed; Ruff, format and mypy clean |
+| Output/artefact | VPA syntax/mask, encryption, duplicate/versioning/reauth, authz, wish validation/amount/mood/city, one-active-wish partial index, withdrawal/cooldown and idempotent expiry-worker tests |
+| Known limitation | One non-blocking Starlette TestClient deprecation warning. |
+
+### VE-022 — Phase 3 browser validation
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P3.10 |
+| Procedure | Opened `/me`; saved `chai.explorer@okhdfc` with privacy acknowledgement; verified masked `ch***@okhdfc`; published a LONG_DAY wish with ₹25 and Bengaluru; withdrew it; verified EXPIRED + 72h cooldown; followed the forced re-authentication path via `/reauth` |
+| Environment | Chrome DevTools; local API/web |
+| Result | **PASS** — payment-method 200, wish create 201, withdraw 200; UI showed masked VPA, active wish and cooldown; no console errors after final reload |
+| Output/artefact | `.artifacts/phase3-my-space-final.png` (gitignored) |
+| Known limitation | Browser validation found and fixed two UX/framework issues: no re-authentication path for VPA changes, and a Next.js cache-components warning from reading `searchParams` (replaced with `/reauth`). A 404 for “no payment method yet” is an expected fetch and may appear in devtools. |
+
+### VE-023 — Phase 3 frontend tests and build
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P3.10 |
+| Command | `cd frontend && npm run lint && npm run format && npm run typecheck && npm test && npm run build` |
+| Environment | Node 26.13.1; Next.js 16.4.6 |
+| Result | **PASS** — ESLint/Prettier/TypeScript clean; 15 Vitest tests pass; production build includes `/me` and `/reauth` |
+| Output/artefact | My Space tests cover masked VPA save, wish publish and withdraw-to-cooldown; sign-in tests cover forced re-authentication |
+| Known limitation | Local Node 26 vs CI Node 22. |
+
 ## Summary
 
 | Verification | Result |
@@ -255,6 +303,10 @@
 | Phase 2 backend tests | PASS — 78 passed |
 | Phase 2 frontend tests/build | PASS — 11 passed |
 | Phase 2 browser flow + session restore | PASS (after CORS fix) |
+| Phase 3 payment/wish migration | PASS — 0003 up/down/up |
+| Phase 3 backend tests | PASS — 126 passed |
+| Phase 3 frontend tests/build | PASS — 15 passed |
+| Phase 3 browser VPA/wish/cooldown | PASS (after reauth UX fix) |
 
 ## Rule for future entries
 

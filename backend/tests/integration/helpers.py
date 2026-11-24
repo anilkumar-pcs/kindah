@@ -70,3 +70,32 @@ def complete_onboarding(
     record_consent(client, headers)
     complete_profile(client, headers, display_name=display_name)
     return session, headers
+
+
+def save_payment_method(
+    client: TestClient,
+    headers: dict[str, str],
+    vpa: str = "alice@okhdfc",
+) -> dict[str, Any]:
+    response = client.put(
+        "/api/v1/me/payment-method",
+        headers=headers,
+        json={"vpa": vpa, "privacyAcknowledged": True},
+    )
+    assert response.status_code == 200, response.text
+    return cast(dict[str, Any], response.json())
+
+
+def complete_setup(
+    client: TestClient,
+    phone: str = TEST_PHONE,
+    display_name: str = "ChaiLover",
+    vpa: str = "alice@okhdfc",
+) -> tuple[dict[str, Any], dict[str, str], dict[str, Any]]:
+    session, headers = complete_onboarding(
+        client,
+        phone=phone,
+        display_name=display_name,
+    )
+    payment_method = save_payment_method(client, headers, vpa=vpa)
+    return session, headers, payment_method

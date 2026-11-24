@@ -231,27 +231,27 @@ publish one valid wish.
 
 **In scope**
 
--   [ ] P3.1 Implement VPA validation at syntax level and explicit
+-   [x] P3.1 Implement VPA validation at syntax level and explicit
     beneficiary-validation status; do not claim ownership verification
     without an approved provider.
--   [ ] P3.2 Encrypt VPA at rest using the selected deployment's
+-   [x] P3.2 Encrypt VPA at rest using the selected deployment's
     secret/KMS strategy; store keyed HMAC fingerprint for duplicate
     detection.
--   [ ] P3.3 Ensure VPA is masked in UI and never included in public
+-   [x] P3.3 Ensure VPA is masked in UI and never included in public
     APIs, logs or analytics.
--   [ ] P3.4 Implement payment-method create/update/versioning and
+-   [x] P3.4 Implement payment-method create/update/versioning and
     privacy acknowledgement.
--   [ ] P3.5 Implement wish creation, content validation, mood enum,
+-   [x] P3.5 Implement wish creation, content validation, mood enum,
     optional city and optional suggested amount.
--   [ ] P3.6 Enforce `MIN_GIFT_INR=10`, `MAX_GIFT_INR=100`, whole INR
+-   [x] P3.6 Enforce `MIN_GIFT_INR=10`, `MAX_GIFT_INR=100`, whole INR
     only for suggested amounts and later gift amounts.
--   [ ] P3.7 Enforce one active wish per user, 24-hour expiry and
+-   [x] P3.7 Enforce one active wish per user, 24-hour expiry and
     72-hour cooldown according to the specification.
--   [ ] P3.8 Implement wish withdrawal and expiry worker with idempotent
+-   [x] P3.8 Implement wish withdrawal and expiry worker with idempotent
     state transitions.
--   [ ] P3.9 Add database constraints and tests for duplicate active
+-   [x] P3.9 Add database constraints and tests for duplicate active
     wishes, expiry races and cooldown.
--   [ ] P3.10 Implement frontend VPA setup, disclosure, wish creation,
+-   [x] P3.10 Implement frontend VPA setup, disclosure, wish creation,
     preview, withdrawal and status display.
 
 **Exit criteria**

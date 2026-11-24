@@ -26,8 +26,8 @@ def clean_identity_tables(migrated_database: None) -> Iterator[None]:
         with engine.begin() as connection:
             connection.execute(
                 text(
-                    "TRUNCATE TABLE auth_events, user_sessions, otp_challenges, users "
-                    "RESTART IDENTITY CASCADE"
+                    "TRUNCATE TABLE auth_events, user_sessions, otp_challenges, "
+                    "wishes, recipient_payment_methods, users RESTART IDENTITY CASCADE"
                 )
             )
     finally:

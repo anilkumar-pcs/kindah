@@ -158,4 +158,15 @@ describe("SignInFlow", () => {
       expect(screen.getByRole("heading", { name: /welcome, chailover/i })).toBeInTheDocument();
     });
   });
+
+  it("skips session restore when re-authentication is forced", async () => {
+    render(<SignInFlow forceReauth />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: /sign in with your mobile number/i,
+      }),
+    ).toBeInTheDocument();
+    expect(mockedRestore).not.toHaveBeenCalled();
+  });
 });

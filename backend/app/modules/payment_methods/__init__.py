@@ -1,0 +1,1 @@
+"""Recipient payment-method module."""

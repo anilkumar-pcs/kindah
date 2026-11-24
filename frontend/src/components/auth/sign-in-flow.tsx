@@ -33,8 +33,12 @@ function messageFor(error: unknown): string {
   return "Something went wrong. Try again.";
 }
 
-export function SignInFlow() {
-  const [step, setStep] = useState<Step>("restoring");
+type SignInFlowProps = {
+  forceReauth?: boolean;
+};
+
+export function SignInFlow({ forceReauth = false }: SignInFlowProps) {
+  const [step, setStep] = useState<Step>(forceReauth ? "phone" : "restoring");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -51,6 +55,10 @@ export function SignInFlow() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    if (forceReauth) {
+      return;
+    }
+
     let cancelled = false;
 
     restoreSession().then((restored) => {
@@ -71,7 +79,7 @@ export function SignInFlow() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [forceReauth]);
 
   async function handleRequestOtp(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -185,8 +193,14 @@ export function SignInFlow() {
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
-            href="/"
+            href="/me"
             className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800"
+          >
+            My Kindness
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-5 py-3 text-sm font-semibold hover:bg-kindly-accent-soft"
           >
             Back to discovery
           </Link>

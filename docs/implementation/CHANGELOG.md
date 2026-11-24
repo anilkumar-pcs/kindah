@@ -2,6 +2,36 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-24 — Phase 3 complete: payment method and wish lifecycle
+
+### Added
+
+- `0003_payment_wishes` migration: payment-method and wish enums/tables, one-active-wish partial unique index, and `users.last_authenticated_at` for re-authentication freshness.
+- VPA syntax validation with explicit `SYNTAX_ONLY` status; no ownership claim.
+- VPA encryption through `CryptoProvider`, keyed HMAC duplicate detection, masked UI/API representation and versioning with privacy acknowledgement.
+- Re-authentication window for VPA changes; forced `/reauth` OTP path when the session is older than the window.
+- Wish creation with 10–120-character message validation, URL/phone/VPA/HTML/UPI filters, mood enum, optional whole-INR ₹10–₹100 amount, optional city and onboarding/payment-method prerequisites.
+- One active wish per user enforced by a partial unique index; 24-hour expiry; 72-hour cooldown after withdrawal/expiry.
+- Withdrawal endpoint and idempotent wish-expiry worker (`python -m app.workers.wish_expiry`).
+- My Space frontend: masked UPI setup, privacy disclosure, wish preview/publish, active-wish display, withdrawal, cooldown and history.
+
+### Fixed
+
+- Chat-style sign-in now supports forced re-authentication through `/reauth` without depending on URL search params, avoiding a Next.js cache-components warning.
+- Cooldown rendering no longer calls impure time functions during render.
+
+### Verification
+
+- 126 backend tests pass; Ruff, format and mypy clean.
+- 15 frontend tests pass; ESLint, Prettier, TypeScript and production build pass.
+- Browser: masked VPA save → wish publish → withdraw → cooldown, plus forced re-auth, all succeed.
+- Payment/wish migration upgrade → downgrade → upgrade passes on an isolated database.
+- Wish-expiry worker runs and reports `expired_count`.
+
+### Blocked
+
+- Production KMS and VPA beneficiary validation are unresolved. Production receiving remains `BLOCKED`; local AES-GCM and syntax-only validation are used.
+
 ## 2026-11-24 — Phase 2 complete: identity, sessions and profile
 
 ### Added

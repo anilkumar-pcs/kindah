@@ -24,6 +24,9 @@ run-api:
 run-web:
 	cd $(FRONTEND) && npm run dev
 
+worker-wish-expiry:
+	cd $(BACKEND) && uv run python -m app.workers.wish_expiry
+
 test-backend:
 	cd $(BACKEND) && uv run pytest
 

@@ -27,8 +27,8 @@ from app.core.security import (
     mask_mobile,
     normalize_indian_mobile,
 )
+from app.modules.identity.audit import record_audit_event
 from app.modules.identity.models import (
-    AuthEvent,
     OtpChallenge,
     User,
     UserSession,
@@ -251,6 +251,7 @@ class IdentityService:
                 mobile_masked=mask_mobile(phone),
                 status=UserStatus.ACTIVE,
                 phone_verified_at=now,
+                last_authenticated_at=now,
             )
             self.session.add(user)
             try:
@@ -271,6 +272,7 @@ class IdentityService:
 
         if user.phone_verified_at is None:
             user.phone_verified_at = now
+        user.last_authenticated_at = now
 
         tokens = self._issue_session(
             user=user,
@@ -628,13 +630,12 @@ class IdentityService:
         ip_hmac: str | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        self.session.add(
-            AuthEvent(
-                user_id=user_id,
-                event_type=event_type,
-                request_ip_hmac=ip_hmac,
-                event_metadata=metadata or {},
-            )
+        record_audit_event(
+            session=self.session,
+            event_type=event_type,
+            user_id=user_id,
+            request_ip_hmac=ip_hmac,
+            metadata=metadata,
         )
 
     @staticmethod
