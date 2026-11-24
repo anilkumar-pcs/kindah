@@ -44,7 +44,7 @@ ignore = ["E501"]
 known-first-party = ["app"]
 
 [tool.ruff.lint.flake8-bugbear]
-extend-immutable-calls = ["fastapi.Depends"]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
 
 [tool.mypy]
 python_version = "3.12"

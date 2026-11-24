@@ -9,6 +9,7 @@ from app.core.config import get_settings
 from app.core.db import Base
 from app.modules.identity import models as identity_models  # noqa: F401
 from app.modules.payment_methods import models as payment_method_models  # noqa: F401
+from app.modules.safety import models as safety_models  # noqa: F401
 from app.modules.wishes import models as wish_models  # noqa: F401
 
 config = context.config

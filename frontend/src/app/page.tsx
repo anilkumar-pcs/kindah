@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { DiscoverFeed } from "@/components/discovery/discover-feed";
 import { HealthCheck } from "@/components/health-check";
 
 const steps = [
@@ -64,6 +65,8 @@ export default function HomePage() {
           ))}
         </ul>
       </section>
+
+      <DiscoverFeed />
 
       <HealthCheck />
     </div>

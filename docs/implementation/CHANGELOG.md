@@ -2,6 +2,31 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-24 — Phase 4 complete: public discovery and selection
+
+### Added
+
+- `0004_discovery` migration: `user_blocks` table and a `wishes(status, created_at)` feed index.
+- Public read-only feed with stable cursor pagination, Fresh ordering and deterministic seeded Random ordering.
+- Optional city filter.
+- Exclusions for own, expired, locked, removed, under-review, blocked, inactive-recipient and no-active-payment-method wishes.
+- Public-safe wish DTO (`id`, pseudonym, avatar, city, timestamp, mood, message, suggested amount) with no phone/VPA/UTR/payment/moderation data.
+- Public wish detail and authenticated `POST /wishes/{id}/select` gate; guests receive 401.
+- Frontend discovery feed with Fresh/Random tabs, city filter, loading/empty/error states, cursor “Load more”, responsive cards and accessible labels.
+- Frontend wish detail with selection success, 409/404 handling and a guest sign-in prompt.
+
+### Fixed
+
+- Removed Next.js URL-data prerendering conflicts from the sign-in and wish-detail routes by using `/reauth` and client-side `useParams`.
+- Feed results are isolated in a keyed child component so filter changes remount cleanly without synchronous state resets in an effect.
+
+### Verification
+
+- 133 backend tests pass; Ruff, format and mypy clean.
+- 21 frontend tests pass; ESLint, Prettier, TypeScript and production build pass.
+- Browser: guest sees an open wish, opens detail, and is prompted to sign in when selecting; no console errors.
+- Discovery migration and fresh-clone validation pass.
+
 ## 2026-11-24 — Phase 3 complete: payment method and wish lifecycle
 
 ### Added

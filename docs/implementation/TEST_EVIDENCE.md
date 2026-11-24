@@ -282,6 +282,54 @@
 | Output/artefact | My Space tests cover masked VPA save, wish publish and withdraw-to-cooldown; sign-in tests cover forced re-authentication |
 | Known limitation | Local Node 26 vs CI Node 22. |
 
+### VE-024 — Discovery migration and backend tests
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P4.1–P4.7 |
+| Command | `cd backend && uv run alembic upgrade head && uv run ruff check . && uv run ruff format --check . && uv run mypy app tests && uv run pytest` |
+| Environment | PostgreSQL 16.16; Python 3.12.16 |
+| Result | **PASS** — `0004_discovery (head)`; 133 tests passed; Ruff, format and mypy clean |
+| Output/artefact | `user_blocks`, feed index, cursor pagination (Fresh/Random), exclusions, public DTO, detail/select auth gate and block tests |
+| Known limitation | One non-blocking Starlette TestClient deprecation warning. |
+
+### VE-025 — Phase 4 browser validation
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P4.6, P4.5 |
+| Procedure | Opened the home feed in an isolated guest browser context; saw the seeded public wish; opened wish detail; clicked “Select this wish” as a guest; verified the sign-in prompt |
+| Environment | Chrome DevTools; local API/web |
+| Result | **PASS** — feed 200, detail 200, select 401 → “Sign in to select”; no sensitive fields rendered; no console errors after removing dynamic metadata/params from the server-rendered route |
+| Output/artefact | `.artifacts/phase4-wish-detail.png` (gitignored) |
+| Known limitation | The expected 401 appears in devtools. Dynamic wish-detail metadata was replaced with client-side `useParams` to satisfy Next.js cache-components. |
+
+### VE-026 — Phase 4 frontend tests and build
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P4.6 |
+| Command | `cd frontend && npm run lint && npm run format && npm run typecheck && npm test && npm run build` |
+| Environment | Node 26.13.1; Next.js 16.4.6 |
+| Result | **PASS** — ESLint/Prettier/TypeScript clean; 21 Vitest tests pass; production build succeeds |
+| Output/artefact | Feed/detail tests cover cards, empty state, load-more, selection success, guest sign-in gate and unavailable state |
+| Known limitation | Local Node 26 vs CI Node 22. |
+
+### VE-027 — Fresh-clone validation after Phases 3 and 4
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | Phase 3/4 exit criteria |
+| Procedure | Pulled the committed repository into the fresh clone; ran `make migrate`, `make check`, `npm run build` |
+| Environment | Fresh clone; PostgreSQL 16.16; Python 3.12.16; Node 26.13.1 |
+| Result | **PASS** — migrations, 133 backend tests, 21 frontend tests, lint/type/format and build all pass |
+| Output/artefact | `/tmp/kindah-phase1-verify-20261123-230455` |
+| Known limitation | GitHub Actions remote execution remains pending. |
+
 ## Summary
 
 | Verification | Result |
@@ -307,6 +355,11 @@
 | Phase 3 backend tests | PASS — 126 passed |
 | Phase 3 frontend tests/build | PASS — 15 passed |
 | Phase 3 browser VPA/wish/cooldown | PASS (after reauth UX fix) |
+| Phase 4 discovery migration | PASS — 0004 up/down/up |
+| Phase 4 backend tests | PASS — 133 passed |
+| Phase 4 frontend tests/build | PASS — 21 passed |
+| Phase 4 browser guest feed/auth gate | PASS |
+| Phase 4 fresh-clone validation | PASS |
 
 ## Rule for future entries
 

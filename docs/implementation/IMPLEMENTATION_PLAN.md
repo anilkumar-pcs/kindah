@@ -276,16 +276,16 @@ view eligible wish details and initiate the gift journey.
 
 **In scope**
 
--   [ ] P4.1 Implement read-only public discovery feed with cursor
+-   [x] P4.1 Implement read-only public discovery feed with cursor
     pagination.
--   [ ] P4.2 Exclude own, expired, locked, removed, under-review,
+-   [x] P4.2 Exclude own, expired, locked, removed, under-review,
     blocked and ineligible wishes.
--   [ ] P4.3 Implement optional city filter and Fresh ordering.
--   [ ] P4.4 Implement wish detail view with only public-safe fields.
--   [ ] P4.5 Enforce authentication before selecting/locking a wish.
--   [ ] P4.6 Implement frontend feed, empty/loading/error states and
+-   [x] P4.3 Implement optional city filter and Fresh ordering.
+-   [x] P4.4 Implement wish detail view with only public-safe fields.
+-   [x] P4.5 Enforce authentication before selecting/locking a wish.
+-   [x] P4.6 Implement frontend feed, empty/loading/error states and
     mobile-responsive wish cards.
--   [ ] P4.7 Add pagination, authorization, privacy and eligibility
+-   [x] P4.7 Add pagination, authorization, privacy and eligibility
     tests.
 
 **Exit criteria**
