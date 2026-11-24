@@ -395,9 +395,9 @@ handling and auditable moderator actions.
     retention.
 -   [x] P6.9 Implement in-app notifications for critical gift and safety
     events.
--   [ ] P6.10 Implement durable outbox processing and retry/dead-letter
+-   [x] P6.10 Implement durable outbox processing and retry/dead-letter
     visibility for critical domain events.
--   [ ] P6.11 Add runbooks for disputes, late payment, OTP outage, VPA
+-   [x] P6.11 Add runbooks for disputes, late payment, OTP outage, VPA
     change, moderation escalation, restore and privacy/security
     incident.
 

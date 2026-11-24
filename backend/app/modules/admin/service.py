@@ -52,12 +52,15 @@ from app.modules.admin.schemas import (
     ModerationActionList,
     ModerationActionResponse,
     ModerationActionSummaryResponse,
+    OutboxDeadLetterList,
+    OutboxDeadLetterResponse,
     UserModerationActionRequest,
     WishModerationActionRequest,
 )
-from app.modules.gifts.models import Gift, GiftStatus
+from app.modules.gifts.models import Gift, GiftStatus, OutboxEvent
 from app.modules.identity.audit import record_audit_event
 from app.modules.identity.models import User, UserRole, UserStatus
+from app.modules.notifications.service import notify
 from app.modules.wishes.models import Wish, WishStatus
 from app.providers.crypto.base import CryptoProvider
 
@@ -385,6 +388,42 @@ class AdminService:
             reason=reason,
             metadata={"moderationActionId": str(record.id)},
         )
+        if target_type == ModerationTargetType.USER:
+            notify(
+                session=self.session,
+                user_id=target_id,
+                dedupe_key=f"moderation:{record.id}",
+                notification_type="ACCOUNT_MODERATION",
+                title={
+                    "WARN": "Account warning",
+                    "RESTRICT": "Account restricted",
+                    "SUSPEND": "Account suspended",
+                    "BAN": "Account banned",
+                    "REACTIVATE": "Account reactivated",
+                }[action],
+                body="Open Appeals to review the action and submit an appeal where available.",
+                entity_type="USER",
+                entity_id=target_id,
+                payload={"action": action},
+            )
+        else:
+            wish = self.session.get(Wish, target_id)
+            if wish is not None:
+                notify(
+                    session=self.session,
+                    user_id=wish.user_id,
+                    dedupe_key=f"moderation:{record.id}",
+                    notification_type="WISH_MODERATION",
+                    title={
+                        "HIDE": "Wish hidden for review",
+                        "RESTORE": "Wish restored",
+                        "REMOVE": "Wish removed",
+                    }[action],
+                    body="Open the wish for current status, or Appeals for account actions.",
+                    entity_type="WISH",
+                    entity_id=wish.id,
+                    payload={"wishId": str(wish.id), "action": action},
+                )
         return record
 
     def _action_response(
@@ -577,6 +616,17 @@ class AdminService:
                 "actionId": str(appeal.action_id),
                 "userId": str(appeal.user_id),
             },
+        )
+        notify(
+            session=self.session,
+            user_id=appeal.user_id,
+            dedupe_key=f"appeal:{appeal.id}:{request.outcome}",
+            notification_type="APPEAL_RESOLVED",
+            title=f"Appeal {request.outcome.lower()}",
+            body="Open Appeals to review the resolution note.",
+            entity_type="APPEAL",
+            entity_id=appeal.id,
+            payload={"appealId": str(appeal.id), "actionId": str(appeal.action_id)},
         )
         self.session.commit()
         return self._admin_appeal_response(appeal, resolver=admin)
@@ -826,6 +876,31 @@ class AdminService:
             ),
             requested_at=row.requested_at,
             cancelled_at=row.cancelled_at,
+        )
+
+    def list_outbox_dead_letters(self) -> OutboxDeadLetterList:
+        rows = list(
+            self.session.scalars(
+                select(OutboxEvent)
+                .where(OutboxEvent.dead_letter_reason.is_not(None))
+                .order_by(OutboxEvent.created_at.desc())
+                .limit(100)
+            )
+        )
+        return OutboxDeadLetterList(
+            dead_letters=[
+                OutboxDeadLetterResponse(
+                    id=row.id,
+                    aggregate_type=row.aggregate_type,
+                    aggregate_id=row.aggregate_id,
+                    event_type=row.event_type,
+                    payload=row.payload,
+                    attempts=row.attempts,
+                    dead_letter_reason=row.dead_letter_reason,
+                    created_at=row.created_at,
+                )
+                for row in rows
+            ]
         )
 
     def audit_logs(self) -> AdminAuditLogList:

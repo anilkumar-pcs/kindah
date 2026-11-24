@@ -89,6 +89,9 @@ class Settings(BaseSettings):
     auto_hide_report_threshold: int = Field(default=3, ge=2, le=20)
     admin_mfa_ttl_minutes: int = Field(default=15, gt=0, le=60)
     admin_mfa_issuer: str = "Kindly Admin"
+    outbox_max_attempts: int = Field(default=5, ge=1, le=20)
+    outbox_retry_base_seconds: int = Field(default=30, ge=1, le=3600)
+    outbox_batch_size: int = Field(default=100, ge=1, le=1000)
     handoff_provider: str = "test"
     admin_user_ids: str = ""
 

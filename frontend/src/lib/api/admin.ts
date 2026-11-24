@@ -106,6 +106,17 @@ export type AdminAppeal = {
   resolvedAt: string | null;
 };
 
+export type OutboxDeadLetter = {
+  id: string;
+  aggregateType: string;
+  aggregateId: string;
+  eventType: string;
+  payload: Record<string, unknown>;
+  attempts: number;
+  deadLetterReason: string | null;
+  createdAt: string;
+};
+
 export type AdminAuditLog = {
   id: string;
   actorDisplayName: string | null;
@@ -194,6 +205,14 @@ export async function moderateWish(
     headers: { "Content-Type": "application/json", ...mfaHeaders(mfaToken) },
     body: JSON.stringify(input),
   });
+}
+
+export async function listAdminOutboxDeadLetters(mfaToken: string): Promise<OutboxDeadLetter[]> {
+  const data = await apiFetch<{ deadLetters: OutboxDeadLetter[] }>(
+    "/api/v1/admin/outbox/dead-letters",
+    { headers: mfaHeaders(mfaToken) },
+  );
+  return data.deadLetters;
 }
 
 export async function listAdminDeletionRequests(mfaToken: string): Promise<AdminDeletionRequest[]> {

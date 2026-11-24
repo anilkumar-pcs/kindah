@@ -13,6 +13,7 @@ import {
   listAdminAppeals,
   listAdminAuditLogs,
   listAdminDeletionRequests,
+  listAdminOutboxDeadLetters,
   listAdminReports,
   listAdminSupportCases,
   resolveSupportCase,
@@ -25,6 +26,7 @@ import {
   type AdminReport,
   type AdminSupportCase,
   type MfaSetup,
+  type OutboxDeadLetter,
 } from "@/lib/api/admin";
 import { ApiError } from "@/lib/api/client";
 import { REPORT_REASON_LABELS } from "@/lib/api/safety";
@@ -32,13 +34,14 @@ import { restoreSession, type UserProfile } from "@/lib/auth/session";
 import { SUPPORT_CASE_LABELS } from "@/lib/gifts/labels";
 
 type PageState = "loading" | "guest" | "denied" | "ready" | "error";
-type AdminTab = "reports" | "support" | "appeals" | "deletion" | "audit";
+type AdminTab = "reports" | "support" | "appeals" | "deletion" | "outbox" | "audit";
 
 type AdminData = {
   reports: AdminReport[];
   supportCases: AdminSupportCase[];
   appeals: AdminAppeal[];
   deletionRequests: AdminDeletionRequest[];
+  deadLetters: OutboxDeadLetter[];
   auditLogs: AdminAuditLog[];
 };
 
@@ -113,14 +116,16 @@ export function AdminConsole() {
   }, []);
 
   async function loadData(token: string) {
-    const [reports, supportCases, appeals, deletionRequests, auditLogs] = await Promise.all([
-      listAdminReports(token),
-      listAdminSupportCases(token),
-      listAdminAppeals(token),
-      listAdminDeletionRequests(token),
-      listAdminAuditLogs(token),
-    ]);
-    setData({ reports, supportCases, appeals, deletionRequests, auditLogs });
+    const [reports, supportCases, appeals, deletionRequests, deadLetters, auditLogs] =
+      await Promise.all([
+        listAdminReports(token),
+        listAdminSupportCases(token),
+        listAdminAppeals(token),
+        listAdminDeletionRequests(token),
+        listAdminOutboxDeadLetters(token),
+        listAdminAuditLogs(token),
+      ]);
+    setData({ reports, supportCases, appeals, deletionRequests, deadLetters, auditLogs });
   }
 
   async function handleStartSetup() {
@@ -432,6 +437,7 @@ export function AdminConsole() {
                 ["support", `Support cases (${data.supportCases.length})`],
                 ["appeals", `Appeals (${data.appeals.length})`],
                 ["deletion", `Deletion (${data.deletionRequests.length})`],
+                ["outbox", `Outbox (${data.deadLetters.length})`],
                 ["audit", `Audit log (${data.auditLogs.length})`],
               ] as Array<[AdminTab, string]>
             ).map(([value, label]) => (
@@ -665,6 +671,42 @@ export function AdminConsole() {
                       {item.cancelledAt ? ` · cancelled ${formatDate(item.cancelledAt)}` : ""}
                     </p>
                     {item.reason && <p className="mt-2">{item.reason}</p>}
+                  </article>
+                ))
+              )}
+            </section>
+          )}
+
+          {tab === "outbox" && (
+            <section aria-labelledby="admin-outbox-heading" className="space-y-3">
+              <h2 id="admin-outbox-heading" className="text-xl font-semibold">
+                Outbox dead letters
+              </h2>
+              <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                Dead-lettered events need investigation. Domain state is already committed; retry
+                only through an approved idempotent handler.
+              </p>
+              {data.deadLetters.length === 0 ? (
+                <p className="rounded-2xl border border-kindly-border bg-white p-5 text-sm text-kindly-muted">
+                  No dead-lettered events.
+                </p>
+              ) : (
+                data.deadLetters.map((item) => (
+                  <article
+                    key={item.id}
+                    className="rounded-2xl border border-kindly-border bg-white p-5 text-sm"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-semibold">{item.eventType}</span>
+                      <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900">
+                        {item.attempts} attempts
+                      </span>
+                    </div>
+                    <p className="mt-2 text-kindly-muted">
+                      {item.aggregateType} · {item.aggregateId.slice(0, 8)} ·{" "}
+                      {formatDate(item.createdAt)}
+                    </p>
+                    <p className="mt-2">Reason: {item.deadLetterReason ?? "—"}</p>
                   </article>
                 ))
               )}

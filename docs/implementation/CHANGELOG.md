@@ -2,6 +2,30 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-24 — Phase 6 complete: durable outbox and operations runbooks
+
+### Added
+
+- `app/workers/outbox_dispatcher.py`: `FOR UPDATE SKIP LOCKED` claiming, per-event attempt
+  isolation, exponential backoff, attempt cap, dead-letter alert hook and idempotent success.
+- MFA-protected `/admin/outbox/dead-letters` and admin console Outbox tab.
+- `RUNBOOK_OPERATIONS.md` covering disputes, late payment, OTP outage, VPA change, moderation
+  escalation, deletion, outbox, restore and privacy/security incidents.
+- Critical payment/dispute path exercised against a separate `kindah_staging_exercise` database,
+  including admin MFA resolution, audit and notifications.
+
+### Verification
+
+- 168 backend tests and 50 frontend tests pass; all lint, format, type and build checks clean.
+- Outbox success/idempotency, retry/dead-letter, concurrent skip-locked claiming and admin
+  visibility are covered.
+- Staging exercise output recorded in `TEST_EVIDENCE.md` VE-039.
+
+### Status
+
+- Phase 6 is `DONE` (11/11). Deployed staging/RPO/RTO, retention, provider/legal and MFA/cooldown
+  decisions remain external or pending owner confirmation.
+
 ## 2026-11-24 — Phase 6: in-app notifications
 
 ### Added

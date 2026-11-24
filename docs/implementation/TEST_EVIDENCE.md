@@ -460,6 +460,30 @@
 | Privacy checks | Notification copy is server-authored; payloads contain entity IDs/action only; no private payment data. Inbox uses own-user filtering and `get_current_auth`, so restricted/banned users can read moderation notices. |
 | Known limitation | Delivery is in-app only; no push/SMS (P7.8 requires providers/consent). Outbox delivery remains P6.10. |
 
+### VE-038 — Phase 6 durable outbox dispatcher
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P6.10 |
+| Command | `cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy app tests && uv run pytest -q` |
+| Environment | PostgreSQL 16.16; Python 3.12.16 |
+| Result | **PASS** — **168 backend tests**; Ruff, format and mypy clean |
+| Automated coverage | Successful events mark `processed_at`; a second dispatch performs no duplicate handler call; failures increment attempts and set future backoff; the attempt cap dead-letters with an alert callback; dead letters are not reselected; two concurrent dispatchers claim a row exactly once under `FOR UPDATE SKIP LOCKED`; MFA admin dead-letter endpoint lists the event and rejects missing MFA. |
+| Known limitation | Default handler validates known event types; external push/SMS delivery adapters are P7.8 and must be idempotent. |
+
+### VE-039 — Phase 6 runbooks and critical-path staging exercise
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P6.11 |
+| Command | `dropdb --if-exists kindah_staging_exercise; createdb kindah_staging_exercise; cd backend && DATABASE_URL='postgresql+psycopg://localhost:5432/kindah_staging_exercise' uv run alembic upgrade head`; then a TestClient exercise against the staging DB |
+| Environment | Separate PostgreSQL database `kindah_staging_exercise`; staging settings; Python 3.12.16 |
+| Result | **PASS** — migrations reached `0012_notifications`; exercise output: `giftStatus=DISPUTED`, `caseStatus=RESOLVED`, admin audit `SUPPORT_CASE_RESOLVED`/`ADMIN_MFA_ENABLED`, donor notification `GIFT_DISPUTED`, recipient notifications `SUPPORT_CASE_RESOLVED`/`GIFT_CLAIMED`; serialized admin payloads contained no UPI URI or raw VPA |
+| Artefact | `RUNBOOK_OPERATIONS.md` (disputes, late payment, OTP outage, VPA change, moderation, deletion, outbox, restore, privacy/security) and `RUNBOOK_LATE_PAYMENT.md` |
+| Known limitation | This is a separate local staging database, not a deployed staging environment; deployed staging, approved RPO/RTO and provider/legal gates remain external. |
+
 ## Summary
 
 | Verification | Result |
@@ -502,6 +526,9 @@
 | Phase 6 appeals/disputes | PASS — 159 total backend tests, 43 frontend tests |
 | Phase 6 deletion requests | PASS — 161 total backend tests, 47 frontend tests, non-destructive |
 | Phase 6 notifications | PASS — 164 total backend tests, 50 frontend tests, dedupe/read/safety |
+| Phase 6 outbox | PASS — 168 total backend tests, retry/dead-letter/skip-locked |
+| Phase 6 runbooks/staging | PASS — local staging DB critical path exercised; deployed staging pending |
+| Phase 6 overall | `DONE` — 11/11 tasks; external launch gates blocked |
 
 ## Rule for future entries
 

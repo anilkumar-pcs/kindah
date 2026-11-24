@@ -26,6 +26,7 @@ from app.modules.admin.schemas import (
     MfaVerifyResponse,
     ModerationActionList,
     ModerationActionResponse,
+    OutboxDeadLetterList,
     UserModerationActionRequest,
     WishModerationActionRequest,
 )
@@ -197,6 +198,14 @@ def list_admin_deletion_requests(
     service: AdminService = Depends(get_admin_service),
 ) -> AdminDeletionRequestList:
     return service.list_admin_deletion_requests(status)
+
+
+@router.get("/admin/outbox/dead-letters", response_model=OutboxDeadLetterList)
+def list_outbox_dead_letters(
+    _auth: AuthContext = Depends(require_admin),
+    service: AdminService = Depends(get_admin_service),
+) -> OutboxDeadLetterList:
+    return service.list_outbox_dead_letters()
 
 
 @router.get("/admin/audit-logs", response_model=AdminAuditLogList)

@@ -147,6 +147,21 @@ class AdminDeletionRequestList(ApiModel):
     requests: list[AdminDeletionRequestResponse]
 
 
+class OutboxDeadLetterResponse(ApiModel):
+    id: UUID
+    aggregate_type: str
+    aggregate_id: UUID
+    event_type: str
+    payload: dict[str, Any]
+    attempts: int
+    dead_letter_reason: str | None
+    created_at: datetime
+
+
+class OutboxDeadLetterList(ApiModel):
+    dead_letters: list[OutboxDeadLetterResponse]
+
+
 class AdminAuditLogResponse(ApiModel):
     id: UUID
     actor_display_name: str | None
