@@ -393,7 +393,7 @@ handling and auditable moderator actions.
 -   [x] P6.8 Implement account deletion request workflow and
     retention-safe anonymisation strategy, subject to counsel-approved
     retention.
--   [ ] P6.9 Implement in-app notifications for critical gift and safety
+-   [x] P6.9 Implement in-app notifications for critical gift and safety
     events.
 -   [ ] P6.10 Implement durable outbox processing and retry/dead-letter
     visibility for critical domain events.

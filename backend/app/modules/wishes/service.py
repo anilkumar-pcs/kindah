@@ -13,6 +13,7 @@ from app.core.config import Settings
 from app.core.errors import AppError
 from app.modules.identity.audit import record_audit_event
 from app.modules.identity.models import User
+from app.modules.notifications.service import notify
 from app.modules.payment_methods.models import (
     PaymentMethodStatus,
     RecipientPaymentMethod,
@@ -286,6 +287,17 @@ def expire_due_wishes(
         wish.closed_reason = "EXPIRED"
         wish.cooldown_until = current + timedelta(hours=settings.wish_cooldown_hours)
         wish.updated_at = current
+        notify(
+            session=session,
+            user_id=wish.user_id,
+            dedupe_key=f"wish:{wish.id}:expired",
+            notification_type="WISH_EXPIRED",
+            title="Wish expired",
+            body="Your 24-hour wish window ended without a completed gift.",
+            entity_type="WISH",
+            entity_id=wish.id,
+            payload={"wishId": str(wish.id)},
+        )
         record_audit_event(
             session=session,
             event_type="WISH_EXPIRED",

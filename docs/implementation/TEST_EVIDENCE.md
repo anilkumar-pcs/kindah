@@ -447,6 +447,19 @@
 | Privacy checks | Optional reason encrypted at rest; admin queue MFA-only; no destructive anonymisation or deletion; financial/audit records preserved. |
 | Known limitation | Actual deletion/anonymisation is intentionally unimplemented until DEC-O8 retention approval. Notifications/outbox/runbooks remain P6.9–P6.11. |
 
+### VE-037 — Phase 6 in-app notifications
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P6.9 |
+| Command | `cd backend && uv run alembic upgrade head && uv run ruff check . && uv run ruff format --check . && uv run mypy app tests && uv run pytest -q`; `cd frontend && npm test && npm run lint && npm run typecheck && npm run build` |
+| Environment | PostgreSQL 16.16; Python 3.12.16; Next.js 16.4.6; Node 26 |
+| Result | **PASS** — `0012_notifications (head)`; **164 backend tests**, **50 frontend tests**; all lint, format, type and build checks clean |
+| Automated coverage | Gift PAID creates one recipient notification; confirmation creates one donor notification; duplicate dedupe key inserts once; unread count/read/read-all work; expiry worker notifies owner; moderation, appeal, auto-hide and support resolution create their respective notifications. Gift notification JSON contains no UPI URI, UTR, phone or VPA. Frontend covers guest, unread/read and mark-all. |
+| Privacy checks | Notification copy is server-authored; payloads contain entity IDs/action only; no private payment data. Inbox uses own-user filtering and `get_current_auth`, so restricted/banned users can read moderation notices. |
+| Known limitation | Delivery is in-app only; no push/SMS (P7.8 requires providers/consent). Outbox delivery remains P6.10. |
+
 ## Summary
 
 | Verification | Result |
@@ -488,6 +501,7 @@
 | Phase 6 moderation actions | PASS — 158 total backend tests, 39 frontend tests, browser hide/restore |
 | Phase 6 appeals/disputes | PASS — 159 total backend tests, 43 frontend tests |
 | Phase 6 deletion requests | PASS — 161 total backend tests, 47 frontend tests, non-destructive |
+| Phase 6 notifications | PASS — 164 total backend tests, 50 frontend tests, dedupe/read/safety |
 
 ## Rule for future entries
 

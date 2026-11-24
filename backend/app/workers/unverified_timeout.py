@@ -18,6 +18,7 @@ from app.modules.gifts.models import (
     OutboxEvent,
     WishReservation,
 )
+from app.modules.notifications.service import notify
 from app.modules.wishes.models import Wish, WishStatus
 
 logger = logging.getLogger("kindly.workers.unverified_timeout")
@@ -94,6 +95,34 @@ def mark_unverified(
                 payload={"giftId": str(gift.id)},
                 idempotency_key=f"outbox:{gift.id}:unverified",
             )
+        )
+        notify(
+            session=session,
+            user_id=gift.donor_id,
+            dedupe_key=f"gift:{gift.id}:unverified:donor",
+            notification_type="GIFT_UNVERIFIED",
+            title="Gift unverified",
+            body=(
+                f"The recipient did not confirm your ₹{gift.amount_inr} gift within "
+                "24 hours. It is now unverified."
+            ),
+            entity_type="GIFT",
+            entity_id=gift.id,
+            payload={"giftId": str(gift.id)},
+        )
+        notify(
+            session=session,
+            user_id=gift.recipient_id,
+            dedupe_key=f"gift:{gift.id}:unverified:recipient",
+            notification_type="GIFT_UNVERIFIED",
+            title="Confirmation window ended",
+            body=(
+                "The 24-hour confirmation window ended. This gift is unverified; "
+                "open it for support options."
+            ),
+            entity_type="GIFT",
+            entity_id=gift.id,
+            payload={"giftId": str(gift.id)},
         )
         marked += 1
 

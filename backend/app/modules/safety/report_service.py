@@ -12,6 +12,7 @@ from app.core.config import Settings
 from app.core.errors import AppError
 from app.modules.identity.audit import record_audit_event
 from app.modules.identity.models import User
+from app.modules.notifications.service import notify
 from app.modules.safety.models import (
     ModerationReport,
     ReportReason,
@@ -196,6 +197,20 @@ class SafetyService:
             return
         wish.status = WishStatus.UNDER_REVIEW
         wish.updated_at = now
+        notify(
+            session=self.session,
+            user_id=wish.user_id,
+            dedupe_key=f"wish:{wish.id}:under-review",
+            notification_type="WISH_UNDER_REVIEW",
+            title="Wish hidden for review",
+            body=(
+                "Your wish was temporarily hidden after multiple reports. "
+                "This is not proof of wrongdoing; a moderator will review it."
+            ),
+            entity_type="WISH",
+            entity_id=wish.id,
+            payload={"wishId": str(wish.id)},
+        )
         record_audit_event(
             session=self.session,
             event_type="WISH_AUTO_HIDDEN",

@@ -2,6 +2,27 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-24 — Phase 6: in-app notifications
+
+### Added
+
+- `0012_notifications` migration with user/type/title/body/entity/payload/dedupe/read state.
+- `notify()` helper using `ON CONFLICT DO NOTHING` for per-user deduplication.
+- Notifications for gift claimed, confirmed, disputed and unverified; wish under-review,
+  restored, removed and expired; account moderation; appeal resolution; support resolution.
+- `/me/notifications`, mark-one-read and read-all APIs with own-user filtering.
+- `/notifications` inbox UI with unread count, entity links and read actions; My Space and
+  sign-in links.
+
+### Verification
+
+- 164 backend tests and 50 frontend tests pass; all lint, format, type and build checks clean.
+- Deduplication, read state, worker events and payload safety are covered.
+
+### Open
+
+- P6.10 durable outbox and P6.11 runbooks.
+
 ## 2026-11-24 — Phase 6: non-destructive account deletion requests
 
 ### Added

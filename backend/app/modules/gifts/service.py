@@ -32,6 +32,7 @@ from app.modules.gifts.schemas import (
     RecipientConfirmationRequest,
 )
 from app.modules.identity.models import User, UserStatus
+from app.modules.notifications.service import notify
 from app.modules.payment_methods.models import (
     PaymentMethodStatus,
     RecipientPaymentMethod,
@@ -267,6 +268,20 @@ class GiftService:
             wish.status = WishStatus.PAYMENT_CLAIMED
             reservation.status = ReservationStatus.CONSUMED
             event_type = "DONOR_CLAIMED_PAID"
+            notify(
+                session=self.session,
+                user_id=gift.recipient_id,
+                dedupe_key=f"gift:{gift.id}:claimed-paid",
+                notification_type="GIFT_CLAIMED",
+                title="Donor says paid",
+                body=(
+                    f"A donor says they paid ₹{gift.amount_inr}. Check your UPI app "
+                    "and confirm whether you received it."
+                ),
+                entity_type="GIFT",
+                entity_id=gift.id,
+                payload={"giftId": str(gift.id)},
+            )
         elif request.outcome == "STILL_PROCESSING":
             if reservation.status != ReservationStatus.ACTIVE or reservation.extension_count >= 1:
                 raise self._invalid_transition()
@@ -361,10 +376,35 @@ class GiftService:
             )
             self._award_karma(gift, now)
             event_type = "RECIPIENT_CONFIRMED"
+            notify(
+                session=self.session,
+                user_id=gift.donor_id,
+                dedupe_key=f"gift:{gift.id}:confirmed",
+                notification_type="GIFT_CONFIRMED",
+                title="Recipient confirmed",
+                body=f"The recipient confirmed your ₹{gift.amount_inr} gift.",
+                entity_type="GIFT",
+                entity_id=gift.id,
+                payload={"giftId": str(gift.id)},
+            )
         else:
             gift.status = GiftStatus.DISPUTED
             wish.status = WishStatus.DISPUTED
             event_type = "RECIPIENT_DISPUTED"
+            notify(
+                session=self.session,
+                user_id=gift.donor_id,
+                dedupe_key=f"gift:{gift.id}:disputed",
+                notification_type="GIFT_DISPUTED",
+                title="Gift disputed",
+                body=(
+                    f"The recipient says they did not receive your ₹{gift.amount_inr} "
+                    "gift. View the gift for support options."
+                ),
+                entity_type="GIFT",
+                entity_id=gift.id,
+                payload={"giftId": str(gift.id)},
+            )
 
         gift.updated_at = now
         wish.updated_at = now

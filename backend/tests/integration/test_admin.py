@@ -187,6 +187,10 @@ def test_user_moderation_actions_and_guards(client: TestClient) -> None:
     )
     assert blocked_wish.status_code == 403
     assert blocked_wish.json()["code"] == "ACCOUNT_RESTRICTED"
+    inbox = client.get("/api/v1/me/notifications", headers=target_headers)
+    assert any(
+        item["notificationType"] == "ACCOUNT_MODERATION" for item in inbox.json()["notifications"]
+    )
 
     reactivated = client.post(
         f"/api/v1/admin/users/{target_id}/actions",
@@ -449,6 +453,10 @@ def test_appeal_workflow_admin_resolution_and_banned_access(client: TestClient) 
     assert mine.status_code == 200
     assert mine.json()["appeals"][0]["status"] == "ACCEPTED"
     assert "lifted separately" in mine.json()["appeals"][0]["resolutionNote"]
+    inbox = client.get("/api/v1/me/notifications", headers=target_headers)
+    assert any(
+        item["notificationType"] == "APPEAL_RESOLVED" for item in inbox.json()["notifications"]
+    )
     assert client.get("/api/v1/me", headers=target_headers).json()["status"] == "RESTRICTED"
 
     banned = client.post(

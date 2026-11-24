@@ -272,6 +272,9 @@ export function MySpace() {
           Your UPI ID is private. Donors only see your pseudonym and wish.
         </p>
         <div className="mt-2 flex flex-wrap gap-4 text-sm">
+          <Link href="/notifications" className="font-semibold text-kindly-accent underline">
+            Notifications
+          </Link>
           <Link href="/appeals" className="font-semibold text-kindly-accent underline">
             Moderation appeals
           </Link>

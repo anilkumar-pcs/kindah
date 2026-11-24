@@ -14,6 +14,7 @@ from app.modules.admin.audit import record_admin_audit
 from app.modules.gifts.models import Gift
 from app.modules.identity.audit import record_audit_event
 from app.modules.identity.models import User
+from app.modules.notifications.service import notify
 from app.modules.payment_methods.models import RecipientPaymentMethod
 from app.modules.safety.models import (
     SupportCase,
@@ -159,6 +160,17 @@ class SupportCaseService:
             target_id=case.id,
             reason=request.resolution_note,
             metadata={"giftId": str(case.gift_id)},
+        )
+        notify(
+            session=self.session,
+            user_id=case.reporter_id,
+            dedupe_key=f"support:{case.id}:resolved",
+            notification_type="SUPPORT_CASE_RESOLVED",
+            title="Support case resolved",
+            body="Your support case was resolved. Open the gift for details.",
+            entity_type="SUPPORT_CASE",
+            entity_id=case.id,
+            payload={"giftId": str(case.gift_id), "caseId": str(case.id)},
         )
         self.session.commit()
         return self._admin_response(case)

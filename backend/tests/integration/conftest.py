@@ -29,8 +29,8 @@ def clean_identity_tables(migrated_database: None) -> Iterator[None]:
                     "TRUNCATE TABLE auth_events, user_sessions, otp_challenges, "
                     "outbox_events, idempotency_records, karma_events, gift_events, "
                     "wish_reservations, gifts, moderation_appeals, moderation_actions, "
-                    "account_deletion_requests, moderation_reports, admin_audit_logs, "
-                    "user_blocks, wishes, "
+                    "account_deletion_requests, moderation_reports, notifications, "
+                    "admin_audit_logs, user_blocks, wishes, "
                     "recipient_payment_methods, users RESTART IDENTITY CASCADE"
                 )
             )

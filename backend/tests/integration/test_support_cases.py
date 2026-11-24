@@ -107,6 +107,11 @@ def test_participant_report_admin_visibility_and_resolution(settings: Settings) 
         assert support_audits[0]["reason"] == "Reviewed with support; no refund or reassignment."
         assert support_audits[0]["targetId"] == case["id"]
         assert support_audits[0]["requestId"]
+        inbox = admin_client.get("/api/v1/me/notifications", headers=donor_headers)
+        assert any(
+            item["notificationType"] == "SUPPORT_CASE_RESOLVED"
+            for item in inbox.json()["notifications"]
+        )
 
         assert (
             admin_client.get(

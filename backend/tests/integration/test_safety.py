@@ -255,6 +255,10 @@ def test_three_unique_reports_auto_hide_once_and_enter_admin_queue(
 
     assert wish["id"] not in [item["id"] for item in client.get("/api/v1/wishes").json()["wishes"]]
     assert client.get(f"/api/v1/wishes/{wish['id']}", headers=reporters[0]).status_code == 404
+    inbox = client.get("/api/v1/me/notifications", headers=owner_headers)
+    assert any(
+        item["notificationType"] == "WISH_UNDER_REVIEW" for item in inbox.json()["notifications"]
+    )
 
     non_admin = client.get("/api/v1/admin/reports", headers=reporters[0])
     assert non_admin.status_code == 403

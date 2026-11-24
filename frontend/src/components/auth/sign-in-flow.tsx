@@ -198,6 +198,12 @@ export function SignInFlow({ forceReauth = false }: SignInFlowProps) {
           >
             My Kindness
           </Link>
+          <Link
+            href="/notifications"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-5 py-3 text-sm font-semibold hover:bg-kindly-accent-soft"
+          >
+            Notifications
+          </Link>
           {user.status !== "ACTIVE" && (
             <Link
               href="/appeals"
