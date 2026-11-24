@@ -354,6 +354,20 @@
 | Output/artefact | 2 support-case integration tests; 14 gift tests including true simultaneous PAID-vs-expiry and recipient-confirmation-vs-timeout races; support API creates participant cases, rejects duplicates/non-participants, denies non-admins, exposes gift/payment detail to admins, masks VPA, rejects double resolution and redacts audit metadata |
 | Known limitation | Admin authorization is an environment allow-list, not production RBAC/MFA (Phase 6). P5.14 gift UI remains open; Phase 5 is **not** DONE. |
 
+### VE-030 — Phase 5 donor/recipient gift UI and full-stack validation
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P5.14 (completes Phase 5) |
+| Command | `cd frontend && npm test && npm run lint && npm run typecheck && npm run build`; browser flows at `http://localhost:3000` against `http://localhost:8000` |
+| Environment | Next.js 16.4.6; React 19.3.0; Node 26; PostgreSQL 16.16; Python 3.12.16 |
+| Result | **PASS** — 31 frontend tests across 8 files; ESLint, Prettier, TypeScript and production build clean; full donor→recipient browser journey succeeded |
+| Browser journey | Recipient PriyaRecipient signed in, saved a masked UPI ID and published a ₹25 wish. Donor ArjunDonor selected it in an isolated browser context, chose the suggested ₹25, reviewed the bank-name/no-custody disclosures, created the UPI handoff, opened the `upi://pay` link, entered a UTR and attested “Donor says paid”. Status became “Awaiting recipient confirmation”. Recipient saw the separate 24-hour response deadline, reacted Heart, added a thank-you note and confirmed receipt; status became “Recipient confirmed”. Both My Space gift histories linked to the gift. Recipient opened a support case from the gift and the UI showed `OPEN` with a reference. |
+| Automated coverage | New `gift-flow.test.tsx` (5 assertions across 4 tests), `gift-detail.test.tsx` (5 tests), My Space gift-history test and wish-detail entry-link assertion; all existing 21 tests remain green. |
+| Privacy checks | Recipient response omits donor identity and UPI handoff; donor sees recipient pseudonym only; recipient view omits `upiIntentUri`/`qrPayload`; support copy warns against sharing UPI ID or phone. Admin details remain API-only pending Phase 6. |
+| Known limitation | Full admin RBAC/MFA UI, moderation controls and accessibility/browser-matrix sign-off remain Phase 6/8. Real-money handoff remains disabled. |
+
 ## Summary
 
 | Verification | Result |
@@ -387,7 +401,8 @@
 | Phase 5 gift/reservation backend | PASS — 149 tests, 14 gift tests |
 | Phase 5 late-payment support/admin | PASS — 2 support-case tests, migration 0006 at head |
 | Phase 5 mandatory race suite | PASS — concurrent donors, idempotency, re-reservation, PAID-vs-expiry, confirmation-vs-timeout |
-| Phase 5 frontend gift UI | NOT STARTED |
+| Phase 5 frontend gift UI | PASS — 31 tests, build clean, donor/recipient browser journey |
+| Phase 5 overall | `DONE` — 15/15 tasks, pending external launch gates only |
 
 ## Rule for future entries
 

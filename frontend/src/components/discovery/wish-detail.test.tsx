@@ -45,6 +45,10 @@ describe("WishDetail", () => {
     await user.click(screen.getByRole("button", { name: /select this wish/i }));
 
     expect(await screen.findByText("Wish selected.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /choose amount/i })).toHaveAttribute(
+      "href",
+      "/gifts/new/wish-1",
+    );
     expect(mockedSelectWish).toHaveBeenCalledWith("wish-1");
   });
 

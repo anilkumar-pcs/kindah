@@ -1,0 +1,465 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import type { FormEvent } from "react";
+
+import { GiftHandoff } from "@/components/gifts/gift-handoff";
+import { ApiError } from "@/lib/api/client";
+import {
+  confirmRecipientOutcome,
+  createSupportCase,
+  getGift,
+  newIdempotencyKey,
+  type Gift,
+  type Reaction,
+  type RecipientOutcome,
+  type SupportCase,
+  type SupportCaseType,
+} from "@/lib/api/gifts";
+import { giftStatusLabel, giftStatusTone, SUPPORT_CASE_LABELS } from "@/lib/gifts/labels";
+import { restoreSession } from "@/lib/auth/session";
+
+type PageState = "loading" | "guest" | "ready" | "error";
+
+function formatDate(value: string | null): string {
+  if (!value) {
+    return "—";
+  }
+  return new Date(value).toLocaleString("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    return error.message;
+  }
+  return "Something went wrong. Try again.";
+}
+
+function RecipientConfirmation({
+  gift,
+  onUpdated,
+}: {
+  gift: Gift;
+  onUpdated: (gift: Gift) => void;
+}) {
+  const [reaction, setReaction] = useState<"" | Reaction>("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState<RecipientOutcome | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const attemptRef = useRef<{ outcome: RecipientOutcome; key: string } | null>(null);
+
+  async function handleConfirm(outcome: RecipientOutcome) {
+    setBusy(outcome);
+    setError(null);
+    if (!attemptRef.current || attemptRef.current.outcome !== outcome) {
+      attemptRef.current = { outcome, key: newIdempotencyKey() };
+    }
+    try {
+      const updated = await confirmRecipientOutcome(
+        gift.giftId,
+        {
+          outcome,
+          ...(outcome === "RECEIVED" && reaction ? { reaction } : {}),
+          ...(outcome === "RECEIVED" && message.trim() ? { message: message.trim() } : {}),
+        },
+        attemptRef.current.key,
+      );
+      attemptRef.current = null;
+      onUpdated(updated);
+    } catch (confirmError) {
+      setError(errorMessage(confirmError));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <section
+      aria-labelledby="recipient-confirmation-heading"
+      className="rounded-2xl border border-kindly-border bg-white p-5"
+    >
+      <p className="text-xs font-semibold tracking-wide text-kindly-accent uppercase">
+        Donor says paid
+      </p>
+      <h2 id="recipient-confirmation-heading" className="mt-1 text-lg font-semibold">
+        Did you receive this gift?
+      </h2>
+      <p className="mt-2 text-sm leading-6 text-kindly-muted">
+        The donor has told us they paid ₹{gift.amountInr}. This is not bank verification. Confirm
+        only after checking your own UPI app or bank account. You have until{" "}
+        {formatDate(gift.recipientResponseDeadline)} to respond.
+      </p>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="gift-reaction" className="block text-sm font-medium">
+            Reaction (optional)
+          </label>
+          <select
+            id="gift-reaction"
+            value={reaction}
+            onChange={(event) => setReaction(event.target.value as "" | Reaction)}
+            className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
+          >
+            <option value="">No reaction</option>
+            <option value="HEART">Heart</option>
+            <option value="PRAY">Pray</option>
+            <option value="SMILE">Smile</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="gift-thanks" className="block text-sm font-medium">
+            Thank-you note (optional)
+          </label>
+          <input
+            id="gift-thanks"
+            type="text"
+            maxLength={120}
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
+            className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+            placeholder="Say thanks or share a smile"
+          />
+        </div>
+      </div>
+
+      {error && (
+        <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </p>
+      )}
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <button
+          type="button"
+          disabled={busy !== null}
+          onClick={() => handleConfirm("RECEIVED")}
+          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
+        >
+          {busy === "RECEIVED" ? "Confirming…" : "Yes, I received it"}
+        </button>
+        <button
+          type="button"
+          disabled={busy !== null}
+          onClick={() => handleConfirm("NOT_RECEIVED")}
+          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border bg-white px-5 py-3 text-sm font-semibold hover:bg-kindly-accent-soft disabled:opacity-60"
+        >
+          {busy === "NOT_RECEIVED" ? "Recording…" : "No, I did not receive it"}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function SupportPanel({ gift }: { gift: Gift }) {
+  const [open, setOpen] = useState(false);
+  const [caseType, setCaseType] = useState<SupportCaseType>(
+    gift.viewerRole === "DONOR" ? "LATE_PAYMENT" : "RECIPIENT_DISPUTE",
+  );
+  const [description, setDescription] = useState("");
+  const [supportCase, setSupportCase] = useState<SupportCase | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    if (description.trim().length < 10) {
+      setError("Describe the problem in at least 10 characters.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const created = await createSupportCase(gift.giftId, {
+        caseType,
+        description: description.trim(),
+      });
+      setSupportCase(created);
+      setDescription("");
+    } catch (submitError) {
+      setError(errorMessage(submitError));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section
+      aria-labelledby="support-heading"
+      className="rounded-2xl border border-kindly-border bg-white p-5"
+    >
+      <h2 id="support-heading" className="text-lg font-semibold">
+        Something went wrong?
+      </h2>
+      <p className="mt-1 text-sm leading-6 text-kindly-muted">
+        Late payments and missing gifts are handled by support. Kindly cannot reverse or refund a
+        UPI payment. Contact your bank or UPI provider for payment disputes.
+      </p>
+
+      {supportCase ? (
+        <div aria-live="polite" className="mt-4 rounded-xl bg-green-50 p-4 text-sm text-green-900">
+          <p className="font-semibold">Support case {supportCase.status}.</p>
+          <p className="mt-1">
+            An administrator can review the gift and your report. Keep the case reference{" "}
+            <span className="font-mono">{supportCase.id.slice(0, 8)}</span>.
+          </p>
+        </div>
+      ) : open ? (
+        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+          <div>
+            <label htmlFor="support-case-type" className="block text-sm font-medium">
+              What happened?
+            </label>
+            <select
+              id="support-case-type"
+              value={caseType}
+              onChange={(event) => setCaseType(event.target.value as SupportCaseType)}
+              className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
+            >
+              {(Object.keys(SUPPORT_CASE_LABELS) as SupportCaseType[]).map((value) => (
+                <option key={value} value={value}>
+                  {SUPPORT_CASE_LABELS[value]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="support-description" className="block text-sm font-medium">
+              Tell us what happened
+            </label>
+            <textarea
+              id="support-description"
+              required
+              minLength={10}
+              maxLength={1000}
+              rows={4}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              className="mt-1 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+              aria-describedby="support-description-help"
+              placeholder="Include what you saw in your UPI app or bank account. Do not include your UPI ID or phone number."
+            />
+            <p id="support-description-help" className="mt-1 text-xs text-kindly-muted">
+              {description.length}/1000 characters. Never include your UPI ID, phone number or PIN.
+            </p>
+          </div>
+          {error && (
+            <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+              {error}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="submit"
+              disabled={busy}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
+            >
+              {busy ? "Sending…" : "Send to support"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                setError(null);
+              }}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-5 py-3 text-sm font-semibold hover:bg-kindly-accent-soft"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-5 py-3 text-sm font-semibold hover:bg-kindly-accent-soft"
+        >
+          Report a problem
+        </button>
+      )}
+    </section>
+  );
+}
+
+export function GiftDetail({ giftId }: { giftId: string }) {
+  const [pageState, setPageState] = useState<PageState>("loading");
+  const [gift, setGift] = useState<Gift | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    restoreSession()
+      .then(async (session) => {
+        if (cancelled) {
+          return;
+        }
+        if (!session) {
+          setPageState("guest");
+          return;
+        }
+        const loadedGift = await getGift(giftId);
+        if (!cancelled) {
+          setGift(loadedGift);
+          setPageState("ready");
+        }
+      })
+      .catch((loadError: unknown) => {
+        if (!cancelled) {
+          setError(
+            loadError instanceof ApiError && loadError.status === 404
+              ? "This gift is unavailable, or you are not a participant."
+              : errorMessage(loadError),
+          );
+          setPageState("error");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [giftId]);
+
+  if (pageState === "loading") {
+    return (
+      <section
+        aria-busy="true"
+        aria-live="polite"
+        className="mx-auto max-w-2xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border"
+      >
+        <p className="text-sm text-kindly-muted">Loading gift…</p>
+      </section>
+    );
+  }
+
+  if (pageState === "guest") {
+    return (
+      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
+        <h1 className="text-2xl font-semibold tracking-tight">Sign in to view this gift</h1>
+        <p className="mt-3 text-sm leading-6 text-kindly-muted">
+          Gift details are visible only to the donor and recipient.
+        </p>
+        <Link
+          href="/sign-in"
+          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800"
+        >
+          Sign in
+        </Link>
+      </section>
+    );
+  }
+
+  if (pageState === "error" || !gift) {
+    return (
+      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
+        <h1 className="text-2xl font-semibold tracking-tight">Gift unavailable</h1>
+        <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+          {error ?? "This gift could not be loaded."}
+        </p>
+        <Link
+          href="/"
+          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800"
+        >
+          Back to discovery
+        </Link>
+      </section>
+    );
+  }
+
+  const isRecipient = gift.viewerRole === "RECIPIENT";
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-6">
+      <header className="rounded-2xl border border-kindly-border bg-white p-5">
+        <div
+          className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${giftStatusTone(gift.giftStatus)}`}
+        >
+          {giftStatusLabel(gift.giftStatus)}
+        </div>
+        <h1 className="mt-3 text-2xl font-semibold tracking-tight">
+          {isRecipient
+            ? "A gift from a kind donor"
+            : `Gift to ${gift.recipientDisplayName ?? "the recipient"}`}
+        </h1>
+        <p className="mt-1 text-3xl font-semibold">₹{gift.amountInr}</p>
+        <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-kindly-muted">Reference</dt>
+            <dd className="font-mono font-semibold">{gift.paymentRefCode}</dd>
+          </div>
+          <div>
+            <dt className="text-kindly-muted">Started</dt>
+            <dd>{formatDate(gift.createdAt)}</dd>
+          </div>
+        </dl>
+
+        {gift.giftStatus === "DONOR_CLAIMED_PAID" && (
+          <p className="mt-4 rounded-xl bg-kindly-accent-soft p-3 text-sm">
+            Donor says paid. Awaiting recipient confirmation.
+          </p>
+        )}
+        {isRecipient &&
+          (gift.giftStatus === "HANDOFF_ISSUED" || gift.giftStatus === "DONOR_PENDING") && (
+            <p className="mt-4 rounded-xl bg-kindly-accent-soft p-3 text-sm">
+              The donor is completing a direct UPI payment. You will be asked to confirm only after
+              they say they have paid.
+            </p>
+          )}
+        {gift.giftStatus === "RECIPIENT_CONFIRMED" && (
+          <p className="mt-4 rounded-xl bg-green-50 p-3 text-sm text-green-900">
+            Recipient confirmed this gift. No further payment action is needed.
+          </p>
+        )}
+        {gift.giftStatus === "DISPUTED" && (
+          <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+            The recipient has disputed receipt. Support can review the case; Kindly cannot reverse
+            the UPI payment.
+          </p>
+        )}
+        {gift.giftStatus === "UNVERIFIED" && (
+          <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+            The recipient did not confirm in time. This gift is unverified. Support can review a
+            report; there is no automatic reopening, refund or reassignment.
+          </p>
+        )}
+        {gift.giftStatus === "FAILED" && (
+          <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+            No payment was recorded and the wish was released. You can return to discovery for
+            another wish.
+          </p>
+        )}
+        {(gift.giftStatus === "ABANDONED" || gift.giftStatus === "CANCELLED") && (
+          <p className="mt-4 rounded-xl bg-stone-100 p-3 text-sm text-stone-700">
+            This handoff is closed. No automatic reopening or reassignment is available.
+          </p>
+        )}
+      </header>
+
+      {!isRecipient && <GiftHandoff gift={gift} onUpdated={setGift} />}
+      {isRecipient && gift.giftStatus === "DONOR_CLAIMED_PAID" && (
+        <RecipientConfirmation gift={gift} onUpdated={setGift} />
+      )}
+
+      <SupportPanel gift={gift} />
+
+      <div className="flex flex-wrap gap-3 text-sm">
+        <Link
+          href="/"
+          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border bg-white px-5 py-3 font-semibold hover:bg-kindly-accent-soft"
+        >
+          Discover wishes
+        </Link>
+        <Link
+          href="/me"
+          className="inline-flex min-h-11 items-center justify-center rounded-xl px-2 py-3 font-semibold text-kindly-accent underline"
+        >
+          My space
+        </Link>
+      </div>
+    </div>
+  );
+}

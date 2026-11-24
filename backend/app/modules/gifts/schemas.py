@@ -33,11 +33,13 @@ class GiftResponse(ApiModel):
     wish_id: UUID
     gift_status: GiftStatus
     wish_status: WishStatus
+    viewer_role: Literal["DONOR", "RECIPIENT"]
     amount_inr: int
     payment_ref_code: str
     upi_intent_uri: str | None = None
     qr_payload: str | None = None
     reservation_expires_at: datetime | None = None
+    recipient_response_deadline: datetime | None = None
     recipient_display_name: str | None = None
     created_at: datetime
 

@@ -17,6 +17,11 @@ vi.mock("@/lib/api/wishes", () => ({
   withdrawWish: vi.fn(),
 }));
 
+vi.mock("@/lib/api/gifts", () => ({
+  listMyGifts: vi.fn(),
+}));
+
+import { listMyGifts, type Gift } from "@/lib/api/gifts";
 import { getPaymentMethod, savePaymentMethod, type PaymentMethod } from "@/lib/api/payment-methods";
 import { createWish, listMyWishes, withdrawWish, type Wish } from "@/lib/api/wishes";
 import { restoreSession, type UserProfile } from "@/lib/auth/session";
@@ -29,6 +34,7 @@ const mockedSavePaymentMethod = vi.mocked(savePaymentMethod);
 const mockedListWishes = vi.mocked(listMyWishes);
 const mockedCreateWish = vi.mocked(createWish);
 const mockedWithdrawWish = vi.mocked(withdrawWish);
+const mockedListGifts = vi.mocked(listMyGifts);
 
 function makeUser(overrides: Partial<UserProfile> = {}): UserProfile {
   return {
@@ -76,11 +82,31 @@ function makeWish(overrides: Partial<Wish> = {}): Wish {
   };
 }
 
+function makeGift(overrides: Partial<Gift> = {}): Gift {
+  return {
+    giftId: "gift-1",
+    wishId: "22222222-2222-2222-2222-222222222222",
+    giftStatus: "DONOR_CLAIMED_PAID",
+    wishStatus: "PAYMENT_CLAIMED",
+    viewerRole: "RECIPIENT",
+    amountInr: 25,
+    paymentRefCode: "PAY12345",
+    upiIntentUri: null,
+    qrPayload: null,
+    reservationExpiresAt: "2026-11-24T00:20:00Z",
+    recipientResponseDeadline: "2026-11-25T00:00:00Z",
+    recipientDisplayName: null,
+    createdAt: "2026-11-24T00:00:00Z",
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
   mockedRestore.mockResolvedValue(makeUser());
   mockedGetPaymentMethod.mockResolvedValue(null);
   mockedListWishes.mockResolvedValue([]);
+  mockedListGifts.mockResolvedValue([]);
 });
 
 describe("MySpace", () => {
@@ -143,5 +169,16 @@ describe("MySpace", () => {
 
     expect(await screen.findByText("Cooldown")).toBeInTheDocument();
     expect(mockedWithdrawWish).toHaveBeenCalledWith("22222222-2222-2222-2222-222222222222");
+  });
+
+  it("lists gifts with the approved status and links to the gift", async () => {
+    mockedGetPaymentMethod.mockResolvedValue(makePaymentMethod());
+    mockedListGifts.mockResolvedValue([makeGift()]);
+
+    render(<MySpace />);
+
+    expect(await screen.findByText("Awaiting recipient confirmation")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /₹25/i })).toHaveAttribute("href", "/gifts/gift-1");
+    expect(screen.getByText(/a kind donor sent this to you/i)).toBeInTheDocument();
   });
 });

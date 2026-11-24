@@ -340,7 +340,7 @@ state machine before polishing the UI.**
 -   [x] P5.13 Add concurrency tests: simultaneous donors, donor outcome
     vs expiry, recipient confirmation vs timeout, retry and
     re-reservation.
--   [ ] P5.14 Add end-to-end UI for amount selection, review, UPI
+-   [x] P5.14 Add end-to-end UI for amount selection, review, UPI
     handoff, return-to-app, donor outcome and recipient confirmation.
 -   [x] P5.15 Keep production real-money handoff disabled until written
     legal and bank/payment-partner gates are cleared.

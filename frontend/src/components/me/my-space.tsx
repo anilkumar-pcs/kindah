@@ -5,8 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
 import { ApiError } from "@/lib/api/client";
+import { listMyGifts, type Gift } from "@/lib/api/gifts";
 import { getPaymentMethod, savePaymentMethod, type PaymentMethod } from "@/lib/api/payment-methods";
 import { createWish, listMyWishes, withdrawWish, type Wish, type WishMood } from "@/lib/api/wishes";
+import { giftStatusLabel } from "@/lib/gifts/labels";
 import { restoreSession, type UserProfile } from "@/lib/auth/session";
 
 const MOODS: Array<{ value: WishMood; label: string }> = [
@@ -44,6 +46,7 @@ export function MySpace() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [wishes, setWishes] = useState<Wish[]>([]);
+  const [gifts, setGifts] = useState<Gift[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [reauthRequired, setReauthRequired] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -84,12 +87,17 @@ export function MySpace() {
       }
       setUser(restored);
       try {
-        const [method, history] = await Promise.all([getPaymentMethod(), listMyWishes()]);
+        const [method, history, giftHistory] = await Promise.all([
+          getPaymentMethod(),
+          listMyWishes(),
+          listMyGifts(),
+        ]);
         if (cancelled) {
           return;
         }
         setPaymentMethod(method);
         setWishes(history);
+        setGifts(giftHistory);
         setEditingVpa(method === null);
         setState("ready");
       } catch (loadError) {
@@ -515,6 +523,41 @@ export function MySpace() {
                     : " · donor chooses amount"}
                   {wish.closedReason ? ` · ${wish.closedReason.toLowerCase()}` : ""}
                 </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section aria-labelledby="gift-history-heading">
+        <h2 id="gift-history-heading" className="text-lg font-semibold">
+          Gift history
+        </h2>
+        {gifts.length === 0 ? (
+          <p className="mt-2 text-sm text-kindly-muted">No gifts yet.</p>
+        ) : (
+          <ul className="mt-3 space-y-3">
+            {gifts.map((gift) => (
+              <li key={gift.giftId}>
+                <Link
+                  href={`/gifts/${gift.giftId}`}
+                  className="block rounded-2xl border border-kindly-border bg-white p-4 text-sm hover:border-kindly-accent"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-semibold">₹{gift.amountInr}</span>
+                    <span className="text-xs font-semibold text-kindly-accent">
+                      {giftStatusLabel(gift.giftStatus)}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-kindly-muted">
+                    {gift.viewerRole === "DONOR"
+                      ? `You sent this to ${gift.recipientDisplayName ?? "a recipient"}.`
+                      : "A kind donor sent this to you."}
+                  </p>
+                  <p className="mt-1 text-xs text-kindly-muted">
+                    {formatDate(gift.createdAt)} · reference {gift.paymentRefCode}
+                  </p>
+                </Link>
               </li>
             ))}
           </ul>

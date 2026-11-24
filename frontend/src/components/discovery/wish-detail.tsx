@@ -143,7 +143,13 @@ export function WishDetail({ wishId }: { wishId: string }) {
       {selected ? (
         <div className="mt-6 rounded-xl bg-green-50 p-4 text-sm text-green-800">
           <p className="font-semibold">Wish selected.</p>
-          <p className="mt-1">The amount and UPI handoff arrive in the next phase.</p>
+          <p className="mt-1">Choose a whole-rupee amount between ₹10 and ₹100.</p>
+          <Link
+            href={`/gifts/new/${wish.id}`}
+            className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 font-semibold text-white hover:bg-orange-800"
+          >
+            Choose amount
+          </Link>
         </div>
       ) : needsAuth ? (
         <div className="mt-6 rounded-xl border border-kindly-border p-4 text-sm">

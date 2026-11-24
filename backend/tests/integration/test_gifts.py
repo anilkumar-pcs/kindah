@@ -166,10 +166,12 @@ def test_create_gift_handoff_and_participant_views(
     assert body["upiIntentUri"].startswith("upi://pay?")
     assert body["qrPayload"] == body["upiIntentUri"]
     assert body["recipientDisplayName"] == "RecipientOne"
+    assert body["viewerRole"] == "DONOR"
 
     donor_view = client.get(f"/api/v1/gifts/{body['giftId']}", headers=donor_headers)
     assert donor_view.status_code == 200
     assert donor_view.json()["upiIntentUri"].startswith("upi://pay?")
+    assert donor_view.json()["viewerRole"] == "DONOR"
 
     recipient_view = client.get(
         f"/api/v1/gifts/{body['giftId']}",
@@ -178,6 +180,7 @@ def test_create_gift_handoff_and_participant_views(
     assert recipient_view.status_code == 200
     assert recipient_view.json()["upiIntentUri"] is None
     assert recipient_view.json()["recipientDisplayName"] is None
+    assert recipient_view.json()["viewerRole"] == "RECIPIENT"
 
     engine = create_engine(os.environ["DATABASE_URL"])
     try:

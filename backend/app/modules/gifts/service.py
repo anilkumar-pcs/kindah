@@ -492,11 +492,13 @@ class GiftService:
             wish_id=gift.wish_id,
             gift_status=gift.status,
             wish_status=wish.status,
+            viewer_role="DONOR" if donor_view else "RECIPIENT",
             amount_inr=gift.amount_inr,
             payment_ref_code=gift.payment_ref,
             upi_intent_uri=uri,
             qr_payload=qr,
             reservation_expires_at=reservation.expires_at,
+            recipient_response_deadline=gift.recipient_response_deadline,
             recipient_display_name=recipient_name if donor_view else None,
             created_at=gift.created_at,
         )

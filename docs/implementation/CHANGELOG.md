@@ -2,6 +2,34 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-24 — Phase 5 complete: donor/recipient gift UI
+
+### Added
+
+- `/gifts/new/[wishId]`: whole-rupee amount selection (₹10–₹100), cheer note, review with
+  no-custody/bank-name disclosures, UPI handoff with QR/link, UTR capture and donor
+  PAID/STILL_PROCESSING/FAILED attestations.
+- `/gifts/[id]`: participant-safe gift detail, recipient RECEIVED/NOT_RECEIVED confirmation,
+  reaction and thank-you note, 24-hour response deadline, terminal-state explanations and a
+  “Report a problem” support form wired to the participant support-case API.
+- My Space gift history with role-aware descriptions and approved status labels.
+- Wish selection now leads into the gift flow.
+- `viewerRole` and `recipientResponseDeadline` in the gift API response so clients render
+  donor/recipient controls and the correct deadline without inferring from private fields.
+- `qrcode.react` dependency for the UPI QR handoff.
+
+### Verification
+
+- 31 frontend tests pass; ESLint, Prettier, TypeScript and production build clean.
+- Full-stack browser flow: donor created/paid a ₹25 handoff; recipient confirmed with a
+  reaction and note; both histories linked correctly; support case opened from the UI.
+- 149 backend tests remain green after the response-contract additions.
+
+### Status
+
+- Phase 5 is **DONE** (15/15). Real-money UPI handoff remains disabled pending external
+  legal and bank/payment-partner gates.
+
 ## 2026-11-24 — Phase 5: late-payment support, admin resolution and race tests
 
 ### Added
