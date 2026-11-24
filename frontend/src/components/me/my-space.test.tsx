@@ -109,7 +109,7 @@ function makeKarma(): KarmaSummary {
         createdAt: "2026-11-24T00:00:00Z",
       },
     ],
-    badges: [{ badgeCode: "FIRST_GIFT", unlockedAt: "2026-11-24T00:00:00Z" }],
+    badges: [{ badgeCode: "FIRST_GIFT", label: "First gift", unlockedAt: "2026-11-24T00:00:00Z" }],
   };
 }
 

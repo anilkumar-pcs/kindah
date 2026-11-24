@@ -93,7 +93,6 @@ class Settings(BaseSettings):
     outbox_retry_base_seconds: int = Field(default=30, ge=1, le=3600)
     outbox_batch_size: int = Field(default=100, ge=1, le=1000)
     handoff_provider: str = "test"
-    admin_user_ids: str = ""
 
     db_connect_timeout_seconds: int = 3
     redis_timeout_seconds: float = 1.0
@@ -139,10 +138,6 @@ class Settings(BaseSettings):
             for term in self.prohibited_wish_terms.split(",")
             if term.strip()
         ]
-
-    @property
-    def admin_user_id_list(self) -> list[str]:
-        return [user_id.strip() for user_id in self.admin_user_ids.split(",") if user_id.strip()]
 
     @property
     def is_production(self) -> bool:

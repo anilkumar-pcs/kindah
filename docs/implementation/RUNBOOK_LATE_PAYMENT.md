@@ -35,9 +35,10 @@ API: `POST /api/v1/gifts/{gift_id}/support-cases` (authenticated participant).
 
 ## Administrator flow
 
-Administrator authorization currently uses the `ADMIN_USER_IDS` comma-separated
-environment allow-list. This is a local/test bridge; full RBAC and MFA remain Phase 6 work.
-Do not enable it for production without those controls.
+Administrator authorization uses the `users.role` column in PostgreSQL (`ADMIN` or
+`MODERATOR`) plus a verified MFA session. The database role is the sole authority. Use
+`backend/scripts/grant_role.py` only for initial bootstrap or recovery, then manage roles through
+the admin Users tab. Do not create environment allow-lists.
 
 1. List open cases: `GET /api/v1/admin/support-cases?status=OPEN`.
 2. Review the full case detail returned by the admin endpoint. It includes the encrypted

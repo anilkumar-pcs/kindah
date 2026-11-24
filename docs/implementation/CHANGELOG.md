@@ -2,6 +2,29 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-24 — DB-only roles, admin role management and configurable badges
+
+### Added
+
+- `users.role` is now the sole admin authority; removed the `ADMIN_USER_IDS` allow-list.
+- `scripts/grant_role.py` bootstrap/recovery CLI (phone HMAC lookup, display name or UUID).
+- Admin user search and `PATCH /admin/users/{id}/role`; admins can grant/revoke USER/MODERATOR/
+  ADMIN with mandatory reason, MFA, self-change guard and audit. Admin Users tab added.
+- `0014_badge_definitions` table seeded with approved badge defaults, plus admin badge CRUD
+  (add/update/deactivate/reactivate) and admin Badges tab.
+- APPEAL/role-change notifications remain safe and deduplicated.
+
+### Decisions
+
+- DEC-O7 approved: no extra cooldown for platform removal.
+- Badge defaults approved and moved to one DB-backed registry; no exposure tracking for now.
+- DEC-I13 admin MFA mechanism remains pending confirmation.
+
+### Verification
+
+- 176 backend tests and 54 frontend tests pass; migration `0014_badge_definitions` at head;
+  all lint/type/build checks clean.
+
 ## 2026-11-24 — Phase 8 hardening started
 
 ### Added

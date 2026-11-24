@@ -5,9 +5,10 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, func, select
+from sqlalchemy import create_engine, delete, func, select
 from sqlalchemy.orm import Session
 
+from app.modules.karma.badges import BadgeDefinition
 from app.modules.karma.models import UserBadge
 from app.modules.karma.service import KarmaService, calculate_streak
 from tests.integration.test_gifts import _confirm, _create_gift, _outcome, _setup
@@ -37,7 +38,10 @@ def test_profile_and_summary_project_ledger_and_badges(client: TestClient) -> No
         "FIRST_CONFIRMED_GIFT",
         "FIRST_TIME_RECIPIENT_BONUS",
     }
-    assert donor_karma["badges"][0]["badgeCode"] == "FIRST_GIFT"
+    first_badge = next(
+        badge for badge in donor_karma["badges"] if badge["badgeCode"] == "FIRST_GIFT"
+    )
+    assert first_badge["label"] == "First gift"
 
     recipient_karma = client.get("/api/v1/me/karma", headers=recipient_headers).json()
     assert recipient_karma["balance"] == 3
@@ -60,6 +64,49 @@ def test_profile_and_summary_project_ledger_and_badges(client: TestClient) -> No
     finally:
         engine.dispose()
     assert recipient_session["user"]["id"]
+
+
+def test_badge_definitions_drive_awards_and_can_be_deactivated(client: TestClient) -> None:
+    engine = create_engine(os.environ["DATABASE_URL"])
+    try:
+        with Session(engine) as db:
+            db.execute(
+                delete(BadgeDefinition).where(
+                    BadgeDefinition.code.in_(["TEST_ACTIVE", "TEST_INACTIVE"])
+                )
+            )
+            db.add_all(
+                [
+                    BadgeDefinition(
+                        code="TEST_ACTIVE",
+                        label="Active test badge",
+                        rule_type="CONFIRMED_SENT",
+                        threshold=1,
+                        active=True,
+                        sort_order=900,
+                    ),
+                    BadgeDefinition(
+                        code="TEST_INACTIVE",
+                        label="Inactive test badge",
+                        rule_type="CONFIRMED_SENT",
+                        threshold=1,
+                        active=False,
+                        sort_order=901,
+                    ),
+                ]
+            )
+            db.commit()
+    finally:
+        engine.dispose()
+
+    _, donor_headers, _, recipient_headers, wish = _setup(client)
+    gift = _create_gift(client, donor_headers, wish["id"]).json()
+    assert _outcome(client, donor_headers, gift["giftId"], "PAID").status_code == 200
+    assert _confirm(client, recipient_headers, gift["giftId"], "RECEIVED").status_code == 200
+    badges = client.get("/api/v1/me/karma", headers=donor_headers).json()["badges"]
+    codes = {badge["badgeCode"] for badge in badges}
+    assert "TEST_ACTIVE" in codes
+    assert "TEST_INACTIVE" not in codes
 
 
 def test_streak_uses_ist_days_across_utc_midnight() -> None:

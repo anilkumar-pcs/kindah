@@ -16,6 +16,7 @@ class KarmaEventResponse(ApiModel):
 
 class KarmaBadgeResponse(ApiModel):
     badge_code: str
+    label: str
     unlocked_at: datetime
 
 

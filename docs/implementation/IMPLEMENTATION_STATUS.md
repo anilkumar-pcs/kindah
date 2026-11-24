@@ -16,7 +16,7 @@
 | 4. Discovery | `DONE` | 7 | 7 | 133 backend + 21 frontend tests |
 | 5. Gift & UPI | `DONE` | 15 | 15 | 149 backend + 31 frontend tests; full-stack gift flow and support report verified |
 | 6. Trust & safety | `DONE` | 11 | 11 | 168 backend + 50 frontend tests; local staging payment/dispute exercise |
-| 7. Engagement | `DONE` | 8 | 8 | 173 backend + 53 frontend tests; badge thresholds provisional |
+| 7. Engagement | `DONE` | 8 | 8 | 176 backend + 54 frontend tests; badge definitions DB-configurable |
 | 8. Hardening & beta | `IN_PROGRESS` | 2 | 12 | Threat model/scans done; local restore/load/a11y checks recorded; launch gates blocked |
 
 ## Phase 5 progress
@@ -50,7 +50,7 @@ Completed:
 - P6.2 block/unblock APIs plus wish-scoped block-owner aliases; two-way discovery/detail/select/gift/report exclusion; My Space blocked-account list with unblock; report/block UI on wish detail.
 - P6.3 atomic auto-hide on the third unique wish report (OPEN→UNDER_REVIEW only, once), moderator-only `/admin/reports` queue with target previews and unique report counts, and feed/detail exclusion under review.
 - P6.4 protected Next.js `/admin` console with role gating, MFA setup/verify, report queue, support detail/resolution and audit view; loading, empty, denied and error states.
-- P6.5 `USER`/`MODERATOR`/`ADMIN` roles, enforced TOTP MFA with single-use recovery codes and session-bound 15-minute tokens, and append-only `admin_audit_logs` with request IDs and encrypted resolution notes.
+- P6.5 `USER`/`MODERATOR`/`ADMIN` database roles as the sole admin authority, enforced TOTP MFA with single-use recovery codes and session-bound 15-minute tokens, admin user search/role management (self-change guarded, audited), and append-only `admin_audit_logs` with request IDs and encrypted resolution notes. Bootstrap CLI: `backend/scripts/grant_role.py`.
 - P6.6 warning, restrict, suspend, ban and reactivate user actions plus hide, restore and remove wish actions, with mandatory reasons, encrypted `moderation_actions`, audit entries, self-moderation and privileged-target guards, and unresolved-gift/expiry restore guards. Admin UI exposes actions inline in the report queue.
 - P6.7 one appeal per restricted/suspended/banned action, encrypted appeal/resolution text, user appeals page, admin appeals queue/resolution with audit, banned users able to authenticate for appeals while interactive actions stay blocked, and MFA-protected support/gift dispute visibility for staff.
 - P6.8 non-destructive account deletion requests guarded by active wishes/gifts, `DELETION_PENDING` status, cancellation, encrypted optional reason and MFA-only admin queue. No deletion or anonymisation occurs pending DEC-O8.
@@ -66,7 +66,7 @@ Open:
 Completed:
 - P7.1 `/me/karma` and profile balance/history derived by `SUM(karma_events.points_delta)`; no cached balance.
 - P7.2 IST (`Asia/Kolkata`) streak from distinct recipient-confirmed giving days, with UTC-midnight boundary tests.
-- P7.3 idempotent badge awards on confirmation with unique `(user_id, badge_code)`; FIRST_GIFT, KIND_HEART (5), KIND_SOUL (10), GRATEFUL and STREAK_3 rules documented.
+- P7.3 idempotent badge awards on confirmation with unique `(user_id, badge_code)`. Defaults are FIRST_GIFT (1 confirmed sent), KIND_HEART (5), KIND_SOUL (10), GRATEFUL (thanks received) and STREAK_3 (3 IST days); definitions, labels, thresholds, order and active state live in `badge_definitions` and are admin-configurable.
 - P7.4 recipient reaction/thanks persisted and exposed to participants in gift detail.
 - P7.5 participant-only share card after confirmation with donor identity/payment data excluded.
 - P7.6 Surprise Me with own/blocked/expired/session-skip exclusion and documented 3×/0.25×/1× weights.
@@ -81,7 +81,7 @@ Open:
 Completed locally:
 - P8.1 `THREAT_MODEL.md` with assets, actors, trust boundaries, threat/control table and open security gates.
 - P8.2 `npm audit` 0 vulnerabilities, `pip-audit` no known vulnerabilities, Bandit medium/high clean after clarifying non-security MD5 feed ordering, no tracked env/secrets and no container image present.
-- Local hardening checks: PostgreSQL dump/restore drill preserved users/wishes/gifts/audit at `0013_user_badges`; 500 feed requests at concurrency 50 with 0 errors (p95 90.3 ms, local only); Lighthouse mobile accessibility 100 on home, sign-in, admin gate and My Space (My Space best-practices 96 due the expected empty-payment-method 404; CLS 0.98 category score).
+- Local hardening checks: PostgreSQL dump/restore drill preserved users/wishes/gifts/badge definitions at `0014_badge_definitions`; 500 feed requests at concurrency 50 with 0 errors (p95 90.3 ms, local only); Lighthouse mobile accessibility 100 on home, sign-in, admin gate and My Space (My Space best-practices 96 due the expected empty-payment-method 404; CLS 0.98 category score).
 
 Blocked/partial:
 - **P8.3** load test needs owner-agreed beta assumptions and a staging target; local smoke only.
@@ -100,11 +100,11 @@ Blocked/partial:
 | B-008 | Production KMS not selected | `OPEN` |
 | B-009 | VPA beneficiary validation unresolved | `OPEN` |
 | B-010 | Admin MFA mechanism (DEC-I13) implemented as recommended TOTP default; owner confirmation required before production | `OPEN` |
-| B-011 | Moderation-removal cooldown policy (DEC-O7) implemented as recommended no-cooldown default; owner confirmation required | `OPEN` |
+| B-011 | Moderation-removal cooldown policy (DEC-O7) | `RESOLVED` — approved no extra cooldown (2026-11-24) |
 | B-012 | Retention schedule (DEC-O8) unresolved; deletion requests are recorded but no data is deleted/anonymised | `EXTERNAL_BLOCKED` |
 | B-013 | Deployed staging environment and approved RPO/RTO not available; local staging exercise recorded, remote drill pending | `EXTERNAL_BLOCKED` |
-| B-014 | Badge thresholds/rules are an implementation default; owner/product confirmation pending | `OPEN` |
-| B-015 | Exposure-cap policy not validated; no exposure tracking is collected | `OPEN` |
+| B-014 | Badge thresholds/rules | `RESOLVED` — defaults approved; now DB-configurable (2026-11-24) |
+| B-015 | Exposure-cap policy | `RESOLVED` — no exposure tracking for now (2026-11-24) |
 | B-016 | Independent security review/penetration test and security-owner sign-off pending | `EXTERNAL_BLOCKED` |
 | B-017 | Monitoring/dashboards/alerting, on-call ownership and approved RPO/RTO pending | `EXTERNAL_BLOCKED` |
 | B-018 | Beta load assumptions and deployed staging target not agreed | `EXTERNAL_BLOCKED` |
@@ -114,6 +114,7 @@ Blocked/partial:
 
 | Date | Phase/task | Change | Evidence |
 |---|---|---|---|
+| 2026-11-24 | Owner follow-up | DB-only admin roles, admin role management, DB badge registry, DEC-O7/badge/exposure approvals | `TEST_EVIDENCE.md` VE-043 |
 | 2026-11-24 | P8.1, P8.2 + local checks | Threat model, scans, restore/load smoke, accessibility audits | `TEST_EVIDENCE.md` VE-041, VE-042 |
 | 2026-11-24 | P7.1–P7.6 | Karma/streak/badges, reactions, share cards, Surprise Me | `TEST_EVIDENCE.md` VE-040 |
 | 2026-11-24 | P6.10, P6.11 | Durable outbox, dead-letter visibility, runbooks, staging exercise | `TEST_EVIDENCE.md` VE-038, VE-039 |
@@ -135,15 +136,16 @@ Blocked/partial:
 
 | Check | Result |
 |---|---|
-| Backend tests | 173 passed (14 gift, 2 support-case, 4 reporting/block/auto-hide, 6 admin security/moderation/appeal, 2 deletion, 3 notifications, 4 outbox, 2 karma, 2 Surprise Me) |
-| Frontend tests | 53 passed (12 test files) |
+| Backend tests | 176 passed (14 gift, 2 support-case, 4 reporting/block/auto-hide, 8 admin security/moderation/appeal/role, 2 deletion, 3 notifications, 4 outbox, 3 karma/badge config, 2 Surprise Me) |
+| Frontend tests | 54 passed (12 test files) |
 | Dependency/security scans | `npm audit` 0; `pip-audit` 0 known; Bandit medium/high clean; no tracked env/secrets |
-| Local restore drill | PASS — dump/restore at `0013_user_badges`; users=3, wishes=3, gifts=1, audit=4 |
+| Local restore drill | PASS — dump/restore at `0014_badge_definitions`; users=3, badge_definitions=5, wishes=3, gifts=1 |
 | Local load smoke | 500 requests, 50 concurrency, 0 errors, p95 90.3 ms (not capacity sign-off) |
 | Accessibility smoke | Lighthouse mobile accessibility 100 on `/`, `/sign-in`, `/admin`, `/me` |
 | Backend quality | Ruff, format, mypy clean |
 | Frontend quality | ESLint, Prettier, tsc, production build pass |
-| Migrations | 0001–0013 apply; 0013 badge migration validated at head |
+| Migrations | 0001–0014 apply; 0014 badge-definition migration validated at head |
+| DB roles/badge config | PASS — DB role sole admin authority; user search/role API/UI; badge definitions admin CRUD |
 | Staging exercise | PASS — separate `kindah_staging_exercise` DB; OTP→VPA→wish→gift→PAID→dispute→support→admin MFA→resolve→audit |
 | Phase 5 race suite | PASS — concurrent donors, idempotency, PAID-vs-expiry, confirmation-vs-timeout, re-reservation |
 | Phase 5 UI | PASS — full-stack donor gift, recipient confirmation and support report |
@@ -158,7 +160,7 @@ Blocked/partial:
 | Phase 6 overall | `DONE` — 11/11 tasks; external launch gates remain blocked |
 | Phase 7 karma/streak/badges | PASS — ledger projection, IST boundaries, idempotent badges |
 | Phase 7 reactions/share/Surprise Me | PASS — participant-only thanks/share card, weighted exclusion-based selection |
-| Phase 7 overall | `DONE` — 8/8 tasks; badge thresholds provisional |
+| Phase 7 overall | `DONE` — 8/8 tasks; badge definitions DB-configurable |
 | Phase 5 overall | `DONE` — 15/15 tasks |
 
 ## Completed slice — late-payment support and admin visibility
@@ -169,11 +171,11 @@ On 2026-11-24 the owner approved `DEC-O5` and `DEC-A06`:
 - Late payments are support-only: no refund, reassignment or automatic reopening.
 - Admin/moderator users must be able to see full support-case and gift details and resolve the reported issue with an audited note. Full admin RBAC/MFA remains Phase 6.
 
-Implemented: `0006_support_cases`, participant case creation, admin list/detail/resolve with the `ADMIN_USER_IDS` allow-list, encrypted case and resolution text, redacted audit events, duplicate-open-case protection, and `RUNBOOK_LATE_PAYMENT.md`. P5.14 surfaces the approved labels and support entry point in `/gifts/new/[wishId]`, `/gifts/[id]` and My Space.
+Implemented: `0006_support_cases`, participant case creation, admin list/detail/resolve, encrypted case and resolution text, redacted audit events, duplicate-open-case protection, and `RUNBOOK_LATE_PAYMENT.md`. Admin access now uses the DB role plus MFA (the original Phase 5 local allow-list was removed). P5.14 surfaces the approved labels and support entry point in `/gifts/new/[wishId]`, `/gifts/[id]` and My Space.
 
 ## Next session handoff
 
-1. Obtain owner decisions: DEC-I13 MFA confirmation, DEC-O7 cooldown, badge thresholds (B-014), exposure policy (B-015), RPO/RTO and beta load assumptions.
-2. Provision deployed staging, monitoring/alerts/on-call, KMS/OTP/UPI providers and complete legal/bank approvals before P8.3–P8.12.
-3. Run independent security review and a full WCAG 2.2 AA/manual browser matrix; record findings.
-4. Keep deletion non-destructive until DEC-O8; keep real-money handoff disabled; do not claim production readiness.
+1. Identify and promote the owner account to DB `ADMIN` using `scripts/grant_role.py` (phone or public display name), then use the admin Users tab for any further role changes.
+2. Obtain the remaining owner decision: DEC-I13 admin MFA mechanism (TOTP is implemented; confirm or replace).
+3. Provision deployed staging, monitoring/alerts/on-call, KMS/OTP/UPI providers and complete legal/bank approvals before P8.3–P8.12.
+4. Run independent security review and a full WCAG 2.2 AA/manual browser matrix; keep deletion non-destructive and real-money handoff disabled.

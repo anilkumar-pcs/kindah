@@ -531,7 +531,7 @@ class IdentityService:
             avatar=user.avatar,
             city=user.city,
             status=user.status,
-            role=effective_role(self.settings, user),
+            role=effective_role(user),
             onboarding_required=self._onboarding_required(user),
             karma=karma.balance(user.id),
             streak=karma.streak(user.id),

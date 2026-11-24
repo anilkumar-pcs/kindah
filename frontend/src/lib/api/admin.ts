@@ -4,6 +4,25 @@ import type { WishStatus } from "@/lib/api/wishes";
 
 export type AdminRole = "USER" | "MODERATOR" | "ADMIN";
 
+export type BadgeDefinition = {
+  code: string;
+  label: string;
+  ruleType: "CONFIRMED_SENT" | "THANKS_RECEIVED" | "STREAK_DAYS";
+  threshold: number;
+  active: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminUser = {
+  id: string;
+  displayName: string | null;
+  role: "USER" | "MODERATOR" | "ADMIN";
+  status: string;
+  createdAt: string;
+};
+
 export type AdminMfaStatus = {
   role: AdminRole;
   mfaEnabled: boolean;
@@ -204,6 +223,69 @@ export async function moderateWish(
     method: "POST",
     headers: { "Content-Type": "application/json", ...mfaHeaders(mfaToken) },
     body: JSON.stringify(input),
+  });
+}
+
+export async function listAdminBadges(mfaToken: string): Promise<BadgeDefinition[]> {
+  const data = await apiFetch<{ badges: BadgeDefinition[] }>("/api/v1/admin/badges", {
+    headers: mfaHeaders(mfaToken),
+  });
+  return data.badges;
+}
+
+export async function createAdminBadge(
+  mfaToken: string,
+  input: Omit<BadgeDefinition, "createdAt" | "updatedAt" | "active">,
+): Promise<BadgeDefinition> {
+  return apiFetch<BadgeDefinition>("/api/v1/admin/badges", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...mfaHeaders(mfaToken) },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateAdminBadge(
+  mfaToken: string,
+  code: string,
+  input: Partial<
+    Pick<BadgeDefinition, "label" | "ruleType" | "threshold" | "active" | "sortOrder">
+  >,
+): Promise<BadgeDefinition> {
+  return apiFetch<BadgeDefinition>(`/api/v1/admin/badges/${code}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...mfaHeaders(mfaToken) },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deactivateAdminBadge(
+  mfaToken: string,
+  code: string,
+): Promise<BadgeDefinition> {
+  return apiFetch<BadgeDefinition>(`/api/v1/admin/badges/${code}`, {
+    method: "DELETE",
+    headers: mfaHeaders(mfaToken),
+  });
+}
+
+export async function listAdminUsers(mfaToken: string, query?: string): Promise<AdminUser[]> {
+  const suffix = query ? `?query=${encodeURIComponent(query)}` : "";
+  const data = await apiFetch<{ users: AdminUser[] }>(`/api/v1/admin/users${suffix}`, {
+    headers: mfaHeaders(mfaToken),
+  });
+  return data.users;
+}
+
+export async function updateUserRole(
+  mfaToken: string,
+  userId: string,
+  role: "USER" | "MODERATOR" | "ADMIN",
+  reason: string,
+): Promise<AdminUser> {
+  return apiFetch<AdminUser>(`/api/v1/admin/users/${userId}/role`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...mfaHeaders(mfaToken) },
+    body: JSON.stringify({ role, reason }),
   });
 }
 

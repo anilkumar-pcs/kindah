@@ -10,8 +10,12 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.main import create_app
-from app.modules.identity.models import AuthEvent
-from tests.integration.helpers import admin_mfa_headers, complete_setup
+from app.modules.identity.models import AuthEvent, UserRole
+from tests.integration.helpers import (
+    admin_mfa_headers,
+    complete_setup,
+    set_user_role,
+)
 from tests.integration.test_gifts import _create_gift, _outcome, _setup
 
 pytestmark = pytest.mark.integration
@@ -55,11 +59,11 @@ def test_participant_report_admin_visibility_and_resolution(settings: Settings) 
             vpa="admin@okhdfc",
         )
         admin_id = str(admin_session["user"]["id"])
+        set_user_role(admin_id, UserRole.ADMIN)
 
         assert client.get("/api/v1/admin/support-cases", headers=donor_headers).status_code == 403
 
-    admin_settings = settings.model_copy(update={"admin_user_ids": admin_id})
-    admin_app = create_app(admin_settings)
+    admin_app = create_app(settings)
     with TestClient(admin_app) as admin_client:
         admin_headers = admin_mfa_headers(admin_client, admin_headers)
         listing = admin_client.get(

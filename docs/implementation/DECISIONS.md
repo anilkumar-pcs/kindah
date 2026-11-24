@@ -30,7 +30,18 @@ This approves:
 
 **2026-11-24 — Late-payment/admin approval.** The owner stated verbatim: "go with recommended defaults...also all of these details should be accessible and visible to admin....admin should be able to resolve the issue if pointed by users". This approves `DEC-O5` (spec payment labels) and `DEC-A06`: late payments are handled through support only (no refund, reassignment or automatic reopening), and admin/moderator users must be able to see full support-case/gift details and resolve the issue. Full admin RBAC/MFA remains Phase 6.
 
-This does **not** approve external legal/provider gates. Other decisions — `DEC-O3`, `DEC-O4`, `DEC-O6`–`DEC-O10`, `DEC-I05`–`DEC-I10`, `DEC-I13`, `DEC-I15`, `DEC-I16`, `DEC-I18` and `DEC-A01` — remain `PENDING` unless separately recorded. External gates remain `EXTERNAL_BLOCKED`.
+**2026-11-24 — DB roles, removal cooldown, badges and exposure.** The owner stated verbatim: "lets keep a role in db that makes someone admin. so the admin also logs as in normal user but the role in db makes him admin... And admin should be able to make any other user as admin. no extra cooldown for platform removal. approve these defaults. but I want these all to be in a single place and configurable... no exposure for now."
+
+This approves:
+
+- `users.role` in PostgreSQL as the sole admin authority; admins log in normally and MFA remains a second factor. Admins can search users and change roles; bootstrap is via `scripts/grant_role.py`.
+- `DEC-O7`: no extra cooldown for platform removal.
+- Badge defaults: FIRST_GIFT (1 confirmed sent), KIND_HEART (5), KIND_SOUL (10), GRATEFUL (thanks received), STREAK_3 (3 IST giving days). Badge definitions are DB-backed and admin-configurable (add/update/deactivate) in one registry.
+- No wish exposure tracking/caps for now.
+
+`DEC-I13` (admin MFA mechanism) remains pending because the owner did not explicitly confirm TOTP versus passkeys; the TOTP implementation stays in place and production admin activation remains gated.
+
+This does **not** approve external legal/provider gates. Other decisions — `DEC-O3`, `DEC-O4`, `DEC-O6`, `DEC-O8`–`DEC-O10`, `DEC-I05`–`DEC-I10`, `DEC-I13`, `DEC-I15`, `DEC-I16`, `DEC-I18` and `DEC-A01` — remain `PENDING` unless separately recorded. External gates remain `EXTERNAL_BLOCKED`.
 
 ---
 
@@ -43,7 +54,7 @@ This does **not** approve external legal/provider gates. Other decisions — `DE
 | DEC-O4 | VPA beneficiary validation | Syntax-only with explicit residual risk | EXTERNAL_BLOCKED | P3.1, P8.9 |
 | DEC-O5 | Payment labels / copy freeze | Use spec's attestation labels | APPROVED (2026-11-24) | P5.5, P5.14 |
 | DEC-O6 | Phone change/recovery | Old+new OTP with support fallback | PENDING | P2.2, production auth |
-| DEC-O7 | Cooldown after moderation removal | No cooldown for platform-removed wish | IMPLEMENTED DEFAULT — OWNER CONFIRMATION PENDING | P3.7, P6.6 |
+| DEC-O7 | Cooldown after moderation removal | No cooldown for platform-removed wish | APPROVED (2026-11-24) | P3.7, P6.6 |
 | DEC-O8 | Retention schedule | Configurable; numeric periods only after counsel | EXTERNAL_BLOCKED | P6.8, P8.9 |
 | DEC-O9 | Brand/trademark | Clear before public marketing | EXTERNAL_BLOCKED | P8.9 |
 | DEC-O10 | Cloud/worker platform | Provider-neutral containers; choose before staging | PENDING | P1.8, P8.8 |
@@ -138,7 +149,7 @@ This does **not** approve external legal/provider gates. Other decisions — `DE
 | Question | Does a platform-removed wish start the 72-hour cooldown? |
 | Options | **A.** No cooldown for a platform-removed wish (spec default proposal). **B.** Apply the 72-hour cooldown. |
 | Recommendation | **A**, with moderator reason/audit and a separate restriction mechanism if abuse is suspected. |
-| Owner decision | **NOT YET APPROVED.** The recommended option A was implemented on 2026-11-24 under the owner's phase-automation instruction: `WISH_REMOVED` sets no cooldown, and restriction/ban remains a separate audited account action. Owner confirmation is still required before production. |
+| Owner decision | **APPROVED (2026-11-24): no extra cooldown for platform removal.** `WISH_REMOVED` sets no cooldown; restriction/ban remains a separate audited account action. |
 | Date | 2026-11-24 |
 | Affects | P3.7, P6.6 |
 
@@ -324,8 +335,10 @@ This does **not** approve external legal/provider gates. Other decisions — `DE
 
 Implementation notes: TOTP SHA-1/6-digit/30-second steps, ±1 step window, per-step replay
 rejection, ten single-use HMAC-hashed recovery codes, and a 15-minute MFA token bound to the
-access-token session. Roles are `USER`, `MODERATOR`, `ADMIN`; `ADMIN_USER_IDS` remains only a
-local/test bootstrap. The `admin_audit_logs` table is append-only via a database trigger.
+access-token session. Roles are `USER`, `MODERATOR`, `ADMIN`; the database role is the sole
+authorization source (the old `ADMIN_USER_IDS` allow-list was removed). Admins can search users
+and change roles; a one-time `scripts/grant_role.py` CLI bootstraps the first administrator.
+The `admin_audit_logs` table is append-only via a database trigger.
 
 ### DEC-I14 — PWA caching policy
 

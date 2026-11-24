@@ -6,16 +6,20 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 
 import { AppealResolutionForm } from "@/components/admin/appeal-resolution-form";
+import { BadgeDefinitionsPanel } from "@/components/admin/badge-definitions-panel";
 import { ModerationActionForm } from "@/components/admin/moderation-action-form";
 import {
   enableAdminMfa,
   getAdminMfaStatus,
   listAdminAppeals,
   listAdminAuditLogs,
+  listAdminBadges,
   listAdminDeletionRequests,
   listAdminOutboxDeadLetters,
   listAdminReports,
   listAdminSupportCases,
+  listAdminUsers,
+  updateUserRole,
   resolveSupportCase,
   setupAdminMfa,
   verifyAdminMfa,
@@ -25,6 +29,8 @@ import {
   type AdminMfaStatus,
   type AdminReport,
   type AdminSupportCase,
+  type AdminUser,
+  type BadgeDefinition,
   type MfaSetup,
   type OutboxDeadLetter,
 } from "@/lib/api/admin";
@@ -34,13 +40,16 @@ import { restoreSession, type UserProfile } from "@/lib/auth/session";
 import { SUPPORT_CASE_LABELS } from "@/lib/gifts/labels";
 
 type PageState = "loading" | "guest" | "denied" | "ready" | "error";
-type AdminTab = "reports" | "support" | "appeals" | "deletion" | "outbox" | "audit";
+type AdminTab =
+  "reports" | "support" | "appeals" | "deletion" | "users" | "badges" | "outbox" | "audit";
 
 type AdminData = {
   reports: AdminReport[];
   supportCases: AdminSupportCase[];
   appeals: AdminAppeal[];
   deletionRequests: AdminDeletionRequest[];
+  users: AdminUser[];
+  badges: BadgeDefinition[];
   deadLetters: OutboxDeadLetter[];
   auditLogs: AdminAuditLog[];
 };
@@ -79,6 +88,10 @@ export function AdminConsole() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resolutionDrafts, setResolutionDrafts] = useState<Record<string, string>>({});
+  const [userQuery, setUserQuery] = useState("");
+  const [roleDrafts, setRoleDrafts] = useState<
+    Record<string, { role: "USER" | "MODERATOR" | "ADMIN"; reason: string }>
+  >({});
 
   useEffect(() => {
     let cancelled = false;
@@ -116,16 +129,35 @@ export function AdminConsole() {
   }, []);
 
   async function loadData(token: string) {
-    const [reports, supportCases, appeals, deletionRequests, deadLetters, auditLogs] =
-      await Promise.all([
-        listAdminReports(token),
-        listAdminSupportCases(token),
-        listAdminAppeals(token),
-        listAdminDeletionRequests(token),
-        listAdminOutboxDeadLetters(token),
-        listAdminAuditLogs(token),
-      ]);
-    setData({ reports, supportCases, appeals, deletionRequests, deadLetters, auditLogs });
+    const [
+      reports,
+      supportCases,
+      appeals,
+      deletionRequests,
+      users,
+      badges,
+      deadLetters,
+      auditLogs,
+    ] = await Promise.all([
+      listAdminReports(token),
+      listAdminSupportCases(token),
+      listAdminAppeals(token),
+      listAdminDeletionRequests(token),
+      listAdminUsers(token),
+      listAdminBadges(token),
+      listAdminOutboxDeadLetters(token),
+      listAdminAuditLogs(token),
+    ]);
+    setData({
+      reports,
+      supportCases,
+      appeals,
+      deletionRequests,
+      users,
+      badges,
+      deadLetters,
+      auditLogs,
+    });
   }
 
   async function handleStartSetup() {
@@ -212,6 +244,54 @@ export function AdminConsole() {
         setMfaToken(null);
       }
       setError(errorMessage(resolveError));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleUserSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!mfaToken) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const users = await listAdminUsers(mfaToken, userQuery.trim() || undefined);
+      setData((current) => (current ? { ...current, users } : current));
+    } catch (searchError) {
+      setError(errorMessage(searchError));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRoleUpdate(target: AdminUser) {
+    if (!mfaToken) {
+      return;
+    }
+    const draft = roleDrafts[target.id] ?? { role: target.role, reason: "" };
+    if (draft.reason.trim().length < 5) {
+      setError("A reason of at least 5 characters is required for a role change.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await updateUserRole(mfaToken, target.id, draft.role, draft.reason.trim());
+      setData((current) =>
+        current
+          ? {
+              ...current,
+              users: current.users.map((item) => (item.id === updated.id ? updated : item)),
+            }
+          : current,
+      );
+      setRoleDrafts((current) => ({ ...current, [target.id]: { role: updated.role, reason: "" } }));
+      const auditLogs = await listAdminAuditLogs(mfaToken);
+      setData((current) => (current ? { ...current, auditLogs } : current));
+    } catch (updateError) {
+      setError(errorMessage(updateError));
     } finally {
       setBusy(false);
     }
@@ -437,6 +517,8 @@ export function AdminConsole() {
                 ["support", `Support cases (${data.supportCases.length})`],
                 ["appeals", `Appeals (${data.appeals.length})`],
                 ["deletion", `Deletion (${data.deletionRequests.length})`],
+                ["users", `Users (${data.users.length})`],
+                ["badges", `Badges (${data.badges.length})`],
                 ["outbox", `Outbox (${data.deadLetters.length})`],
                 ["audit", `Audit log (${data.auditLogs.length})`],
               ] as Array<[AdminTab, string]>
@@ -675,6 +757,131 @@ export function AdminConsole() {
                 ))
               )}
             </section>
+          )}
+
+          {tab === "users" && (
+            <section aria-labelledby="admin-users-heading" className="space-y-3">
+              <h2 id="admin-users-heading" className="text-xl font-semibold">
+                Users and roles
+              </h2>
+              <form onSubmit={handleUserSearch} className="flex flex-wrap items-end gap-2">
+                <div className="min-w-48 flex-1">
+                  <label htmlFor="admin-user-search" className="block text-sm font-medium">
+                    Search by display name
+                  </label>
+                  <input
+                    id="admin-user-search"
+                    type="text"
+                    maxLength={60}
+                    value={userQuery}
+                    onChange={(event) => setUserQuery(event.target.value)}
+                    className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border bg-white px-4 py-2 text-sm font-semibold hover:bg-kindly-accent-soft disabled:opacity-60"
+                >
+                  Search
+                </button>
+              </form>
+              {data.users.length === 0 ? (
+                <p className="rounded-2xl border border-kindly-border bg-white p-5 text-sm text-kindly-muted">
+                  No matching users.
+                </p>
+              ) : (
+                data.users.map((item) => {
+                  const draft = roleDrafts[item.id] ?? { role: item.role, reason: "" };
+                  return (
+                    <article
+                      key={item.id}
+                      className="rounded-2xl border border-kindly-border bg-white p-5 text-sm"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-semibold">{item.displayName ?? "Unnamed user"}</span>
+                        <span className="rounded-full bg-kindly-accent-soft px-3 py-1 text-xs font-semibold">
+                          {item.role} · {item.status}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-kindly-muted">
+                        User {item.id.slice(0, 8)} · joined {formatDate(item.createdAt)}
+                      </p>
+                      <div className="mt-3 flex flex-wrap items-end gap-2">
+                        <div>
+                          <label htmlFor={`role-${item.id}`} className="block text-xs font-medium">
+                            Database role
+                          </label>
+                          <select
+                            id={`role-${item.id}`}
+                            value={draft.role}
+                            onChange={(event) =>
+                              setRoleDrafts((current) => ({
+                                ...current,
+                                [item.id]: {
+                                  role: event.target.value as AdminUser["role"],
+                                  reason: current[item.id]?.reason ?? "",
+                                },
+                              }))
+                            }
+                            className="mt-1 min-h-11 rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
+                          >
+                            <option value="USER">USER</option>
+                            <option value="MODERATOR">MODERATOR</option>
+                            <option value="ADMIN">ADMIN</option>
+                          </select>
+                        </div>
+                        <div className="min-w-48 flex-1">
+                          <label
+                            htmlFor={`role-reason-${item.id}`}
+                            className="block text-xs font-medium"
+                          >
+                            Reason (mandatory)
+                          </label>
+                          <input
+                            id={`role-reason-${item.id}`}
+                            type="text"
+                            minLength={5}
+                            maxLength={1000}
+                            value={draft.reason}
+                            onChange={(event) =>
+                              setRoleDrafts((current) => ({
+                                ...current,
+                                [item.id]: {
+                                  role: current[item.id]?.role ?? item.role,
+                                  reason: event.target.value,
+                                },
+                              }))
+                            }
+                            className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          disabled={busy || item.id === user?.id}
+                          onClick={() => handleRoleUpdate(item)}
+                          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
+                        >
+                          {item.id === user?.id ? "This is you" : "Update role"}
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })
+              )}
+            </section>
+          )}
+
+          {tab === "badges" && (
+            <BadgeDefinitionsPanel
+              mfaToken={mfaToken ?? ""}
+              definitions={data.badges}
+              onChanged={async () => {
+                if (mfaToken) {
+                  await loadData(mfaToken);
+                }
+              }}
+            />
           )}
 
           {tab === "outbox" && (

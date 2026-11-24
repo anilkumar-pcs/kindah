@@ -10,6 +10,7 @@ export type KarmaEvent = {
 
 export type KarmaBadge = {
   badgeCode: string;
+  label: string;
   unlockedAt: string;
 };
 

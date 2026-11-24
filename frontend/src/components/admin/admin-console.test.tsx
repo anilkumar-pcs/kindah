@@ -9,17 +9,23 @@ vi.mock("@/lib/auth/session", () => ({
 vi.mock("@/lib/api/admin", () => ({
   enableAdminMfa: vi.fn(),
   getAdminMfaStatus: vi.fn(),
+  createAdminBadge: vi.fn(),
+  deactivateAdminBadge: vi.fn(),
   listAdminAppeals: vi.fn(),
   listAdminAuditLogs: vi.fn(),
+  listAdminBadges: vi.fn(),
   listAdminDeletionRequests: vi.fn(),
   listAdminOutboxDeadLetters: vi.fn(),
   listAdminReports: vi.fn(),
   listAdminSupportCases: vi.fn(),
+  listAdminUsers: vi.fn(),
   moderateUser: vi.fn(),
   moderateWish: vi.fn(),
   resolveAppeal: vi.fn(),
   resolveSupportCase: vi.fn(),
   setupAdminMfa: vi.fn(),
+  updateAdminBadge: vi.fn(),
+  updateUserRole: vi.fn(),
   verifyAdminMfa: vi.fn(),
 }));
 
@@ -28,14 +34,17 @@ import {
   getAdminMfaStatus,
   listAdminAppeals,
   listAdminAuditLogs,
+  listAdminBadges,
   listAdminDeletionRequests,
   listAdminOutboxDeadLetters,
   listAdminReports,
   listAdminSupportCases,
+  listAdminUsers,
   moderateWish,
   resolveAppeal,
   resolveSupportCase,
   setupAdminMfa,
+  updateUserRole,
   verifyAdminMfa,
   type AdminSupportCase,
 } from "@/lib/api/admin";
@@ -56,6 +65,9 @@ const mockedModerateWish = vi.mocked(moderateWish);
 const mockedAppeals = vi.mocked(listAdminAppeals);
 const mockedDeletionRequests = vi.mocked(listAdminDeletionRequests);
 const mockedDeadLetters = vi.mocked(listAdminOutboxDeadLetters);
+const mockedUsers = vi.mocked(listAdminUsers);
+const mockedBadges = vi.mocked(listAdminBadges);
+const mockedUpdateRole = vi.mocked(updateUserRole);
 const mockedResolveAppeal = vi.mocked(resolveAppeal);
 
 function makeUser(role: "USER" | "ADMIN" = "ADMIN"): UserProfile {
@@ -115,6 +127,8 @@ beforeEach(() => {
   mockedAppeals.mockResolvedValue([]);
   mockedDeletionRequests.mockResolvedValue([]);
   mockedDeadLetters.mockResolvedValue([]);
+  mockedUsers.mockResolvedValue([]);
+  mockedBadges.mockResolvedValue([]);
   mockedAudit.mockResolvedValue([]);
 });
 
@@ -249,6 +263,56 @@ describe("AdminConsole", () => {
       action: "HIDE",
       reason: "Clear policy violation.",
     });
+  });
+
+  it("promotes a user to admin from the Users tab", async () => {
+    const user = userEvent.setup();
+    mockedStatus.mockResolvedValue({
+      role: "ADMIN",
+      mfaEnabled: true,
+      mfaRequired: true,
+      recoveryCodesRemaining: 9,
+    });
+    mockedVerify.mockResolvedValue({
+      mfaToken: "verified-token",
+      expiresIn: 900,
+      method: "TOTP",
+    });
+    mockedUsers.mockResolvedValue([
+      {
+        id: "user-2",
+        displayName: "PromoteMe",
+        role: "USER",
+        status: "ACTIVE",
+        createdAt: "2026-11-24T00:00:00Z",
+      },
+    ]);
+    mockedUpdateRole.mockResolvedValue({
+      id: "user-2",
+      displayName: "PromoteMe",
+      role: "ADMIN",
+      status: "ACTIVE",
+      createdAt: "2026-11-24T00:00:00Z",
+    });
+
+    render(<AdminConsole />);
+
+    await user.type(await screen.findByLabelText(/authenticator or recovery code/i), "123456");
+    await user.click(screen.getByRole("button", { name: /open admin console/i }));
+    await user.click(await screen.findByRole("button", { name: /users \(1\)/i }));
+
+    expect(await screen.findByText("PromoteMe")).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText(/database role/i), "ADMIN");
+    await user.type(screen.getByLabelText(/reason \(mandatory\)/i), "Owner approved.");
+    await user.click(screen.getByRole("button", { name: /update role/i }));
+
+    expect(await screen.findByText(/admin · active/i)).toBeInTheDocument();
+    expect(mockedUpdateRole).toHaveBeenCalledWith(
+      "verified-token",
+      "user-2",
+      "ADMIN",
+      "Owner approved.",
+    );
   });
 
   it("resolves an appeal from the admin queue", async () => {

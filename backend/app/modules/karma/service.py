@@ -9,6 +9,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.modules.gifts.models import Gift, GiftStatus, KarmaEvent
+from app.modules.karma.badges import BadgeDefinition
 from app.modules.karma.models import UserBadge
 from app.modules.karma.schemas import (
     KarmaBadgeResponse,
@@ -17,14 +18,6 @@ from app.modules.karma.schemas import (
 )
 
 IST = ZoneInfo("Asia/Kolkata")
-
-BADGE_LABELS = {
-    "FIRST_GIFT": "First gift",
-    "KIND_HEART": "Kind heart",
-    "KIND_SOUL": "Kind soul",
-    "GRATEFUL": "Grateful",
-    "STREAK_3": "Three-day streak",
-}
 
 
 def ist_date(value: datetime) -> date:
@@ -89,6 +82,10 @@ class KarmaService:
                 .order_by(UserBadge.unlocked_at)
             )
         )
+        definitions = {
+            definition.code: definition
+            for definition in self.session.scalars(select(BadgeDefinition))
+        }
         return KarmaSummaryResponse(
             balance=self.balance(user_id),
             streak=self.streak(user_id),
@@ -105,6 +102,11 @@ class KarmaService:
             badges=[
                 KarmaBadgeResponse(
                     badge_code=badge.badge_code,
+                    label=(
+                        definitions[badge.badge_code].label
+                        if badge.badge_code in definitions
+                        else badge.badge_code
+                    ),
                     unlocked_at=badge.unlocked_at,
                 )
                 for badge in badges
@@ -146,23 +148,27 @@ class KarmaService:
             or 0
         )
         streak = self.streak(user_id, current)
-        codes: list[str] = []
-        if confirmed_sent >= 1:
-            codes.append("FIRST_GIFT")
-        if confirmed_sent >= 5:
-            codes.append("KIND_HEART")
-        if confirmed_sent >= 10:
-            codes.append("KIND_SOUL")
-        if confirmed_received >= 1 and thanks_received >= 1:
-            codes.append("GRATEFUL")
-        if streak >= 3:
-            codes.append("STREAK_3")
-        for code in codes:
+        metrics = {
+            "CONFIRMED_SENT": confirmed_sent,
+            "THANKS_RECEIVED": thanks_received if confirmed_received else 0,
+            "STREAK_DAYS": streak,
+        }
+        definitions = list(
+            self.session.scalars(
+                select(BadgeDefinition)
+                .where(BadgeDefinition.active.is_(True))
+                .order_by(BadgeDefinition.sort_order)
+            )
+        )
+        for definition in definitions:
+            value = metrics.get(definition.rule_type)
+            if value is None or value < definition.threshold:
+                continue
             self.session.execute(
                 insert(UserBadge)
                 .values(
                     user_id=user_id,
-                    badge_code=code,
+                    badge_code=definition.code,
                     unlocked_at=current,
                 )
                 .on_conflict_do_nothing(index_elements=["user_id", "badge_code"])

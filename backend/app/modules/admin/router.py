@@ -13,10 +13,16 @@ from app.modules.admin.schemas import (
     AdminAuditLogList,
     AdminDeletionRequestList,
     AdminMfaStatusResponse,
+    AdminUserList,
+    AdminUserSummary,
     AppealCreateRequest,
     AppealList,
     AppealResolveRequest,
     AppealResponse,
+    BadgeDefinitionCreate,
+    BadgeDefinitionList,
+    BadgeDefinitionResponse,
+    BadgeDefinitionUpdate,
     DeletionRequestCreate,
     DeletionRequestResponse,
     MfaEnableRequest,
@@ -28,6 +34,7 @@ from app.modules.admin.schemas import (
     ModerationActionResponse,
     OutboxDeadLetterList,
     UserModerationActionRequest,
+    UserRoleUpdateRequest,
     WishModerationActionRequest,
 )
 from app.modules.admin.service import AdminService
@@ -86,6 +93,61 @@ def verify_mfa(
     service: AdminService = Depends(get_admin_service),
 ) -> MfaVerifyResponse:
     return service.verify_mfa(auth.user, auth.session.id, body.code)
+
+
+@router.get("/admin/badges", response_model=BadgeDefinitionList)
+def list_badge_definitions(
+    _auth: AuthContext = Depends(require_admin),
+    service: AdminService = Depends(get_admin_service),
+) -> BadgeDefinitionList:
+    return service.list_badge_definitions()
+
+
+@router.post("/admin/badges", response_model=BadgeDefinitionResponse, status_code=201)
+def create_badge_definition(
+    body: BadgeDefinitionCreate,
+    auth: AuthContext = Depends(require_admin),
+    service: AdminService = Depends(get_admin_service),
+) -> BadgeDefinitionResponse:
+    return service.create_badge_definition(auth.user, body)
+
+
+@router.patch("/admin/badges/{code}", response_model=BadgeDefinitionResponse)
+def update_badge_definition(
+    code: str,
+    body: BadgeDefinitionUpdate,
+    auth: AuthContext = Depends(require_admin),
+    service: AdminService = Depends(get_admin_service),
+) -> BadgeDefinitionResponse:
+    return service.update_badge_definition(auth.user, code, body)
+
+
+@router.delete("/admin/badges/{code}", response_model=BadgeDefinitionResponse)
+def deactivate_badge_definition(
+    code: str,
+    auth: AuthContext = Depends(require_admin),
+    service: AdminService = Depends(get_admin_service),
+) -> BadgeDefinitionResponse:
+    return service.deactivate_badge_definition(auth.user, code)
+
+
+@router.get("/admin/users", response_model=AdminUserList)
+def list_users(
+    query: str | None = Query(default=None, max_length=60),
+    _auth: AuthContext = Depends(require_admin),
+    service: AdminService = Depends(get_admin_service),
+) -> AdminUserList:
+    return service.list_users(query)
+
+
+@router.patch("/admin/users/{user_id}/role", response_model=AdminUserSummary)
+def set_user_role(
+    user_id: UUID,
+    body: UserRoleUpdateRequest,
+    auth: AuthContext = Depends(require_admin),
+    service: AdminService = Depends(get_admin_service),
+) -> AdminUserSummary:
+    return service.set_user_role(auth.user, user_id, body)
 
 
 @router.post(

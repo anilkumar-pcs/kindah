@@ -5,7 +5,7 @@ import uuid
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -40,10 +40,16 @@ from app.modules.admin.schemas import (
     AdminDeletionRequestList,
     AdminDeletionRequestResponse,
     AdminMfaStatusResponse,
+    AdminUserList,
+    AdminUserSummary,
     AppealCreateRequest,
     AppealList,
     AppealResolveRequest,
     AppealResponse,
+    BadgeDefinitionCreate,
+    BadgeDefinitionList,
+    BadgeDefinitionResponse,
+    BadgeDefinitionUpdate,
     DeletionRequestCreate,
     DeletionRequestResponse,
     MfaEnableResponse,
@@ -55,11 +61,13 @@ from app.modules.admin.schemas import (
     OutboxDeadLetterList,
     OutboxDeadLetterResponse,
     UserModerationActionRequest,
+    UserRoleUpdateRequest,
     WishModerationActionRequest,
 )
 from app.modules.gifts.models import Gift, GiftStatus, OutboxEvent
 from app.modules.identity.audit import record_audit_event
 from app.modules.identity.models import User, UserRole, UserStatus
+from app.modules.karma.badges import BadgeDefinition
 from app.modules.notifications.service import notify
 from app.modules.wishes.models import Wish, WishStatus
 from app.providers.crypto.base import CryptoProvider
@@ -86,7 +94,7 @@ class AdminService:
 
     def mfa_status(self, user: User) -> AdminMfaStatusResponse:
         return AdminMfaStatusResponse(
-            role=effective_role(self.settings, user),
+            role=effective_role(user),
             mfa_enabled=user.mfa_enabled_at is not None,
             mfa_required=True,
             recovery_codes_remaining=len(user.mfa_recovery_codes_hashed or []),
@@ -223,6 +231,83 @@ class AdminService:
             method="RECOVERY",
         )
 
+    def list_users(self, query: str | None = None) -> AdminUserList:
+        statement = (
+            select(User)
+            .where(User.status != UserStatus.DELETED)
+            .order_by(User.created_at.desc())
+            .limit(100)
+        )
+        if query and query.strip():
+            statement = statement.where(
+                func.lower(User.display_name).contains(query.strip().lower())
+            )
+        return AdminUserList(
+            users=[self._user_summary(user) for user in self.session.scalars(statement)]
+        )
+
+    def set_user_role(
+        self,
+        admin: User,
+        target_id: UUID,
+        request: UserRoleUpdateRequest,
+    ) -> AdminUserSummary:
+        if effective_role(admin) != UserRole.ADMIN:
+            raise AppError(
+                403,
+                "FORBIDDEN",
+                "Administrator access required",
+                "Only an administrator can change roles.",
+            )
+        target = self.session.get(User, target_id)
+        if target is None or target.status == UserStatus.DELETED:
+            raise AppError(404, "NOT_FOUND", "User not found", "This user is unavailable.")
+        if target.id == admin.id:
+            raise AppError(
+                422,
+                "CANNOT_CHANGE_OWN_ROLE",
+                "Cannot change your own role",
+                "Ask another administrator to change your role.",
+            )
+        if target.role == request.role:
+            raise self._invalid_action(f"This user already has role {request.role.value}.")
+        from_role = target.role
+        now = datetime.now(UTC)
+        target.role = request.role
+        target.updated_at = now
+        record_admin_audit(
+            session=self.session,
+            crypto=self.crypto,
+            actor_id=admin.id,
+            action="USER_ROLE_CHANGED",
+            target_type="USER",
+            target_id=target.id,
+            reason=request.reason,
+            metadata={"fromRole": from_role.value, "toRole": request.role.value},
+        )
+        notify(
+            session=self.session,
+            user_id=target.id,
+            dedupe_key=f"role-change:{target.id}:{uuid.uuid4()}",
+            notification_type="ACCOUNT_ROLE_CHANGED",
+            title="Account role updated",
+            body=f"Your account role is now {request.role.value}.",
+            entity_type="USER",
+            entity_id=target.id,
+            payload={"role": request.role.value},
+        )
+        self.session.commit()
+        return self._user_summary(target)
+
+    def _user_summary(self, user: User) -> AdminUserSummary:
+        return AdminUserSummary(
+            id=user.id,
+            display_name=user.display_name,
+            role=user.role,
+            status=user.status,
+            created_at=user.created_at,
+        )
+
     def moderate_user(
         self,
         admin: User,
@@ -239,7 +324,7 @@ class AdminService:
                 "Cannot moderate yourself",
                 "Use another administrator account for this action.",
             )
-        actor_role = effective_role(self.settings, admin)
+        actor_role = effective_role(admin)
         if target.role == UserRole.ADMIN and actor_role != UserRole.ADMIN:
             raise AppError(
                 403,
@@ -450,6 +535,124 @@ class AdminService:
             "INVALID_STATE_TRANSITION",
             "Action not allowed",
             detail,
+        )
+
+    # ------------------------------------------------------------------
+    # Badge definitions
+    # ------------------------------------------------------------------
+    def list_badge_definitions(self) -> BadgeDefinitionList:
+        definitions = list(
+            self.session.scalars(
+                select(BadgeDefinition).order_by(
+                    BadgeDefinition.sort_order,
+                    BadgeDefinition.code,
+                )
+            )
+        )
+        return BadgeDefinitionList(
+            badges=[self._badge_definition_response(item) for item in definitions]
+        )
+
+    def create_badge_definition(
+        self,
+        admin: User,
+        request: BadgeDefinitionCreate,
+    ) -> BadgeDefinitionResponse:
+        existing = self.session.get(BadgeDefinition, request.code)
+        if existing is not None:
+            raise AppError(
+                409,
+                "BADGE_EXISTS",
+                "Badge already exists",
+                "A badge definition with this code already exists.",
+            )
+        now = datetime.now(UTC)
+        definition = BadgeDefinition(
+            code=request.code,
+            label=request.label,
+            rule_type=request.rule_type,
+            threshold=request.threshold,
+            active=request.active,
+            sort_order=request.sort_order,
+            created_at=now,
+            updated_at=now,
+        )
+        self.session.add(definition)
+        record_admin_audit(
+            session=self.session,
+            crypto=self.crypto,
+            actor_id=admin.id,
+            action="BADGE_DEFINITION_CREATED",
+            target_type="BADGE",
+            target_id=None,
+            metadata={"code": request.code},
+        )
+        self.session.commit()
+        return self._badge_definition_response(definition)
+
+    def update_badge_definition(
+        self,
+        admin: User,
+        code: str,
+        request: BadgeDefinitionUpdate,
+    ) -> BadgeDefinitionResponse:
+        definition = self.session.get(BadgeDefinition, code)
+        if definition is None:
+            raise AppError(404, "NOT_FOUND", "Badge not found", "This badge is unavailable.")
+        changed: list[str] = []
+        for field in ("label", "rule_type", "threshold", "active", "sort_order"):
+            value = getattr(request, field)
+            if field in request.model_fields_set and value is not None:
+                setattr(definition, field, value)
+                changed.append(field)
+        definition.updated_at = datetime.now(UTC)
+        record_admin_audit(
+            session=self.session,
+            crypto=self.crypto,
+            actor_id=admin.id,
+            action="BADGE_DEFINITION_UPDATED",
+            target_type="BADGE",
+            target_id=None,
+            metadata={"code": code, "fields": changed},
+        )
+        self.session.commit()
+        return self._badge_definition_response(definition)
+
+    def deactivate_badge_definition(
+        self,
+        admin: User,
+        code: str,
+    ) -> BadgeDefinitionResponse:
+        definition = self.session.get(BadgeDefinition, code)
+        if definition is None:
+            raise AppError(404, "NOT_FOUND", "Badge not found", "This badge is unavailable.")
+        definition.active = False
+        definition.updated_at = datetime.now(UTC)
+        record_admin_audit(
+            session=self.session,
+            crypto=self.crypto,
+            actor_id=admin.id,
+            action="BADGE_DEFINITION_DEACTIVATED",
+            target_type="BADGE",
+            target_id=None,
+            metadata={"code": code},
+        )
+        self.session.commit()
+        return self._badge_definition_response(definition)
+
+    def _badge_definition_response(
+        self,
+        definition: BadgeDefinition,
+    ) -> BadgeDefinitionResponse:
+        return BadgeDefinitionResponse(
+            code=definition.code,
+            label=definition.label,
+            rule_type=definition.rule_type,
+            threshold=definition.threshold,
+            active=definition.active,
+            sort_order=definition.sort_order,
+            created_at=definition.created_at,
+            updated_at=definition.updated_at,
         )
 
     # ------------------------------------------------------------------

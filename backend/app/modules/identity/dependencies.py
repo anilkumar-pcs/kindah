@@ -70,8 +70,7 @@ def require_admin_role(
     request: Request,
     auth: AuthContext = Depends(require_active_auth),
 ) -> AuthContext:
-    settings = request.app.state.settings
-    if not has_admin_access(settings, auth.user):
+    if not has_admin_access(auth.user):
         raise AppError(
             403,
             "FORBIDDEN",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -483,6 +484,105 @@ def test_appeal_workflow_admin_resolution_and_banned_access(client: TestClient) 
             assert all("appealing" not in row.reason_encrypted for row in rows)
     finally:
         engine.dispose()
+
+
+def test_admin_can_search_users_and_change_roles(client: TestClient) -> None:
+    admin_session, admin_headers = _admin_with_mfa(client, "9876502041", "RoleAdmin")
+    target_session, target_headers, _ = complete_setup(
+        client,
+        phone="9876502042",
+        display_name="RoleTarget",
+        vpa="roletarget@okaxis",
+    )
+    target_id = str(target_session["user"]["id"])
+    admin_id = str(admin_session["user"]["id"])
+
+    search = client.get(
+        "/api/v1/admin/users", headers=admin_headers, params={"query": "roletarget"}
+    )
+    assert search.status_code == 200, search.text
+    assert search.json()["users"][0]["role"] == "USER"
+    assert "phone" not in str(search.json()).lower()
+
+    promoted = client.patch(
+        f"/api/v1/admin/users/{target_id}/role",
+        headers=admin_headers,
+        json={"role": "ADMIN", "reason": "Owner-approved bootstrap promotion."},
+    )
+    assert promoted.status_code == 200, promoted.text
+    assert promoted.json()["role"] == "ADMIN"
+    assert (
+        client.get(
+            "/api/v1/admin/users", headers=admin_headers, params={"query": "RoleTarget"}
+        ).json()["users"][0]["role"]
+        == "ADMIN"
+    )
+    inbox = client.get("/api/v1/me/notifications", headers=target_headers)
+    assert any(
+        item["notificationType"] == "ACCOUNT_ROLE_CHANGED" for item in inbox.json()["notifications"]
+    )
+
+    self_change = client.patch(
+        f"/api/v1/admin/users/{admin_id}/role",
+        headers=admin_headers,
+        json={"role": "USER", "reason": "Trying to demote myself."},
+    )
+    assert self_change.status_code == 422
+    assert self_change.json()["code"] == "CANNOT_CHANGE_OWN_ROLE"
+
+    audits = client.get("/api/v1/admin/audit-logs", headers=admin_headers)
+    assert any(entry["action"] == "USER_ROLE_CHANGED" for entry in audits.json()["logs"])
+
+
+def test_badge_definitions_are_admin_configurable(client: TestClient) -> None:
+    _, admin_headers = _admin_with_mfa(client, "9876502051", "BadgeAdmin")
+    code = f"TEST_{uuid.uuid4().hex[:8].upper()}"
+
+    created = client.post(
+        "/api/v1/admin/badges",
+        headers=admin_headers,
+        json={
+            "code": code,
+            "label": "Test badge",
+            "ruleType": "CONFIRMED_SENT",
+            "threshold": 2,
+            "active": True,
+            "sortOrder": 90,
+        },
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["ruleType"] == "CONFIRMED_SENT"
+
+    updated = client.patch(
+        f"/api/v1/admin/badges/{code}",
+        headers=admin_headers,
+        json={"label": "Updated test badge", "threshold": 1},
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["label"] == "Updated test badge"
+    assert updated.json()["threshold"] == 1
+
+    deactivated = client.delete(f"/api/v1/admin/badges/{code}", headers=admin_headers)
+    assert deactivated.status_code == 200
+    assert deactivated.json()["active"] is False
+    listing = client.get("/api/v1/admin/badges", headers=admin_headers)
+    assert any(
+        item["code"] == code and item["active"] is False for item in listing.json()["badges"]
+    )
+
+    _, ordinary_headers, _ = complete_setup(
+        client,
+        phone="9876502052",
+        display_name="BadgeOrdinary",
+        vpa="badgeordinary@okaxis",
+    )
+    assert client.get("/api/v1/admin/badges", headers=ordinary_headers).status_code == 403
+
+    audits = client.get("/api/v1/admin/audit-logs", headers=admin_headers)
+    actions = [entry["action"] for entry in audits.json()["logs"]]
+    assert "BADGE_DEFINITION_CREATED" in actions
+    assert "BADGE_DEFINITION_UPDATED" in actions
+    assert "BADGE_DEFINITION_DEACTIVATED" in actions
 
 
 def test_non_admin_cannot_use_mfa_or_audit_endpoints(client: TestClient) -> None:

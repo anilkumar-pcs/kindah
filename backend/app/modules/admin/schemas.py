@@ -4,11 +4,28 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from app.core.schemas import ApiModel
 from app.modules.admin.models import AppealStatus, DeletionRequestStatus
 from app.modules.identity.models import UserRole, UserStatus
+
+
+class AdminUserSummary(ApiModel):
+    id: UUID
+    display_name: str | None
+    role: UserRole
+    status: UserStatus
+    created_at: datetime
+
+
+class AdminUserList(ApiModel):
+    users: list[AdminUserSummary]
+
+
+class UserRoleUpdateRequest(ApiModel):
+    role: UserRole
+    reason: str = Field(min_length=5, max_length=1000)
 
 
 class AdminMfaStatusResponse(ApiModel):
@@ -160,6 +177,47 @@ class OutboxDeadLetterResponse(ApiModel):
 
 class OutboxDeadLetterList(ApiModel):
     dead_letters: list[OutboxDeadLetterResponse]
+
+
+BadgeRuleType = Literal["CONFIRMED_SENT", "THANKS_RECEIVED", "STREAK_DAYS"]
+
+
+class BadgeDefinitionResponse(ApiModel):
+    code: str
+    label: str
+    rule_type: BadgeRuleType
+    threshold: int
+    active: bool
+    sort_order: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class BadgeDefinitionList(ApiModel):
+    badges: list[BadgeDefinitionResponse]
+
+
+class BadgeDefinitionCreate(ApiModel):
+    code: str = Field(min_length=3, max_length=32, pattern=r"^[A-Z][A-Z0-9_]+$")
+    label: str = Field(min_length=2, max_length=64)
+    rule_type: BadgeRuleType
+    threshold: int = Field(ge=1, le=1000)
+    active: bool = True
+    sort_order: int = Field(default=0, ge=0, le=1000)
+
+
+class BadgeDefinitionUpdate(ApiModel):
+    label: str | None = Field(default=None, min_length=2, max_length=64)
+    rule_type: BadgeRuleType | None = None
+    threshold: int | None = Field(default=None, ge=1, le=1000)
+    active: bool | None = None
+    sort_order: int | None = Field(default=None, ge=0, le=1000)
+
+    @model_validator(mode="after")
+    def at_least_one_field(self) -> BadgeDefinitionUpdate:
+        if not self.model_fields_set:
+            raise ValueError("At least one field is required")
+        return self
 
 
 class AdminAuditLogResponse(ApiModel):

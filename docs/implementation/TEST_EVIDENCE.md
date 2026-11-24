@@ -515,10 +515,24 @@
 |---|---|
 | Date | 2026-11-24 |
 | Phase/task | P8.3, P8.5, P8.7 (local smoke only) |
-| Restore | `pg_dump kindah_dev` → restore into `kindah_restore_drill`; counts users=3, wishes=3, gifts=1, audit=4; Alembic `0013_user_badges (head)`; restore DB removed after drill |
+| Restore | `pg_dump kindah_dev` → restore into `kindah_restore_drill`; counts users=3, badge_definitions=5, wishes=3, gifts=1; Alembic `0014_badge_definitions (head)`; restore DB removed after drill |
 | Load | 500 concurrent-ish GET `/api/v1/wishes?limit=20` at concurrency 50; 0 errors; 888.6 rps; p50 51.1 ms; p95 90.3 ms; p99 109.0 ms; max 149.6 ms (local dev machine, not capacity sign-off) |
 | Accessibility | Lighthouse mobile navigation: `/` 100 accessibility, `/sign-in` 100, `/admin` 100, `/me` 100. `/me` best-practices 96 due expected empty-payment-method 404 and CLS score 0.98; no a11y failures |
 | Known limitation | No owner-approved beta assumptions/RPO/RTO, deployed staging, monitoring/on-call, manual screen-reader/keyboard or mobile-browser matrix. P8.3–P8.7 are not fully signed off. |
+
+### VE-043 — DB-only admin roles, role management and configurable badges
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | Owner follow-up (RBAC/badges policy) |
+| Command | `cd backend && uv run alembic upgrade head && uv run ruff check . && uv run ruff format --check . && uv run mypy app tests scripts && uv run pytest -q`; `cd frontend && npm test && npm run lint && npm run typecheck && npm run build` |
+| Environment | PostgreSQL 16.16; Python 3.12.16; Next.js 16.4.6; Node 26 |
+| Result | **PASS** — `0014_badge_definitions (head)`; **176 backend tests**, **54 frontend tests**; all lint, format, type and build checks clean |
+| Roles | `users.role` is the sole admin authority; env allow-list removed. Admin can search users and promote/demote to USER/MODERATOR/ADMIN with mandatory reason, MFA and audit; self-role changes return `CANNOT_CHANGE_OWN_ROLE`; non-admin role changes denied. Role-change notification emitted. Bootstrap CLI supports phone (HMAC lookup, never printed), display name or user UUID. |
+| Badges | `badge_definitions` holds code/label/rule type/threshold/active/sort order; seeds the approved defaults. Admin CRUD creates, updates and deactivates badges with audit; deactivation stops future awards while earned badges remain; DB rule changes are used by the next confirmation. |
+| Decisions | DEC-O7 approved (no extra cooldown), badge defaults approved, no exposure tracking for now. DEC-I13 remains pending. |
+| Known limitation | The owner account has not been identified; bootstrap requires the owner's phone/display name. Rule types remain code-backed, so adding an entirely new rule type still needs code. |
 
 ## Summary
 
@@ -567,7 +581,8 @@
 | Phase 6 overall | `DONE` — 11/11 tasks; external launch gates blocked |
 | Phase 7 karma/streak/badges | PASS — 173 total backend tests, 53 frontend tests |
 | Phase 7 share/Surprise Me | PASS — privacy allow-list, exclusion and weight tests |
-| Phase 7 overall | `DONE` — 8/8 tasks; badge thresholds provisional |
+| Phase 7 overall | `DONE` — 8/8 tasks; badge definitions DB-configurable |
+| DB roles/badge registry | PASS — 176 total backend tests, 54 frontend tests, migration 0014 |
 | Phase 8 threat model/scans | PASS (local scope) — npm/pip/Bandit/secret checks |
 | Phase 8 restore/load/a11y smoke | PASS locally — restore at head, p95 90.3 ms, a11y 100 on 4 pages |
 | Phase 8 overall | `BLOCKED` — deployed staging, monitoring/RPO/RTO, independent security review, legal/provider gates |

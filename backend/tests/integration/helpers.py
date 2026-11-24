@@ -1,13 +1,30 @@
 from __future__ import annotations
 
+import os
 from typing import Any, cast
+from uuid import UUID
 
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
 from app.core.security import totp_code
+from app.modules.identity.models import User, UserRole
 
 TEST_PHONE = "9876543210"
 TEST_CODE = "123456"
+
+
+def set_user_role(user_id: str, role: UserRole) -> None:
+    engine = create_engine(os.environ["DATABASE_URL"])
+    try:
+        with Session(engine) as db:
+            user = db.get(User, UUID(user_id))
+            assert user is not None
+            user.role = role
+            db.commit()
+    finally:
+        engine.dispose()
 
 
 def admin_mfa_headers(client: TestClient, headers: dict[str, str]) -> dict[str, str]:

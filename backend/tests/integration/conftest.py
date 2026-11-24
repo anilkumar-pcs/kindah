@@ -34,6 +34,7 @@ def clean_identity_tables(migrated_database: None) -> Iterator[None]:
                     "recipient_payment_methods, users RESTART IDENTITY CASCADE"
                 )
             )
+            connection.execute(text("DELETE FROM badge_definitions WHERE code LIKE 'TEST%'"))
     finally:
         engine.dispose()
     yield

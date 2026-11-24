@@ -13,14 +13,6 @@ import { listBlocks, unblockUser, type BlockedUser } from "@/lib/api/safety";
 import { giftStatusLabel } from "@/lib/gifts/labels";
 import { restoreSession, type UserProfile } from "@/lib/auth/session";
 
-const BADGE_LABELS: Record<string, string> = {
-  FIRST_GIFT: "First gift",
-  KIND_HEART: "Kind heart",
-  KIND_SOUL: "Kind soul",
-  GRATEFUL: "Grateful",
-  STREAK_3: "Three-day streak",
-};
-
 const KARMA_EVENT_LABELS: Record<string, string> = {
   FIRST_CONFIRMED_GIFT: "First confirmed gift",
   CONFIRMED_GIFT: "Confirmed gift",
@@ -331,7 +323,7 @@ export function MySpace() {
                   key={badge.badgeCode}
                   className="rounded-full bg-kindly-accent-soft px-3 py-1 text-xs font-semibold text-kindly-accent"
                 >
-                  {BADGE_LABELS[badge.badgeCode] ?? badge.badgeCode}
+                  {badge.label}
                 </li>
               ))}
             </ul>
