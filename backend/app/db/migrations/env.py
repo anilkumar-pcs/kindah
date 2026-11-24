@@ -7,17 +7,17 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import get_settings
 from app.core.db import Base
+from app.modules.identity import models as identity_models  # noqa: F401
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+database_url = str(config.attributes.get("database_url") or get_settings().database_url)
+
 # Alembic's ConfigParser interpolates '%', so escape it in the URL.
-config.set_main_option(
-    "sqlalchemy.url",
-    get_settings().database_url.replace("%", "%%"),
-)
+config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 
 target_metadata = Base.metadata
 

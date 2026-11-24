@@ -16,6 +16,7 @@ from app.core.errors import problem_response, register_exception_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import RequestContextMiddleware, SecurityHeadersMiddleware
 from app.core.redis import RedisHealth
+from app.providers import build_crypto_provider, build_sms_provider
 
 logger = logging.getLogger("kindly.app")
 
@@ -53,6 +54,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if resolved_settings.redis_url
         else None
     )
+    app.state.crypto = build_crypto_provider(resolved_settings)
+    app.state.sms = build_sms_provider(resolved_settings)
 
     app.add_middleware(
         CORSMiddleware,
@@ -63,6 +66,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "Authorization",
             "Content-Type",
             "Idempotency-Key",
+            "X-CSRF-Token",
             "X-Request-ID",
         ],
         expose_headers=["X-Request-ID"],

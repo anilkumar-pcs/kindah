@@ -3,7 +3,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
+from app.modules.identity.router import router as identity_router
+
 router = APIRouter()
+router.include_router(identity_router)
 
 
 class MetaResponse(BaseModel):

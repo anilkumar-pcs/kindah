@@ -10,9 +10,11 @@ def make_settings(**overrides: object) -> Settings:
     values: dict[str, object] = {
         "environment": "test",
         "database_url": "postgresql+psycopg://localhost:5432/kindah_test",
-        "jwt_secret": "test-only-jwt-secret",
-        "refresh_token_pepper": "test-only-refresh-token-pepper",
-        "crypto_key": "test-only-crypto-key",
+        "jwt_secret": "test-only-jwt-secret-minimum-32-characters",
+        "refresh_token_pepper": "test-only-refresh-token-pepper-minimum-32-characters",
+        "crypto_key": "test-only-crypto-key-minimum-32-characters",
+        "lookup_hmac_key": "test-only-lookup-hmac-key-minimum-32-characters",
+        "otp_hmac_key": "test-only-otp-hmac-key-minimum-32-characters",
     }
     values.update(overrides)
     return Settings.model_validate(values)
@@ -60,9 +62,32 @@ def test_production_rejects_development_secret_placeholders() -> None:
 def test_production_accepts_non_placeholder_secrets() -> None:
     settings = make_settings(
         environment="production",
-        jwt_secret="a-real-production-jwt-secret",
-        refresh_token_pepper="a-real-production-refresh-pepper",
-        crypto_key="a-real-production-crypto-key",
+        jwt_secret="a-real-production-jwt-secret-minimum-32-characters",
+        refresh_token_pepper="a-real-production-refresh-pepper-minimum-32-characters",
+        crypto_key="a-real-production-crypto-key-minimum-32-characters",
+        lookup_hmac_key="a-real-production-lookup-key-minimum-32-characters",
+        otp_hmac_key="a-real-production-otp-key-minimum-32-characters",
+        sms_provider="external",
+        crypto_provider="kms",
     )
     assert settings.is_production is True
     assert settings.docs_url is None
+
+
+def test_production_rejects_test_sms_and_local_crypto() -> None:
+    with pytest.raises(ValidationError):
+        make_settings(
+            environment="production",
+            jwt_secret="a-real-production-jwt-secret-minimum-32-characters",
+            refresh_token_pepper="a-real-production-refresh-pepper-minimum-32-characters",
+            crypto_key="a-real-production-crypto-key-minimum-32-characters",
+            lookup_hmac_key="a-real-production-lookup-key-minimum-32-characters",
+            otp_hmac_key="a-real-production-otp-key-minimum-32-characters",
+        )
+
+
+def test_otp_test_code_must_be_six_digits() -> None:
+    with pytest.raises(ValidationError):
+        make_settings(otp_test_code="12345")
+    with pytest.raises(ValidationError):
+        make_settings(otp_test_code="abcdef")

@@ -186,6 +186,54 @@
 | Output/artefact | Fresh clone at `/tmp/kindah-phase1-verify-20261123-230455` |
 | Known limitation | This first fresh-clone run found and fixed a generated-type dependency in `layout.tsx` (commit `2991941`). GitHub Actions execution still requires a remote runner; `actionlint` passes and every CI step passes locally. |
 
+### VE-016 — Identity migration cycle
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P2.1–P2.7 |
+| Command | `cd backend && uv run alembic upgrade head`; pytest migration test on isolated `kindah_migration_test` (upgrade → downgrade → upgrade) |
+| Environment | PostgreSQL 16.16 |
+| Result | **PASS** — `0002_identity (head)`; enum + `users`, `user_sessions`, `otp_challenges`, `auth_events` created and dropped cleanly |
+| Output/artefact | `test_migrations.py::test_upgrade_downgrade_upgrade` |
+| Known limitation | Migration test creates its own PostgreSQL database; the CI role must allow `CREATE DATABASE`. |
+
+### VE-017 — Phase 2 backend tests and quality checks
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P2.1–P2.8 |
+| Command | `cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy app tests && uv run pytest` |
+| Environment | Python 3.12.16; PostgreSQL 16.16 `kindah_test` |
+| Result | **PASS** — 78 tests passed; Ruff, format and mypy clean |
+| Output/artefact | Unit tests: phone normalization, OTP/JWT, AES-GCM, config; integration tests: OTP flow, duplicate phone, consent, profile, sessions, rotation/reuse, CSRF, rate limits, expiry, account status, audit privacy |
+| Known limitation | One non-blocking Starlette TestClient deprecation warning. |
+
+### VE-018 — Phase 2 browser validation
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P2.9 |
+| Procedure | Started API + Next.js; entered `9876543210`; test OTP `123456`; checked all consent boxes; set display name `ChaiExplorer`, avatar Chai, city Bengaluru; submitted; reloaded `/sign-in` to verify refresh-session restore |
+| Environment | Chrome DevTools; local API/web |
+| Result | **PASS** — OTP request 202, verify 200, consent 200, profile 200; “Welcome, ChaiExplorer” rendered; reload restored the session via `/auth/refresh` + `/me`; no console errors after fix |
+| Output/artefact | `.artifacts/phase2-signed-in.png` (gitignored) |
+| Known limitation | Browser validation found a real CORS defect: `X-CSRF-Token` was missing from `allow_headers`, blocking refresh preflight. Fixed in `main.py` and covered by a regression test. |
+
+### VE-019 — Phase 2 frontend tests and build
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P2.9 |
+| Command | `cd frontend && npm run lint && npm run format && npm run typecheck && npm test && npm run build` |
+| Environment | Node 26.13.1; Next.js 16.4.6 |
+| Result | **PASS** — ESLint/Prettier/TypeScript clean; 11 Vitest tests pass; production build succeeds |
+| Output/artefact | Sign-in flow tests cover OTP → consent → profile, missing-consent rejection and session restore; API client tests cover bearer auth and refresh-and-retry |
+| Known limitation | Local Node 26 vs CI Node 22; both within the documented range. |
+
 ## Summary
 
 | Verification | Result |
@@ -203,6 +251,10 @@
 | Phase 1 browser full-stack check | PASS |
 | Phase 1 fresh-clone setup | PASS |
 | Phase 1 CI syntax | PASS (`actionlint`); remote run pending |
+| Phase 2 identity migration | PASS — 0002 up/down/up |
+| Phase 2 backend tests | PASS — 78 passed |
+| Phase 2 frontend tests/build | PASS — 11 passed |
+| Phase 2 browser flow + session restore | PASS (after CORS fix) |
 
 ## Rule for future entries
 

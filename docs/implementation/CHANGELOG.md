@@ -2,6 +2,38 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-24 — Phase 2 complete: identity, sessions and profile
+
+### Added
+
+- `0002_identity` migration: `user_status` enum, `users`, `user_sessions`, `otp_challenges` and `auth_events` with constraints and indexes.
+- OTP request/verify service with Indian mobile normalization, keyed HMAC lookup, encrypted mobile storage, masked display, per-phone/IP rate limits, resend throttle, attempt limits and expiry.
+- `SmsProvider` interface and deterministic test adapter; production rejects the test adapter at startup.
+- Session lifecycle: 15-minute JWT access token, rotating opaque refresh token hashed in PostgreSQL, reuse detection with family revocation, logout, expiry checks and account-status enforcement.
+- Double-submit CSRF protection for refresh/logout; access token held in memory only.
+- Consent endpoint recording 18+, draft Terms, Privacy and Guidelines acceptance with policy version.
+- Pseudonymous profile: validated unique display name, preset avatar, optional city, onboarding state, public-safe `/me` DTO.
+- Audit events for OTP, account, session, consent and profile changes without phone/OTP contents.
+- Frontend sign-in flow: OTP request/verify, consent, profile setup, session restore, logout, loading/error states and accessible forms.
+- API client bearer-token support, refresh-and-retry, and CSRF header handling.
+
+### Fixed
+
+- Added `X-CSRF-Token` to the CORS allow-list. Browser validation caught that refresh preflight was blocked; a regression test now covers it.
+- Session restore no longer makes a guaranteed 401 request when no CSRF cookie exists.
+- Development/test signing secrets were lengthened past the 32-character minimum; configuration rejects shorter keys.
+
+### Verification
+
+- 78 backend tests pass; Ruff, format and mypy clean.
+- 11 frontend tests pass; ESLint, Prettier, TypeScript and production build pass.
+- Browser flow: OTP → consent → profile → signed-in; page reload restores session with no console errors.
+- Identity migration upgrade → downgrade → upgrade passes on an isolated database.
+
+### Blocked
+
+- Production OTP/SMS provider is not selected. Production auth remains `BLOCKED`; development/test use the deterministic adapter.
+
 ## 2026-11-23 — Phase 1 complete: foundation and runnable skeleton
 
 ### Added

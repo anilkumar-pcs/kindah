@@ -191,22 +191,22 @@ account.
 
 **In scope**
 
--   [ ] P2.1 Implement OTP request/verify service abstraction with
+-   [x] P2.1 Implement OTP request/verify service abstraction with
     local/test adapter and rate limiting.
--   [ ] P2.2 Implement Indian mobile number normalization and
+-   [x] P2.2 Implement Indian mobile number normalization and
     one-account-per-verified-number enforcement.
--   [ ] P2.3 Implement secure session/token lifecycle, refresh rotation
+-   [x] P2.3 Implement secure session/token lifecycle, refresh rotation
     or equivalent revocation-safe design, logout and expiry.
--   [ ] P2.4 Implement first-login 18+ self-declaration and
+-   [x] P2.4 Implement first-login 18+ self-declaration and
     Terms/Privacy/Guidelines acceptance timestamps.
--   [ ] P2.5 Implement pseudonymous display name and avatar; enforce
+-   [x] P2.5 Implement pseudonymous display name and avatar; enforce
     uniqueness and safe validation.
--   [ ] P2.6 Implement profile read/update and account status checks.
--   [ ] P2.7 Implement authorization dependencies and ensure
+-   [x] P2.6 Implement profile read/update and account status checks.
+-   [x] P2.7 Implement authorization dependencies and ensure
     restricted/suspended/banned accounts cannot perform prohibited
     actions.
--   [ ] P2.8 Add OTP abuse controls, audit events and security tests.
--   [ ] P2.9 Implement frontend sign-in, verification, consent and
+-   [x] P2.8 Add OTP abuse controls, audit events and security tests.
+-   [x] P2.9 Implement frontend sign-in, verification, consent and
     profile setup flows.
 
 **Exit criteria**

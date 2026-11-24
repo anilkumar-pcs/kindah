@@ -40,14 +40,36 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
     log_level: str = "INFO"
 
-    jwt_secret: SecretStr = Field(default=SecretStr("dev-only-jwt-secret-change-me"))
-    refresh_token_pepper: SecretStr = Field(
-        default=SecretStr("dev-only-refresh-token-pepper-change-me")
+    jwt_secret: SecretStr = Field(
+        default=SecretStr("dev-only-jwt-secret-change-me-minimum-32-characters")
     )
-    crypto_key: SecretStr = Field(default=SecretStr("dev-only-crypto-key-change-me"))
+    refresh_token_pepper: SecretStr = Field(
+        default=SecretStr("dev-only-refresh-token-pepper-minimum-32-characters")
+    )
+    crypto_key: SecretStr = Field(default=SecretStr("dev-only-crypto-key-minimum-32-characters"))
+    lookup_hmac_key: SecretStr = Field(
+        default=SecretStr("dev-only-lookup-hmac-key-minimum-32-characters")
+    )
+    otp_hmac_key: SecretStr = Field(
+        default=SecretStr("dev-only-otp-hmac-key-minimum-32-characters")
+    )
 
     payments_live_enabled: bool = False
     handoff_mode: Literal["test", "live"] = "test"
+
+    sms_provider: str = "test"
+    crypto_provider: str = "local"
+
+    access_token_ttl_minutes: int = Field(default=15, gt=0, le=120)
+    refresh_token_ttl_days: int = Field(default=30, gt=0, le=365)
+    otp_ttl_seconds: int = Field(default=300, gt=0, le=900)
+    otp_max_attempts: int = Field(default=5, gt=0, le=10)
+    otp_resend_seconds: int = Field(default=30, ge=0, le=300)
+    otp_phone_limit: int = Field(default=3, gt=0, le=20)
+    otp_ip_limit: int = Field(default=20, gt=0, le=200)
+    otp_window_minutes: int = Field(default=15, gt=0, le=60)
+    otp_test_code: str = "123456"
+    legal_policy_version: str = "draft-2026-11-23"
 
     db_connect_timeout_seconds: int = 3
     redis_timeout_seconds: float = 1.0
@@ -75,6 +97,13 @@ class Settings(BaseSettings):
             raise ValueError("API_V1_PREFIX must start with '/'")
         return value.rstrip("/")
 
+    @field_validator("otp_test_code")
+    @classmethod
+    def validate_otp_test_code(cls, value: str) -> str:
+        if len(value) != 6 or not value.isdigit():
+            raise ValueError("OTP_TEST_CODE must be exactly six digits")
+        return value
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
@@ -91,8 +120,21 @@ class Settings(BaseSettings):
     def redoc_url(self) -> str | None:
         return None if self.is_production else "/redoc"
 
+    @property
+    def cookie_secure(self) -> bool:
+        return self.is_production
+
     @model_validator(mode="after")
     def enforce_safety(self) -> Settings:
+        for name, secret in {
+            "JWT_SECRET": self.jwt_secret,
+            "REFRESH_TOKEN_PEPPER": self.refresh_token_pepper,
+            "CRYPTO_KEY": self.crypto_key,
+            "LOOKUP_HMAC_KEY": self.lookup_hmac_key,
+            "OTP_HMAC_KEY": self.otp_hmac_key,
+        }.items():
+            if len(secret.get_secret_value()) < 32:
+                raise ValueError(f"{name} must be at least 32 characters")
         if self.environment in {"local", "test"} and self.payments_live_enabled:
             raise ValueError("PAYMENTS_LIVE_ENABLED must be false in local and test environments")
         if self.payments_live_enabled and self.handoff_mode != "live":
@@ -104,10 +146,16 @@ class Settings(BaseSettings):
                 "JWT_SECRET": self.jwt_secret,
                 "REFRESH_TOKEN_PEPPER": self.refresh_token_pepper,
                 "CRYPTO_KEY": self.crypto_key,
+                "LOOKUP_HMAC_KEY": self.lookup_hmac_key,
+                "OTP_HMAC_KEY": self.otp_hmac_key,
             }.items():
                 value = secret.get_secret_value()
                 if any(marker in value for marker in _INSECURE_SECRET_PLACEHOLDERS):
                     raise ValueError(f"{name} must not use a development placeholder in production")
+            if self.sms_provider == "test":
+                raise ValueError("SMS_PROVIDER must not be the test adapter in production")
+            if self.crypto_provider == "local":
+                raise ValueError("CRYPTO_PROVIDER must not be the local adapter in production")
         return self
 
 

@@ -125,3 +125,18 @@ def test_cors_preflight_allows_configured_origin(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
+
+
+def test_cors_preflight_allows_csrf_header(client: TestClient) -> None:
+    response = client.options(
+        "/api/v1/auth/refresh",
+        headers={
+            "Origin": "http://localhost:3000",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "x-csrf-token,content-type",
+        },
+    )
+
+    assert response.status_code == 200
+    allowed = response.headers["access-control-allow-headers"].lower()
+    assert "x-csrf-token" in allowed

@@ -7,9 +7,13 @@ from collections.abc import Iterator
 os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("DATABASE_URL", "postgresql+psycopg://localhost:5432/kindah_test")
 os.environ.setdefault("REDIS_URL", "")
-os.environ.setdefault("JWT_SECRET", "test-only-jwt-secret")
-os.environ.setdefault("REFRESH_TOKEN_PEPPER", "test-only-refresh-token-pepper")
-os.environ.setdefault("CRYPTO_KEY", "test-only-crypto-key")
+os.environ.setdefault("JWT_SECRET", "test-only-jwt-secret-minimum-32-characters")
+os.environ.setdefault(
+    "REFRESH_TOKEN_PEPPER", "test-only-refresh-token-pepper-minimum-32-characters"
+)
+os.environ.setdefault("CRYPTO_KEY", "test-only-crypto-key-minimum-32-characters")
+os.environ.setdefault("LOOKUP_HMAC_KEY", "test-only-lookup-hmac-key-minimum-32-characters")
+os.environ.setdefault("OTP_HMAC_KEY", "test-only-otp-hmac-key-minimum-32-characters")
 os.environ.setdefault("PAYMENTS_LIVE_ENABLED", "false")
 os.environ.setdefault("HANDOFF_MODE", "test")
 
@@ -30,9 +34,11 @@ def settings() -> Settings:
         database_url=TEST_DATABASE_URL,
         redis_url=None,
         cors_origins="http://localhost:3000",
-        jwt_secret="test-only-jwt-secret",
-        refresh_token_pepper="test-only-refresh-token-pepper",
-        crypto_key="test-only-crypto-key",
+        jwt_secret="test-only-jwt-secret-minimum-32-characters",
+        refresh_token_pepper="test-only-refresh-token-pepper-minimum-32-characters",
+        crypto_key="test-only-crypto-key-minimum-32-characters",
+        lookup_hmac_key="test-only-lookup-hmac-key-minimum-32-characters",
+        otp_hmac_key="test-only-otp-hmac-key-minimum-32-characters",
         payments_live_enabled=False,
         handoff_mode="test",
         db_connect_timeout_seconds=2,
