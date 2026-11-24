@@ -381,7 +381,7 @@ handling and auditable moderator actions.
     prevention and abuse controls.
 -   [x] P6.2 Implement block/unblock and ensure blocked users cannot
     discover or interact with each other as specified.
--   [ ] P6.3 Implement auto-hide threshold and review queue.
+-   [x] P6.3 Implement auto-hide threshold and review queue.
 -   [ ] P6.4 Implement minimum protected admin/moderator area in the
     same application.
 -   [ ] P6.5 Implement role checks, admin MFA requirement and

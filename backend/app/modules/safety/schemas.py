@@ -75,6 +75,23 @@ class BlockedUserList(ApiModel):
     blocked_users: list[BlockedUserResponse]
 
 
+class AdminReportResponse(ApiModel):
+    id: UUID
+    target_type: ReportTargetType
+    target_id: UUID
+    reason: ReportReason
+    status: ReportStatus
+    unique_report_count: int
+    target_display_name: str | None
+    target_preview: str | None
+    target_status: str | None
+    created_at: datetime
+
+
+class AdminReportList(ApiModel):
+    reports: list[AdminReportResponse]
+
+
 class AdminSupportCaseList(ApiModel):
     cases: list[AdminSupportCaseResponse]
 

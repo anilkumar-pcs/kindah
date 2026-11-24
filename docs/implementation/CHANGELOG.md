@@ -2,6 +2,27 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-24 — Phase 6: auto-hide and moderator report queue
+
+### Added
+
+- Atomic auto-hide: the third unique wish report moves an active OPEN wish to UNDER_REVIEW
+  under a wish row lock. Duplicate reports do not count and the hide audit is written once.
+- `GET /api/v1/admin/reports` queue with status filter, target display name, public message
+  preview, target status and unique report count; reporter identity and private data are
+  excluded.
+- `AUTO_HIDE_REPORT_THRESHOLD=3` configuration and documentation.
+
+### Verification
+
+- 153 backend tests pass; Ruff, format and mypy clean.
+- Tests cover duplicate-non-counting, exact threshold, once-only audit, feed/detail exclusion
+  and non-admin 403 on the queue.
+
+### Open
+
+- Protected admin UI/RBAC/MFA (P6.4–P6.5), moderation actions and restore (P6.6).
+
 ## 2026-11-24 — Phase 6: reporting, rate limits and blocking
 
 ### Added

@@ -382,6 +382,18 @@
 | Privacy checks | Report responses contain target/reason/status only, no reporter identity or display name; audit metadata has no free text; blocking excludes both users in both directions; no user IDs are added to public wish cards. |
 | Known limitation | The moderator queue/admin UI (P6.3–P6.5) is not built yet; reports remain OPEN and no auto-hide is applied. |
 
+### VE-032 — Phase 6 auto-hide threshold and moderator review queue
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P6.3 |
+| Command | `cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy app tests && uv run pytest -q` |
+| Environment | PostgreSQL 16.16; Python 3.12.16 |
+| Result | **PASS** — **153 backend tests**; Ruff, format and mypy clean |
+| Output/artefact | Two unique reports plus a duplicate leave the wish OPEN; the third unique report atomically moves it to UNDER_REVIEW; a fourth unique report does not create a second `WISH_AUTO_HIDDEN` audit event. Hidden wish is absent from guest feed and participant detail. `/admin/reports` returns target display name, message preview, status and unique report count; non-admin receives 403; no reporter identity, phone, VPA or report free text is exposed. |
+| Known limitation | Admin queue is API-only until P6.4/P6.5; moderation actions and restore are P6.6. |
+
 ## Summary
 
 | Verification | Result |
@@ -418,6 +430,7 @@
 | Phase 5 frontend gift UI | PASS — 31 tests, build clean, donor/recipient browser journey |
 | Phase 5 overall | `DONE` — 15/15 tasks, pending external launch gates only |
 | Phase 6 reporting/blocking | PASS — 152 total backend tests, 34 frontend tests, report/block browser flow |
+| Phase 6 auto-hide/queue | PASS — 153 total backend tests, threshold hides once, queue is admin-only |
 
 ## Rule for future entries
 

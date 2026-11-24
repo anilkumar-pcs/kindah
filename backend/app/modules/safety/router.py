@@ -8,9 +8,10 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db_session
 from app.modules.identity.dependencies import require_active_auth, require_admin
 from app.modules.identity.service import AuthContext
-from app.modules.safety.models import SupportCaseStatus
+from app.modules.safety.models import ReportStatus, SupportCaseStatus
 from app.modules.safety.report_service import SafetyService
 from app.modules.safety.schemas import (
+    AdminReportList,
     AdminSupportCaseList,
     AdminSupportCaseResponse,
     BlockedUserList,
@@ -155,6 +156,15 @@ def create_support_case(
     service: SupportCaseService = Depends(get_support_service),
 ) -> SupportCaseResponse:
     return service.create(auth.user, gift_id, body)
+
+
+@router.get("/admin/reports", response_model=AdminReportList)
+def list_reports(
+    status: ReportStatus | None = Query(default=ReportStatus.OPEN),
+    _admin: AuthContext = Depends(require_admin),
+    service: SafetyService = Depends(get_safety_service),
+) -> AdminReportList:
+    return service.list_admin(status)
 
 
 @router.get(

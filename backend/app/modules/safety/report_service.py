@@ -20,12 +20,14 @@ from app.modules.safety.models import (
     UserBlock,
 )
 from app.modules.safety.schemas import (
+    AdminReportList,
+    AdminReportResponse,
     BlockedUserList,
     BlockedUserResponse,
     ReportCreateRequest,
     ReportResponse,
 )
-from app.modules.wishes.models import Wish
+from app.modules.wishes.models import Wish, WishStatus
 
 
 class SafetyService:
@@ -136,6 +138,8 @@ class SafetyService:
             updated_at=now,
         )
         self.session.add(report)
+        self.session.flush()
+        self._auto_hide_if_threshold(target_type, target_id, now)
         record_audit_event(
             session=self.session,
             event_type="REPORT_CREATED",
@@ -170,6 +174,82 @@ class SafetyService:
                 ModerationReport.target_id == target_id,
             )
         )
+
+    def _auto_hide_if_threshold(
+        self,
+        target_type: ReportTargetType,
+        target_id: UUID,
+        now: datetime,
+    ) -> None:
+        if target_type != ReportTargetType.WISH:
+            return
+        wish = self.session.scalar(select(Wish).where(Wish.id == target_id).with_for_update())
+        if wish is None or wish.status != WishStatus.OPEN or wish.expires_at <= now:
+            return
+        unique_reports = self.session.scalar(
+            select(func.count(ModerationReport.id)).where(
+                ModerationReport.target_type == ReportTargetType.WISH,
+                ModerationReport.target_id == target_id,
+            )
+        )
+        if (unique_reports or 0) < self.settings.auto_hide_report_threshold:
+            return
+        wish.status = WishStatus.UNDER_REVIEW
+        wish.updated_at = now
+        record_audit_event(
+            session=self.session,
+            event_type="WISH_AUTO_HIDDEN",
+            user_id=None,
+            metadata={
+                "wishId": str(wish.id),
+                "uniqueReports": unique_reports,
+                "threshold": self.settings.auto_hide_report_threshold,
+            },
+        )
+
+    def list_admin(self, status: ReportStatus | None = None) -> AdminReportList:
+        statement = select(ModerationReport).order_by(ModerationReport.created_at.asc()).limit(100)
+        if status is not None:
+            statement = statement.where(ModerationReport.status == status)
+        reports = list(self.session.scalars(statement))
+        responses: list[AdminReportResponse] = []
+        for report in reports:
+            unique_reports = self.session.scalar(
+                select(func.count(ModerationReport.id)).where(
+                    ModerationReport.target_type == report.target_type,
+                    ModerationReport.target_id == report.target_id,
+                )
+            )
+            display_name: str | None = None
+            preview: str | None = None
+            target_status: str | None = None
+            if report.target_type == ReportTargetType.WISH:
+                wish = self.session.get(Wish, report.target_id)
+                if wish is not None:
+                    preview = wish.message
+                    target_status = wish.status.value
+                    owner = self.session.get(User, wish.user_id)
+                    display_name = owner.display_name if owner else None
+            else:
+                user = self.session.get(User, report.target_id)
+                if user is not None:
+                    display_name = user.display_name
+                    target_status = user.status.value
+            responses.append(
+                AdminReportResponse(
+                    id=report.id,
+                    target_type=report.target_type,
+                    target_id=report.target_id,
+                    reason=report.reason,
+                    status=report.status,
+                    unique_report_count=int(unique_reports or 0),
+                    target_display_name=display_name,
+                    target_preview=preview,
+                    target_status=target_status,
+                    created_at=report.created_at,
+                )
+            )
+        return AdminReportList(reports=responses)
 
     # ------------------------------------------------------------------
     # Blocks

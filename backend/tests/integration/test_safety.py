@@ -11,6 +11,7 @@ from app.core.config import Settings
 from app.main import create_app
 from app.modules.identity.models import AuthEvent
 from app.modules.safety.models import ModerationReport
+from app.modules.wishes.models import Wish, WishStatus
 from tests.integration.helpers import complete_setup
 from tests.integration.test_discovery import _create_wish
 from tests.integration.test_gifts import _create_gift
@@ -195,6 +196,94 @@ def test_block_unblock_excludes_discovery_and_interactions(client: TestClient) -
         headers=viewer_headers,
     )
     assert alias_unblock.status_code == 204
+
+
+def test_three_unique_reports_auto_hide_once_and_enter_admin_queue(
+    client: TestClient,
+    settings: Settings,
+) -> None:
+    owner_session, owner_headers, _ = complete_setup(
+        client,
+        phone="9876501031",
+        display_name="HiddenWishOwner",
+        vpa="hiddenowner@okhdfc",
+    )
+    wish = _create_wish(client, owner_headers)
+    reporters: list[dict[str, str]] = []
+    for index in range(1, 5):
+        _, headers, _ = complete_setup(
+            client,
+            phone=f"987650104{index}",
+            display_name=f"HideReporter{index}",
+            vpa=f"hidereporter{index}@okaxis",
+        )
+        reporters.append(headers)
+
+    assert _report_wish(client, reporters[0], wish["id"]).status_code == 201
+    assert _report_wish(client, reporters[1], wish["id"], reason="SPAM_BOT").status_code == 201
+    duplicate = _report_wish(client, reporters[0], wish["id"], reason="OTHER")
+    assert duplicate.status_code == 200
+
+    engine = create_engine(os.environ["DATABASE_URL"])
+    try:
+        with Session(engine) as db:
+            wish_row = db.get(Wish, wish["id"])
+            assert wish_row is not None
+            assert wish_row.status == WishStatus.OPEN
+    finally:
+        engine.dispose()
+
+    assert _report_wish(client, reporters[2], wish["id"], reason="IMPERSONATION").status_code == 201
+    assert _report_wish(client, reporters[3], wish["id"], reason="OTHER").status_code == 201
+    assert _report_wish(client, reporters[2], wish["id"], reason="SPAM_BOT").status_code == 200
+
+    engine = create_engine(os.environ["DATABASE_URL"])
+    try:
+        with Session(engine) as db:
+            wish_row = db.get(Wish, wish["id"])
+            assert wish_row is not None
+            assert wish_row.status == WishStatus.UNDER_REVIEW
+            hidden_events = list(
+                db.scalars(select(AuthEvent).where(AuthEvent.event_type == "WISH_AUTO_HIDDEN"))
+            )
+            assert len(hidden_events) == 1
+            assert hidden_events[0].event_metadata["uniqueReports"] == 3
+            assert hidden_events[0].event_metadata["threshold"] == 3
+            assert "HideReporter" not in str(hidden_events[0].event_metadata)
+    finally:
+        engine.dispose()
+
+    assert wish["id"] not in [item["id"] for item in client.get("/api/v1/wishes").json()["wishes"]]
+    assert client.get(f"/api/v1/wishes/{wish['id']}", headers=reporters[0]).status_code == 404
+
+    non_admin = client.get("/api/v1/admin/reports", headers=reporters[0])
+    assert non_admin.status_code == 403
+
+    admin_session, admin_headers, _ = complete_setup(
+        client,
+        phone="9876501050",
+        display_name="QueueAdmin",
+        vpa="queueadmin@okhdfc",
+    )
+    admin_id = str(admin_session["user"]["id"])
+    admin_app = create_app(settings.model_copy(update={"admin_user_ids": admin_id}))
+    with TestClient(admin_app) as admin_client:
+        queue = admin_client.get("/api/v1/admin/reports", headers=admin_headers)
+        assert queue.status_code == 200, queue.text
+        reports = queue.json()["reports"]
+        assert len(reports) == 4
+        first = reports[0]
+        assert first["targetType"] == "WISH"
+        assert first["targetId"] == wish["id"]
+        assert first["targetDisplayName"] == "HiddenWishOwner"
+        assert first["targetPreview"] == "A warm chai for a long day"
+        assert first["targetStatus"] == "UNDER_REVIEW"
+        assert first["uniqueReportCount"] == 4
+        assert "reporter" not in str(first).lower()
+        assert "98765010" not in str(reports)
+        assert "hiddenowner@okhdfc" not in str(reports)
+
+    assert owner_session["user"]["id"]
 
 
 def _two_users(client: TestClient) -> tuple[dict[str, str], dict[str, str]]:
