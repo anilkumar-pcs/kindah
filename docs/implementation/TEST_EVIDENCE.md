@@ -330,6 +330,18 @@
 | Output/artefact | `/tmp/kindah-phase1-verify-20261123-230455` |
 | Known limitation | GitHub Actions remote execution remains pending. |
 
+### VE-028 — Phase 5 gift/reservation backend and state-machine tests
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P5.1–P5.9, P5.11, P5.12, P5.15 |
+| Command | `cd backend && uv run alembic upgrade head && uv run ruff check . && uv run ruff format --check . && uv run mypy app tests && uv run pytest` |
+| Environment | PostgreSQL 16.16; Python 3.12.16 |
+| Result | **PASS** — `0005_gifts (head)`; **145 backend tests passed**; Ruff, format and mypy clean |
+| Output/artefact | 12 gift tests: handoff/views, idempotent replay/conflict, two concurrent donors (one 201/one 409), PAID consumes reservation, FAILED after PAID rejected, STILL_PROCESSING once, FAILED release/re-reservation, recipient confirmation + karma once (30 donor/3 recipient), dispute no karma, recipient-only confirmation, expiry reopen, DONOR_PENDING never reopens, PAID survives expiry and becomes UNVERIFIED with no karma |
+| Known limitation | True simultaneous PAID-vs-expiry and confirmation-vs-timeout races are not yet instrumented; P5.10 late-payment support path and P5.14 UI remain open. Phase 5 is **not** DONE. |
+
 ## Summary
 
 | Verification | Result |
@@ -360,6 +372,9 @@
 | Phase 4 frontend tests/build | PASS — 21 passed |
 | Phase 4 browser guest feed/auth gate | PASS |
 | Phase 4 fresh-clone validation | PASS |
+| Phase 5 gift/reservation backend | PASS — 145 tests, 12 gift tests |
+| Phase 5 mandatory race suite | PARTIAL — concurrent donors/idempotency covered; true PAID-vs-expiry and confirmation-vs-timeout races pending |
+| Phase 5 frontend gift UI | NOT STARTED |
 
 ## Rule for future entries
 

@@ -26,7 +26,9 @@ This approves:
 - Installation of local development dependencies and initialisation of git with a baseline commit.
 - Sequential phase progression after each phase's validation.
 
-This does **not** approve the Phase 5 reservation/UPI interpretations or external legal/provider gates. `DEC-O2`–`DEC-O10`, `DEC-I05`–`DEC-I10`, `DEC-I13`, `DEC-I15`, `DEC-I16`, `DEC-I18` and `DEC-A01`–`DEC-A04` remain `PENDING` unless separately recorded. External gates remain `EXTERNAL_BLOCKED`.
+**2026-11-24 — Phase 5 defaults approval.** The owner stated verbatim: "go ahead with your proposed defaults". This approves `DEC-O2` (10-minute reservation, one extension to 20 minutes total, 24-hour recipient response), `DEC-A02` (generate in-transaction, persist encrypted, expose after commit), `DEC-A03` (literal spec: a new wish is allowed after PAID) and `DEC-A04` (DONOR_PENDING timeout expires the wish and never reopens).
+
+This does **not** approve external legal/provider gates. Other decisions — `DEC-O3`–`DEC-O10`, `DEC-I05`–`DEC-I10`, `DEC-I13`, `DEC-I15`, `DEC-I16`, `DEC-I18`, `DEC-A01` and `DEC-A05` — remain `PENDING` unless separately recorded. External gates remain `EXTERNAL_BLOCKED`.
 
 ---
 
@@ -34,7 +36,7 @@ This does **not** approve the Phase 5 reservation/UPI interpretations or externa
 
 | ID | Topic | Proposal | Owner decision | Affects |
 |---|---|---|---|---|
-| DEC-O2 | Reservation and response timings | 10 min + one extension to 20 min total; 24h recipient response | PENDING | P5.2, P5.7, P5.8 |
+| DEC-O2 | Reservation and response timings | 10 min + one extension to 20 min total; 24h recipient response | APPROVED (2026-11-24) | P5.2, P5.7, P5.8 |
 | DEC-O3 | Direct UPI legal/bank position | Keep real money off until written approvals | EXTERNAL_BLOCKED | P5.15, P8.9, P8.11 |
 | DEC-O4 | VPA beneficiary validation | Syntax-only with explicit residual risk | EXTERNAL_BLOCKED | P3.1, P8.9 |
 | DEC-O5 | Payment labels / copy freeze | Use spec's attestation labels | PENDING | P5.5, P5.14 |
@@ -62,9 +64,9 @@ This does **not** approve the Phase 5 reservation/UPI interpretations or externa
 | DEC-I17 | CI platform | GitHub Actions | APPROVED (Phase 1) | P1.8 |
 | DEC-I18 | Display-name policy | 3–24 chars, case-insensitive unique, reserved words | PENDING | P2.5 |
 | DEC-A01 | Surprise Me / Random tab scope | Random in Phase 4; Surprise Me Phase 7, before beta | PENDING | P4, P7, P8 |
-| DEC-A02 | UPI URI generation vs persistence | Generate in transaction, persist encrypted, expose after commit | PENDING | P5.3, P5.4 |
-| DEC-A03 | Wish eligibility after donor PAID | Follow literal spec (new wish allowed) | PENDING | P3.7, P5 |
-| DEC-A04 | `DONOR_PENDING` at reservation timeout | Expire wish; never reopen; support path | PENDING | P5.7, P5.10 |
+| DEC-A02 | UPI URI generation vs persistence | Generate in transaction, persist encrypted, expose after commit | APPROVED (2026-11-24) | P5.3, P5.4 |
+| DEC-A03 | Wish eligibility after donor PAID | Follow literal spec (new wish allowed) | APPROVED (2026-11-24) | P3.7, P5 |
+| DEC-A04 | `DONOR_PENDING` at reservation timeout | Expire wish; never reopen; support path | APPROVED (2026-11-24) | P5.7, P5.10 |
 | DEC-A05 | Visual design direction | Neutral accessible tokens until owner supplies direction | APPROVED (Phase 1) | P1.4, P4.6, P5.14 |
 
 ---
@@ -78,7 +80,7 @@ This does **not** approve the Phase 5 reservation/UPI interpretations or externa
 | Question | Confirm the reservation/response timings before implementing the gift state machine. |
 | Options | **A.** 10-minute handoff reservation; one Still Processing extension to a maximum of 20 minutes total; 24-hour recipient response window (spec recommendation). **B.** Different values. **C.** Make values configurable but ship A. |
 | Recommendation | **C.** Implement A as configurable settings; obtain owner sign-off before Phase 5 and record the exact values. A configuration change must not silently alter an in-flight gift. |
-| Owner decision | **PENDING** |
+| Owner decision | **APPROVED — 2026-11-24** |
 | Date | 2026-11-23 |
 | Affects | P5.2, P5.7, P5.8 |
 
@@ -394,7 +396,7 @@ This does **not** approve the Phase 5 reservation/UPI interpretations or externa
 | Question | Spec §4.2 says the UPI URI/QR is persisted; §4.4 says no URI may be generated or returned before the transaction commits. How should the gift transaction behave? |
 | Options | **A.** Generate the URI in memory from validated/persisted server-owned data inside the transaction, persist the handoff payload encrypted, and expose it only after commit. **B.** Commit the gift first, then generate/persist the handoff in a second transaction with an idempotent recovery path. **C.** Generate after commit and never persist, regenerating on read. |
 | Recommendation | **A.** It preserves atomicity, satisfies persistence, and avoids exposing a handoff for a failed commit. Interpret the §4.4 prohibition as "do not expose before commit." If the owner reads it literally as "do not generate", B is required with a committed-but-unissued recovery state. |
-| Owner decision | **PENDING** |
+| Owner decision | **APPROVED — 2026-11-24** |
 | Date | 2026-11-23 |
 | Affects | P5.3, P5.4 |
 
@@ -405,7 +407,7 @@ This does **not** approve the Phase 5 reservation/UPI interpretations or externa
 | Question | Spec §3.2 limits a user to one OPEN or LOCKED wish and starts cooldown only after GRANTED or EXPIRED. May a recipient publish a new wish while the previous wish is PAYMENT_CLAIMED, UNVERIFIED or DISPUTED? |
 | Options | **A.** Follow the literal spec: yes, because the old wish is no longer OPEN/LOCKED and no cooldown applies. **B.** Treat unresolved payment states as blocking a new wish until the old wish is terminal. **C.** Block until terminal and then apply a cooldown. |
 | Recommendation | **A** for spec fidelity, with a privacy/abuse review note. If the product intent is "one unresolved gift at a time", choose **B** before Phase 3. Do not implement a hybrid silently. |
-| Owner decision | **PENDING** |
+| Owner decision | **APPROVED — 2026-11-24** |
 | Date | 2026-11-23 |
 | Affects | P3.7, P5 |
 
@@ -416,7 +418,7 @@ This does **not** approve the Phase 5 reservation/UPI interpretations or externa
 | Question | Spec §4.1 permits LOCKED → OPEN on ABANDONED while within the original lifetime, but §4.3 says never release a wish while the gift is DONOR_PENDING. What happens when a still-processing handoff reaches its extended timeout? |
 | Options | **A.** Mark the gift ABANDONED and the wish EXPIRED; never reopen; route to support. **B.** Keep the reservation ACTIVE and alert support for manual resolution. **C.** Abandon and reopen within the lifetime. |
 | Recommendation | **A.** The donor has indicated a payment may be in flight; reopening risks a second transfer to the same wish. No karma, no automatic refund. |
-| Owner decision | **PENDING** |
+| Owner decision | **APPROVED — 2026-11-24** |
 | Date | 2026-11-23 |
 | Affects | P5.7, P5.10 |
 

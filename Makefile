@@ -27,6 +27,12 @@ run-web:
 worker-wish-expiry:
 	cd $(BACKEND) && uv run python -m app.workers.wish_expiry
 
+worker-reservation-expiry:
+	cd $(BACKEND) && uv run python -m app.workers.reservation_expiry
+
+worker-unverified-timeout:
+	cd $(BACKEND) && uv run python -m app.workers.unverified_timeout
+
 test-backend:
 	cd $(BACKEND) && uv run pytest
 

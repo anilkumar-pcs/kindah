@@ -313,36 +313,36 @@ state machine before polishing the UI.**
 
 **In scope**
 
--   [ ] P5.1 Implement canonical enums and state transitions exactly as
+-   [x] P5.1 Implement canonical enums and state transitions exactly as
     defined in specification Section 4.
--   [ ] P5.2 Implement `wish_reservations` with explicit status,
+-   [x] P5.2 Implement `wish_reservations` with explicit status,
     timestamps, extension count and partial unique index for one ACTIVE
     reservation per wish.
--   [ ] P5.3 Implement `POST /api/v1/gifts` with authenticated donor,
+-   [x] P5.3 Implement `POST /api/v1/gifts` with authenticated donor,
     server-side amount validation, row locking and idempotency.
--   [ ] P5.4 Persist gift, reservation, wish lock, gift event and
+-   [x] P5.4 Persist gift, reservation, wish lock, gift event and
     outbox/domain event atomically.
--   [ ] P5.5 Generate UPI intent/QR payload for test destinations behind
+-   [x] P5.5 Generate UPI intent/QR payload for test destinations behind
     a feature flag; clearly disclose bank-registered-name visibility.
--   [ ] P5.6 Implement donor outcomes: PAID, STILL_PROCESSING and
+-   [x] P5.6 Implement donor outcomes: PAID, STILL_PROCESSING and
     FAILED, with actor authorization and state guards.
--   [ ] P5.7 Implement one allowed reservation extension and the
+-   [x] P5.7 Implement one allowed reservation extension and the
     configured reservation expiry worker.
--   [ ] P5.8 Implement recipient RECEIVED/NOT_RECEIVED confirmation and
+-   [x] P5.8 Implement recipient RECEIVED/NOT_RECEIVED confirmation and
     24-hour response deadline.
--   [ ] P5.9 Implement terminal states UNVERIFIED/DISPUTED and ensure no
+-   [x] P5.9 Implement terminal states UNVERIFIED/DISPUTED and ensure no
     automatic reopening after a paid claim.
 -   [ ] P5.10 Implement late-payment/old-URI support path; do not
     promise platform-controlled reversal/refund.
--   [ ] P5.11 Implement gift history/status for donor and recipient.
--   [ ] P5.12 Implement karma ledger only after recipient confirmation;
+-   [x] P5.11 Implement gift history/status for donor and recipient.
+-   [x] P5.12 Implement karma ledger only after recipient confirmation;
     enforce unique idempotency key and no duplicate awards.
 -   [ ] P5.13 Add concurrency tests: simultaneous donors, donor outcome
     vs expiry, recipient confirmation vs timeout, retry and
     re-reservation.
 -   [ ] P5.14 Add end-to-end UI for amount selection, review, UPI
     handoff, return-to-app, donor outcome and recipient confirmation.
--   [ ] P5.15 Keep production real-money handoff disabled until written
+-   [x] P5.15 Keep production real-money handoff disabled until written
     legal and bank/payment-partner gates are cleared.
 
 **Mandatory exit criteria**

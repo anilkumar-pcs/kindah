@@ -80,6 +80,13 @@ class Settings(BaseSettings):
     max_gift_inr: int = Field(default=100, ge=10)
     prohibited_wish_terms: str = ""
 
+    reservation_minutes: int = Field(default=10, gt=0, le=60)
+    reservation_extension_minutes: int = Field(default=20, gt=0, le=60)
+    recipient_response_hours: int = Field(default=24, gt=0, le=72)
+    unresolved_claim_limit: int = Field(default=2, gt=0, le=10)
+    cheer_max_chars: int = Field(default=80, gt=0, le=120)
+    handoff_provider: str = "test"
+
     db_connect_timeout_seconds: int = 3
     redis_timeout_seconds: float = 1.0
 
@@ -177,6 +184,8 @@ class Settings(BaseSettings):
                 raise ValueError("SMS_PROVIDER must not be the test adapter in production")
             if self.crypto_provider == "local":
                 raise ValueError("CRYPTO_PROVIDER must not be the local adapter in production")
+            if self.handoff_provider == "test":
+                raise ValueError("HANDOFF_PROVIDER must not be the test adapter in production")
         return self
 
 

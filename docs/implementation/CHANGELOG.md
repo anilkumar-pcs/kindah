@@ -2,6 +2,32 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-24 — Phase 5 in progress: gift, reservation and UPI handoff backend
+
+### Added
+
+- `0005_gifts` migration: `gift_status`/`reservation_status` enums, `gifts`, `wish_reservations` (one ACTIVE reservation per wish), `gift_events`, `karma_events`, `idempotency_records` and `outbox_events`.
+- `PaymentHandoffProvider` interface and deterministic test adapter that builds a UPI URI/QR payload from server-owned data; production rejects the test adapter.
+- Atomic `POST /api/v1/gifts` with wish row lock, eligibility checks, unresolved-claim cap, idempotency replay/conflict, encrypted handoff payload, ACTIVE reservation, wish LOCKED, gift events and outbox.
+- Donor outcomes PAID / STILL_PROCESSING / FAILED with state guards; PAID consumes the reservation and moves the wish to PAYMENT_CLAIMED; FAILED releases/reopens or expires; one extension maximum.
+- Recipient RECEIVED/NOT_RECEIVED confirmation, participant authorization, 24h deadline, terminal GRANTED/DISPUTED/UNVERIFIED and no reopening after a paid claim.
+- Karma ledger on recipient confirmation (first/subsequent gift, first-time recipient bonus, thanks, pay-it-forward) with unique idempotency keys.
+- Participant-only gift detail and `/me/gifts` history.
+- Reservation-expiry and unverified-timeout workers; approved defaults recorded for `DEC-O2`, `DEC-A02`–`DEC-A04`.
+
+### Verification
+
+- 145 backend tests pass; Ruff, format and mypy clean.
+- 12 gift tests cover concurrent donors (one success), idempotency, PAID/FAILED/STILL_PROCESSING, recipient confirmation and karma-once, disputes, expiry and timeout workers.
+- Gift migration applies successfully.
+
+### Open
+
+- P5.10 late-payment/old-URI support path.
+- P5.13 true simultaneous PAID-vs-expiry and confirmation-vs-timeout race tests.
+- P5.14 donor/recipient gift UI.
+- Phase 5 is **IN_PROGRESS**, not DONE.
+
 ## 2026-11-24 — Phase 4 complete: public discovery and selection
 
 ### Added

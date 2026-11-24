@@ -69,6 +69,7 @@ def test_production_accepts_non_placeholder_secrets() -> None:
         otp_hmac_key="a-real-production-otp-key-minimum-32-characters",
         sms_provider="external",
         crypto_provider="kms",
+        handoff_provider="external",
     )
     assert settings.is_production is True
     assert settings.docs_url is None
