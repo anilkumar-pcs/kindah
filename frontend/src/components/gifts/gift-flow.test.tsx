@@ -74,6 +74,8 @@ function makeGift(status: GiftStatus = "HANDOFF_ISSUED"): Gift {
     reservationExpiresAt: "2026-11-24T00:20:00Z",
     recipientResponseDeadline: paid ? "2026-11-25T00:00:00Z" : null,
     recipientDisplayName: "RecipientOne",
+    reaction: null,
+    thankYouMessage: null,
     createdAt: "2026-11-24T00:00:00Z",
   };
 }

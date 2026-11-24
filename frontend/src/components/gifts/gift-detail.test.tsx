@@ -10,6 +10,7 @@ vi.mock("@/lib/api/gifts", () => ({
   confirmRecipientOutcome: vi.fn(),
   createSupportCase: vi.fn(),
   getGift: vi.fn(),
+  getShareCard: vi.fn(),
   newIdempotencyKey: vi.fn(() => "test-idempotency-key"),
   reportDonorOutcome: vi.fn(),
 }));
@@ -18,6 +19,7 @@ import {
   confirmRecipientOutcome,
   createSupportCase,
   getGift,
+  getShareCard,
   type Gift,
   type GiftStatus,
   type SupportCase,
@@ -30,6 +32,7 @@ const mockedRestore = vi.mocked(restoreSession);
 const mockedGetGift = vi.mocked(getGift);
 const mockedConfirm = vi.mocked(confirmRecipientOutcome);
 const mockedSupport = vi.mocked(createSupportCase);
+const mockedShareCard = vi.mocked(getShareCard);
 
 function makeUser(): UserProfile {
   return {
@@ -66,6 +69,8 @@ function makeGift(
     reservationExpiresAt: "2026-11-24T00:20:00Z",
     recipientResponseDeadline: "2026-11-25T00:00:00Z",
     recipientDisplayName: viewerRole === "DONOR" ? "RecipientOne" : null,
+    reaction: null,
+    thankYouMessage: null,
     createdAt: "2026-11-24T00:00:00Z",
   };
 }
@@ -144,6 +149,29 @@ describe("GiftDetail", () => {
       caseType: "LATE_PAYMENT",
       description: "I paid after the timer ended but the gift is unverified.",
     });
+  });
+
+  it("creates a privacy-safe share card for a confirmed gift", async () => {
+    const user = userEvent.setup();
+    mockedGetGift.mockResolvedValue(makeGift("RECIPIENT_CONFIRMED"));
+    mockedShareCard.mockResolvedValue({
+      giftId: "gift-1",
+      amountInr: 25,
+      wishMessage: "A warm chai for a long day",
+      recipientDisplayName: "RecipientOne",
+      reaction: "HEART",
+      thankYouMessage: "Thank you",
+      createdAt: "2026-11-24T00:00:00Z",
+      shareText: "A ₹25 act of kindness on Kindly for RecipientOne.",
+    });
+
+    render(<GiftDetail giftId="gift-1" />);
+
+    await user.click(await screen.findByRole("button", { name: /create share card/i }));
+
+    expect(await screen.findByText(/a ₹25 act of kindness on kindly/i)).toBeInTheDocument();
+    expect(mockedShareCard).toHaveBeenCalledWith("gift-1");
+    expect(screen.queryByText(/upi:\/\//i)).not.toBeInTheDocument();
   });
 
   it("shows the handoff and donor outcomes to the donor only", async () => {

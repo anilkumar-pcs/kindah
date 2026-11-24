@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 
 import { ApiError } from "@/lib/api/client";
-import { listPublicWishes, type PublicWish } from "@/lib/api/discovery";
+import { listPublicWishes, surpriseMe, type PublicWish } from "@/lib/api/discovery";
 import type { WishMood } from "@/lib/api/wishes";
 
 const MOOD_LABELS: Record<WishMood, string> = {
@@ -163,14 +164,56 @@ function FeedResults({ sort, city, onRetry }: FeedResultsProps) {
 }
 
 export function DiscoverFeed() {
+  const router = useRouter();
   const [sort, setSort] = useState<"fresh" | "random">("fresh");
   const [cityInput, setCityInput] = useState("");
   const [city, setCity] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const [surpriseBusy, setSurpriseBusy] = useState(false);
+  const [surpriseError, setSurpriseError] = useState<string | null>(null);
+  const [surpriseNeedsAuth, setSurpriseNeedsAuth] = useState(false);
 
   function applyCity(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setCity(cityInput.trim());
+  }
+
+  async function handleSurprise() {
+    setSurpriseBusy(true);
+    setSurpriseError(null);
+    setSurpriseNeedsAuth(false);
+    let skipped: string[] = [];
+    try {
+      const raw = sessionStorage.getItem("kindly:surprise-skips");
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          skipped = parsed.filter((value): value is string => typeof value === "string");
+        }
+      }
+    } catch {
+      skipped = [];
+    }
+    try {
+      const wish = await surpriseMe(skipped);
+      sessionStorage.setItem(
+        "kindly:surprise-skips",
+        JSON.stringify([...skipped, wish.id].slice(-50)),
+      );
+      router.push(`/wishes/${wish.id}`);
+    } catch (surpriseLoadError) {
+      if (surpriseLoadError instanceof ApiError) {
+        if (surpriseLoadError.status === 401) {
+          setSurpriseNeedsAuth(true);
+        } else {
+          setSurpriseError(surpriseLoadError.message);
+        }
+      } else {
+        setSurpriseError("Could not pick a surprise wish.");
+      }
+    } finally {
+      setSurpriseBusy(false);
+    }
   }
 
   function clearCity() {
@@ -247,6 +290,37 @@ export function DiscoverFeed() {
           </button>
         )}
       </form>
+
+      <div className="rounded-2xl border border-kindly-border bg-white p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="font-semibold">Surprise me</p>
+            <p className="text-sm text-kindly-muted">
+              One eligible wish, weighted fairly. Skip and try again in this session.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={surpriseBusy}
+            onClick={handleSurprise}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
+          >
+            {surpriseBusy ? "Choosing…" : "Surprise me"}
+          </button>
+        </div>
+        {surpriseNeedsAuth && (
+          <p className="mt-2 text-sm">
+            <Link href="/sign-in" className="font-semibold text-kindly-accent underline">
+              Sign in to use Surprise Me
+            </Link>
+          </p>
+        )}
+        {surpriseError && (
+          <p role="alert" className="mt-2 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+            {surpriseError}
+          </p>
+        )}
+      </div>
 
       <FeedResults
         key={`${sort}|${city}|${reloadKey}`}

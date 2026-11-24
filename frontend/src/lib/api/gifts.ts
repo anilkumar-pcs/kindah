@@ -28,6 +28,8 @@ export type Gift = {
   reservationExpiresAt: string | null;
   recipientResponseDeadline: string | null;
   recipientDisplayName: string | null;
+  reaction: string | null;
+  thankYouMessage: string | null;
   createdAt: string;
 };
 
@@ -76,8 +78,23 @@ export async function createGift(input: GiftCreateInput, idempotencyKey: string)
   });
 }
 
+export type ShareCard = {
+  giftId: string;
+  amountInr: number;
+  wishMessage: string;
+  recipientDisplayName: string | null;
+  reaction: string | null;
+  thankYouMessage: string | null;
+  createdAt: string;
+  shareText: string;
+};
+
 export async function getGift(giftId: string): Promise<Gift> {
   return apiFetch<Gift>(`/api/v1/gifts/${giftId}`);
+}
+
+export async function getShareCard(giftId: string): Promise<ShareCard> {
+  return apiFetch<ShareCard>(`/api/v1/gifts/${giftId}/share-card`);
 }
 
 export async function listMyGifts(): Promise<Gift[]> {

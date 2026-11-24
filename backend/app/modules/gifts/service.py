@@ -30,8 +30,10 @@ from app.modules.gifts.schemas import (
     GiftListResponse,
     GiftResponse,
     RecipientConfirmationRequest,
+    ShareCardResponse,
 )
 from app.modules.identity.models import User, UserStatus
+from app.modules.karma.service import KarmaService
 from app.modules.notifications.service import notify
 from app.modules.payment_methods.models import (
     PaymentMethodStatus,
@@ -409,6 +411,10 @@ class GiftService:
         gift.updated_at = now
         wish.updated_at = now
         reservation.updated_at = now
+        if gift.status == GiftStatus.RECIPIENT_CONFIRMED:
+            karma = KarmaService(self.session)
+            karma.award_badges(gift.donor_id, now)
+            karma.award_badges(gift.recipient_id, now)
         self._event(
             gift,
             recipient.id,
@@ -451,6 +457,39 @@ class GiftService:
             wish,
             reservation,
             donor_view=actor.id == gift.donor_id,
+        )
+
+    def share_card(self, actor: User, gift_id: UUID) -> ShareCardResponse:
+        gift = self.session.get(Gift, gift_id)
+        if gift is None or actor.id not in {gift.donor_id, gift.recipient_id}:
+            raise self._not_found()
+        if gift.status != GiftStatus.RECIPIENT_CONFIRMED:
+            raise AppError(
+                409,
+                "SHARE_CARD_UNAVAILABLE",
+                "Share card unavailable",
+                "A share card is available only after recipient confirmation.",
+            )
+        wish = self.session.get(Wish, gift.wish_id)
+        recipient = self.session.get(User, gift.recipient_id)
+        if wish is None:
+            raise self._not_found()
+        recipient_name = recipient.display_name if recipient else None
+        share_text = f"A ₹{gift.amount_inr} act of kindness on Kindly"
+        if recipient_name:
+            share_text += f" for {recipient_name}"
+        share_text += "."
+        if gift.thank_you_message:
+            share_text += f" “{gift.thank_you_message}”"
+        return ShareCardResponse(
+            gift_id=gift.id,
+            amount_inr=gift.amount_inr,
+            wish_message=wish.message,
+            recipient_display_name=recipient_name,
+            reaction=gift.reaction,
+            thank_you_message=gift.thank_you_message,
+            created_at=gift.created_at,
+            share_text=share_text,
         )
 
     def list_for_user(self, actor: User) -> GiftListResponse:
@@ -540,6 +579,8 @@ class GiftService:
             reservation_expires_at=reservation.expires_at,
             recipient_response_deadline=gift.recipient_response_deadline,
             recipient_display_name=recipient_name if donor_view else None,
+            reaction=gift.reaction,
+            thank_you_message=gift.thank_you_message,
             created_at=gift.created_at,
         )
 

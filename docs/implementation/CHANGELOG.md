@@ -2,6 +2,28 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-24 — Phase 7 complete: karma, streaks, share cards and Surprise Me
+
+### Added
+
+- `0013_user_badges` migration and idempotent badge awards on recipient confirmation.
+- `/me/karma` ledger projection plus profile-derived karma/streak; IST day-boundary streak logic.
+- Participant reaction/thank-you in gift responses and UI.
+- Participant-only share-card endpoint after confirmation, excluding donor identity and all payment data.
+- Surprise Me endpoint with own/blocked/expired/session-skip exclusion and 3×/0.25×/1× weights;
+  discovery UI button with session-stored skips.
+
+### Verification
+
+- 173 backend tests and 53 frontend tests pass; all lint, format, type and build checks clean.
+- Ledger projection, badge idempotency, IST boundaries, share-card privacy, exclusion and weights
+  are covered.
+
+### Decisions/limitations
+
+- Badge thresholds remain a provisional implementation default (B-014).
+- No exposure records/caps (no validated policy) and no push/SMS provider (external gate).
+
 ## 2026-11-24 — Phase 6 complete: durable outbox and operations runbooks
 
 ### Added

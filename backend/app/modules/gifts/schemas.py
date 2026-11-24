@@ -41,8 +41,21 @@ class GiftResponse(ApiModel):
     reservation_expires_at: datetime | None = None
     recipient_response_deadline: datetime | None = None
     recipient_display_name: str | None = None
+    reaction: str | None = None
+    thank_you_message: str | None = None
     created_at: datetime
 
 
 class GiftListResponse(ApiModel):
     gifts: list[GiftResponse]
+
+
+class ShareCardResponse(ApiModel):
+    gift_id: UUID
+    amount_inr: int
+    wish_message: str
+    recipient_display_name: str | None
+    reaction: str | None
+    thank_you_message: str | None
+    created_at: datetime
+    share_text: str

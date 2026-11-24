@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+import random
 import secrets
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 from uuid import UUID
 
@@ -18,6 +19,7 @@ from app.modules.discovery.pagination import (
     encode_random_cursor,
 )
 from app.modules.discovery.schemas import FeedResponse, PublicWish
+from app.modules.gifts.models import Gift, GiftStatus
 from app.modules.identity.models import User, UserStatus
 from app.modules.payment_methods.models import (
     PaymentMethodStatus,
@@ -27,6 +29,18 @@ from app.modules.safety.models import UserBlock
 from app.modules.wishes.models import Wish, WishStatus
 
 SortOrder = Literal["fresh", "random"]
+
+
+def surprise_weight(
+    confirmed_received: int,
+    last_confirmed: datetime | None,
+    now: datetime,
+) -> float:
+    if confirmed_received == 0:
+        return 3.0
+    if last_confirmed is not None and last_confirmed > now - timedelta(days=14):
+        return 0.25
+    return 1.0
 
 
 class DiscoveryService:
@@ -167,6 +181,109 @@ class DiscoveryService:
                 "Wish unavailable",
                 "This wish is no longer available for selection.",
             )
+        return self._card(wish, user)
+
+    def surprise_candidates(
+        self,
+        *,
+        viewer_id: UUID,
+        skipped_wish_ids: list[UUID],
+        city: str | None,
+        now: datetime | None = None,
+    ) -> list[tuple[Wish, User, float]]:
+        current = now or datetime.now(UTC)
+        conditions = [
+            Wish.status == WishStatus.OPEN,
+            Wish.expires_at > current,
+            Wish.user_id != viewer_id,
+            User.status == UserStatus.ACTIVE,
+            User.display_name.is_not(None),
+            User.avatar.is_not(None),
+            ~exists().where(
+                UserBlock.blocker_id == viewer_id,
+                UserBlock.blocked_id == Wish.user_id,
+            ),
+            ~exists().where(
+                UserBlock.blocker_id == Wish.user_id,
+                UserBlock.blocked_id == viewer_id,
+            ),
+        ]
+        if city and city.strip():
+            conditions.append(func.lower(Wish.city) == city.strip().lower())
+        if skipped_wish_ids:
+            conditions.append(~Wish.id.in_(skipped_wish_ids))
+        rows = self.session.execute(
+            select(Wish, User)
+            .join(User, Wish.user_id == User.id)
+            .join(
+                RecipientPaymentMethod,
+                and_(
+                    RecipientPaymentMethod.user_id == User.id,
+                    RecipientPaymentMethod.status == PaymentMethodStatus.ACTIVE,
+                ),
+            )
+            .where(*conditions)
+            .limit(200)
+        ).all()
+
+        owner_ids = {user.id for _, user in rows}
+        history_rows = self.session.execute(
+            select(
+                Gift.recipient_id,
+                func.count(Gift.id),
+                func.max(Gift.updated_at),
+            )
+            .where(
+                Gift.recipient_id.in_(owner_ids),
+                Gift.status == GiftStatus.RECIPIENT_CONFIRMED,
+            )
+            .group_by(Gift.recipient_id)
+        ).all()
+        history = {
+            recipient_id: (int(count), last_confirmed)
+            for recipient_id, count, last_confirmed in history_rows
+        }
+        candidates: list[tuple[Wish, User, float]] = []
+        for wish, user in rows:
+            count, last_confirmed = history.get(user.id, (0, None))
+            candidates.append(
+                (
+                    wish,
+                    user,
+                    surprise_weight(count, last_confirmed, current),
+                )
+            )
+        return candidates
+
+    def surprise(
+        self,
+        *,
+        viewer_id: UUID,
+        skipped_wish_ids: list[UUID],
+        city: str | None,
+        rng: random.Random | None = None,
+    ) -> PublicWish:
+        candidates = self.surprise_candidates(
+            viewer_id=viewer_id,
+            skipped_wish_ids=skipped_wish_ids,
+            city=city,
+        )
+        if not candidates:
+            raise AppError(
+                404,
+                "NO_ELIGIBLE_WISHES",
+                "No eligible wishes",
+                "No wishes are eligible for Surprise Me right now.",
+            )
+        generator = rng or random.SystemRandom()
+        total = sum(weight for _, _, weight in candidates)
+        pick = generator.uniform(0, total)
+        cursor = 0.0
+        for wish, user, weight in candidates:
+            cursor += weight
+            if pick <= cursor:
+                return self._card(wish, user)
+        wish, user, _ = candidates[-1]
         return self._card(wish, user)
 
     def _load(self, wish_id: UUID) -> tuple[Wish | None, User | None]:

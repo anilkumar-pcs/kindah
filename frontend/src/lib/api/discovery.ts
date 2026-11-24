@@ -51,3 +51,11 @@ export async function selectWish(wishId: string): Promise<PublicWish> {
     method: "POST",
   });
 }
+
+export async function surpriseMe(skippedWishIds: string[]): Promise<PublicWish> {
+  return apiFetch<PublicWish>("/api/v1/wishes/surprise", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ skippedWishIds }),
+  });
+}

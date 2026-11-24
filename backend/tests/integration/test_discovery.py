@@ -317,6 +317,48 @@ def test_blocked_users_are_excluded(client: TestClient) -> None:
     assert wish["id"] in [item["id"] for item in guest_feed.json()["wishes"]]
 
 
+def test_surprise_me_excludes_own_blocked_and_skipped(client: TestClient) -> None:
+    viewer_session, viewer_headers, _ = complete_setup(
+        client,
+        phone="9876500701",
+        display_name="SurpriseViewer",
+        vpa="surpriseviewer@okaxis",
+    )
+    owner_session, owner_headers, _ = complete_setup(
+        client,
+        phone="9876500702",
+        display_name="SurpriseOwner",
+        vpa="surpriseowner@okhdfc",
+    )
+    wish = _create_wish(client, owner_headers)
+
+    selected = client.post("/api/v1/wishes/surprise", headers=viewer_headers, json={})
+    assert selected.status_code == 200, selected.text
+    assert selected.json()["id"] == wish["id"]
+
+    skipped = client.post(
+        "/api/v1/wishes/surprise",
+        headers=viewer_headers,
+        json={"skippedWishIds": [wish["id"]]},
+    )
+    assert skipped.status_code == 404
+    assert skipped.json()["code"] == "NO_ELIGIBLE_WISHES"
+
+    _add_block(str(viewer_session["user"]["id"]), str(owner_session["user"]["id"]))
+    blocked = client.post("/api/v1/wishes/surprise", headers=viewer_headers, json={})
+    assert blocked.status_code == 404
+
+
+def test_surprise_weights_follow_policy() -> None:
+    from app.modules.discovery.service import surprise_weight
+
+    now = datetime.now(UTC)
+    assert surprise_weight(0, None, now) == 3.0
+    assert surprise_weight(1, now - timedelta(days=1), now) == 0.25
+    assert surprise_weight(1, now - timedelta(days=14, seconds=1), now) == 1.0
+    assert surprise_weight(2, None, now) == 1.0
+
+
 def test_invalid_cursor_is_rejected(client: TestClient) -> None:
     response = client.get("/api/v1/wishes", params={"cursor": "not-a-cursor"})
     assert response.status_code == 400

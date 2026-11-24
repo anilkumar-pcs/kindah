@@ -6,11 +6,28 @@ import type { FormEvent } from "react";
 
 import { ApiError } from "@/lib/api/client";
 import { listMyGifts, type Gift } from "@/lib/api/gifts";
+import { getKarmaSummary, type KarmaSummary } from "@/lib/api/karma";
 import { getPaymentMethod, savePaymentMethod, type PaymentMethod } from "@/lib/api/payment-methods";
 import { createWish, listMyWishes, withdrawWish, type Wish, type WishMood } from "@/lib/api/wishes";
 import { listBlocks, unblockUser, type BlockedUser } from "@/lib/api/safety";
 import { giftStatusLabel } from "@/lib/gifts/labels";
 import { restoreSession, type UserProfile } from "@/lib/auth/session";
+
+const BADGE_LABELS: Record<string, string> = {
+  FIRST_GIFT: "First gift",
+  KIND_HEART: "Kind heart",
+  KIND_SOUL: "Kind soul",
+  GRATEFUL: "Grateful",
+  STREAK_3: "Three-day streak",
+};
+
+const KARMA_EVENT_LABELS: Record<string, string> = {
+  FIRST_CONFIRMED_GIFT: "First confirmed gift",
+  CONFIRMED_GIFT: "Confirmed gift",
+  FIRST_TIME_RECIPIENT_BONUS: "First-time recipient bonus",
+  RECIPIENT_THANKS: "Recipient thanks",
+  PAY_IT_FORWARD: "Pay it forward",
+};
 
 const MOODS: Array<{ value: WishMood; label: string }> = [
   { value: "CHAI_SNACK", label: "Chai & snack" },
@@ -49,6 +66,7 @@ export function MySpace() {
   const [wishes, setWishes] = useState<Wish[]>([]);
   const [gifts, setGifts] = useState<Gift[]>([]);
   const [blocks, setBlocks] = useState<BlockedUser[]>([]);
+  const [karma, setKarma] = useState<KarmaSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reauthRequired, setReauthRequired] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -89,11 +107,12 @@ export function MySpace() {
       }
       setUser(restored);
       try {
-        const [method, history, giftHistory, blockedUsers] = await Promise.all([
+        const [method, history, giftHistory, blockedUsers, karmaSummary] = await Promise.all([
           getPaymentMethod(),
           listMyWishes(),
           listMyGifts(),
           listBlocks(),
+          getKarmaSummary(),
         ]);
         if (cancelled) {
           return;
@@ -102,6 +121,7 @@ export function MySpace() {
         setWishes(history);
         setGifts(giftHistory);
         setBlocks(blockedUsers);
+        setKarma(karmaSummary);
         setEditingVpa(method === null);
         setState("ready");
       } catch (loadError) {
@@ -283,6 +303,54 @@ export function MySpace() {
           </Link>
         </div>
       </header>
+
+      {karma && (
+        <section
+          aria-labelledby="karma-heading"
+          className="rounded-2xl border border-kindly-border bg-white p-5"
+        >
+          <h2 id="karma-heading" className="text-lg font-semibold">
+            Karma & badges
+          </h2>
+          <p className="mt-2 text-sm text-kindly-muted">
+            Karma has no cash value or redemption. It is derived from the immutable ledger.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-4 text-sm">
+            <p>
+              <span className="text-2xl font-semibold">{karma.balance}</span> karma
+            </p>
+            <p>
+              <span className="text-2xl font-semibold">{karma.streak}</span>
+              -day giving streak
+            </p>
+          </div>
+          {karma.badges.length > 0 && (
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {karma.badges.map((badge) => (
+                <li
+                  key={badge.badgeCode}
+                  className="rounded-full bg-kindly-accent-soft px-3 py-1 text-xs font-semibold text-kindly-accent"
+                >
+                  {BADGE_LABELS[badge.badgeCode] ?? badge.badgeCode}
+                </li>
+              ))}
+            </ul>
+          )}
+          {karma.events.length > 0 && (
+            <ul className="mt-4 space-y-2 text-sm">
+              {karma.events.slice(0, 5).map((event) => (
+                <li key={event.id} className="flex justify-between gap-3">
+                  <span>{KARMA_EVENT_LABELS[event.eventType] ?? event.eventType}</span>
+                  <span className="font-semibold text-kindly-accent">
+                    {event.pointsDelta > 0 ? "+" : ""}
+                    {event.pointsDelta}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       {error && (
         <div role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">

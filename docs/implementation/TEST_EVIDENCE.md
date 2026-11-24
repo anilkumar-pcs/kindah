@@ -484,6 +484,20 @@
 | Artefact | `RUNBOOK_OPERATIONS.md` (disputes, late payment, OTP outage, VPA change, moderation, deletion, outbox, restore, privacy/security) and `RUNBOOK_LATE_PAYMENT.md` |
 | Known limitation | This is a separate local staging database, not a deployed staging environment; deployed staging, approved RPO/RTO and provider/legal gates remain external. |
 
+### VE-040 — Phase 7 karma, streaks, reactions, share cards and Surprise Me
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P7.1–P7.6 |
+| Command | `cd backend && uv run alembic upgrade head && uv run ruff check . && uv run ruff format --check . && uv run mypy app tests && uv run pytest -q`; `cd frontend && npm test && npm run lint && npm run typecheck && npm run build` |
+| Environment | PostgreSQL 16.16; Python 3.12.16; Next.js 16.4.6; Node 26 |
+| Result | **PASS** — `0013_user_badges (head)`; **173 backend tests**, **53 frontend tests**; all lint, format, type and build checks clean |
+| Karma/streak/badges | Donor balance 30 (25 first confirmed + 5 first-time recipient) and recipient 3 (thanks) projected from ledger; profile and `/me/karma` agree; FIRST_GIFT/GRATEFUL badges awarded once and re-award is a no-op; streak is 1 for same IST day across UTC midnight, 3 for three consecutive IST days, and 0 with no days. Badge thresholds are FIRST_GIFT 1, KIND_HEART 5, KIND_SOUL 10, GRATEFUL thanks, STREAK_3. |
+| Reactions/share | Recipient reaction/thank-you returned to participants only; share card requires recipient confirmation, is participant-only, and contains no donor identity, VPA, phone, UTR, payment ref or UPI URI. |
+| Surprise Me | Own/blocked/expired/session-skipped wishes excluded; weights are 3× never received, 0.25× received within 14 days, 1× otherwise; frontend records skipped IDs in session storage and navigates to the selected wish. |
+| Known limitation | Badge thresholds (B-014) and exposure-cap policy (B-015) remain provisional/undecided; no push/SMS delivery was added because providers/consent are absent. |
+
 ## Summary
 
 | Verification | Result |
@@ -529,6 +543,9 @@
 | Phase 6 outbox | PASS — 168 total backend tests, retry/dead-letter/skip-locked |
 | Phase 6 runbooks/staging | PASS — local staging DB critical path exercised; deployed staging pending |
 | Phase 6 overall | `DONE` — 11/11 tasks; external launch gates blocked |
+| Phase 7 karma/streak/badges | PASS — 173 total backend tests, 53 frontend tests |
+| Phase 7 share/Surprise Me | PASS — privacy allow-list, exclusion and weight tests |
+| Phase 7 overall | `DONE` — 8/8 tasks; badge thresholds provisional |
 
 ## Rule for future entries
 

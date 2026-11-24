@@ -42,6 +42,7 @@ from app.modules.identity.schemas import (
     ProfileUpdateRequest,
     UserProfileResponse,
 )
+from app.modules.karma.service import KarmaService
 from app.providers.crypto.base import CryptoProvider
 from app.providers.sms.base import OtpMessage, SmsProvider
 
@@ -523,6 +524,7 @@ class IdentityService:
     # Helpers
     # ------------------------------------------------------------------
     def profile(self, user: User) -> UserProfileResponse:
+        karma = KarmaService(self.session)
         return UserProfileResponse(
             id=user.id,
             display_name=user.display_name,
@@ -531,8 +533,8 @@ class IdentityService:
             status=user.status,
             role=effective_role(self.settings, user),
             onboarding_required=self._onboarding_required(user),
-            karma=0,
-            streak=0,
+            karma=karma.balance(user.id),
+            streak=karma.streak(user.id),
             cooldown_until=None,
             age_confirmed_at=user.age_confirmed_at,
             terms_accepted_at=user.terms_accepted_at,

@@ -461,6 +461,44 @@ def test_paid_survives_expiry_and_times_out_to_unverified(
         engine.dispose()
 
 
+def test_share_card_is_private_and_confirmation_gated(
+    client: TestClient,
+) -> None:
+    _, donor_headers, _, recipient_headers, wish = _setup(client)
+    gift = _create_gift(client, donor_headers, wish["id"]).json()
+    assert _outcome(client, donor_headers, gift["giftId"], "PAID").status_code == 200
+
+    before = client.get(f"/api/v1/gifts/{gift['giftId']}/share-card", headers=donor_headers)
+    assert before.status_code == 409
+    assert before.json()["code"] == "SHARE_CARD_UNAVAILABLE"
+
+    assert _confirm(client, recipient_headers, gift["giftId"], "RECEIVED").status_code == 200
+    card = client.get(f"/api/v1/gifts/{gift['giftId']}/share-card", headers=donor_headers)
+    assert card.status_code == 200, card.text
+    body = card.json()
+    assert body["amountInr"] == 25
+    assert body["recipientDisplayName"] == "RecipientOne"
+    assert "DonorOne" not in str(body)
+    assert "upi://" not in str(body)
+    assert "recipient1@okaxis" not in str(body)
+    assert "PAY" not in str(body)
+    assert "utr" not in str(body).lower()
+
+    _, outsider_headers, _ = complete_setup(
+        client,
+        phone="9876506201",
+        display_name="ShareOutsider",
+        vpa="shareoutsider@okhdfc",
+    )
+    assert (
+        client.get(
+            f"/api/v1/gifts/{gift['giftId']}/share-card",
+            headers=outsider_headers,
+        ).status_code
+        == 404
+    )
+
+
 def test_paid_vs_expiry_race_is_consistent(
     client: TestClient,
     settings: Settings,

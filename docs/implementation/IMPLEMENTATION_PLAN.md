@@ -421,18 +421,18 @@ and transaction correctness are proven.
 
 **In scope**
 
--   [ ] P7.1 Implement karma history and balance projection from
+-   [x] P7.1 Implement karma history and balance projection from
     immutable karma ledger.
--   [ ] P7.2 Implement streak calculation with correct IST day
+-   [x] P7.2 Implement streak calculation with correct IST day
     boundaries.
--   [ ] P7.3 Implement badge rules and idempotent award processing.
--   [ ] P7.4 Implement thank-you reaction and optional message.
--   [ ] P7.5 Implement privacy-safe share cards.
--   [ ] P7.6 Implement Surprise Me with documented eligibility and
+-   [x] P7.3 Implement badge rules and idempotent award processing.
+-   [x] P7.4 Implement thank-you reaction and optional message.
+-   [x] P7.5 Implement privacy-safe share cards.
+-   [x] P7.6 Implement Surprise Me with documented eligibility and
     weighted fairness.
--   [ ] P7.7 Add exposure records/caps only if required by the validated
+-   [x] P7.7 Add exposure records/caps only if required by the validated
     fairness policy.
--   [ ] P7.8 Add optional push/SMS delivery enhancements only when
+-   [x] P7.8 Add optional push/SMS delivery enhancements only when
     providers and consent are in place.
 
 **Exit criteria**

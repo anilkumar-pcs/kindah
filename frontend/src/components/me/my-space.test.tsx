@@ -26,7 +26,12 @@ vi.mock("@/lib/api/safety", () => ({
   unblockUser: vi.fn(),
 }));
 
+vi.mock("@/lib/api/karma", () => ({
+  getKarmaSummary: vi.fn(),
+}));
+
 import { listMyGifts, type Gift } from "@/lib/api/gifts";
+import { getKarmaSummary, type KarmaSummary } from "@/lib/api/karma";
 import { listBlocks, unblockUser } from "@/lib/api/safety";
 import { getPaymentMethod, savePaymentMethod, type PaymentMethod } from "@/lib/api/payment-methods";
 import { createWish, listMyWishes, withdrawWish, type Wish } from "@/lib/api/wishes";
@@ -43,6 +48,7 @@ const mockedWithdrawWish = vi.mocked(withdrawWish);
 const mockedListGifts = vi.mocked(listMyGifts);
 const mockedListBlocks = vi.mocked(listBlocks);
 const mockedUnblockUser = vi.mocked(unblockUser);
+const mockedGetKarma = vi.mocked(getKarmaSummary);
 
 function makeUser(overrides: Partial<UserProfile> = {}): UserProfile {
   return {
@@ -90,6 +96,23 @@ function makeWish(overrides: Partial<Wish> = {}): Wish {
   };
 }
 
+function makeKarma(): KarmaSummary {
+  return {
+    balance: 30,
+    streak: 1,
+    events: [
+      {
+        id: "karma-1",
+        eventType: "FIRST_CONFIRMED_GIFT",
+        pointsDelta: 25,
+        giftId: "gift-1",
+        createdAt: "2026-11-24T00:00:00Z",
+      },
+    ],
+    badges: [{ badgeCode: "FIRST_GIFT", unlockedAt: "2026-11-24T00:00:00Z" }],
+  };
+}
+
 function makeGift(overrides: Partial<Gift> = {}): Gift {
   return {
     giftId: "gift-1",
@@ -104,6 +127,8 @@ function makeGift(overrides: Partial<Gift> = {}): Gift {
     reservationExpiresAt: "2026-11-24T00:20:00Z",
     recipientResponseDeadline: "2026-11-25T00:00:00Z",
     recipientDisplayName: null,
+    reaction: null,
+    thankYouMessage: null,
     createdAt: "2026-11-24T00:00:00Z",
     ...overrides,
   };
@@ -116,6 +141,7 @@ beforeEach(() => {
   mockedListWishes.mockResolvedValue([]);
   mockedListGifts.mockResolvedValue([]);
   mockedListBlocks.mockResolvedValue([]);
+  mockedGetKarma.mockResolvedValue(makeKarma());
 });
 
 describe("MySpace", () => {
@@ -178,6 +204,17 @@ describe("MySpace", () => {
 
     expect(await screen.findByText("Cooldown")).toBeInTheDocument();
     expect(mockedWithdrawWish).toHaveBeenCalledWith("22222222-2222-2222-2222-222222222222");
+  });
+
+  it("shows ledger-derived karma, streak and badges", async () => {
+    mockedGetPaymentMethod.mockResolvedValue(makePaymentMethod());
+    render(<MySpace />);
+
+    expect(await screen.findByText("Karma & badges")).toBeInTheDocument();
+    expect(screen.getByText("30")).toBeInTheDocument();
+    expect(screen.queryByText("Three-day streak")).not.toBeInTheDocument();
+    expect(screen.getByText("First gift")).toBeInTheDocument();
+    expect(screen.getByText("First confirmed gift")).toBeInTheDocument();
   });
 
   it("lists gifts with the approved status and links to the gift", async () => {

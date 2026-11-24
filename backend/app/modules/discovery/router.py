@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db_session
-from app.modules.discovery.schemas import FeedResponse, PublicWish
+from app.modules.discovery.schemas import FeedResponse, PublicWish, SurpriseRequest
 from app.modules.discovery.service import DiscoveryService, SortOrder
 from app.modules.identity.dependencies import (
     get_bearer_token,
@@ -51,6 +51,19 @@ def list_wishes(
         cursor=cursor,
         limit=limit,
         seed=seed,
+    )
+
+
+@router.post("/wishes/surprise", response_model=PublicWish)
+def surprise_me(
+    body: SurpriseRequest,
+    auth: AuthContext = Depends(require_active_auth),
+    service: DiscoveryService = Depends(get_discovery_service),
+) -> PublicWish:
+    return service.surprise(
+        viewer_id=auth.user.id,
+        skipped_wish_ids=body.skipped_wish_ids,
+        city=body.city,
     )
 
 

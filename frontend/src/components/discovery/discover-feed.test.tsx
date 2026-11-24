@@ -1,16 +1,24 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/api/discovery", () => ({
-  listPublicWishes: vi.fn(),
+const routerPush = vi.hoisted(() => vi.fn());
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: routerPush }),
 }));
 
-import { listPublicWishes, type PublicWish } from "@/lib/api/discovery";
+vi.mock("@/lib/api/discovery", () => ({
+  listPublicWishes: vi.fn(),
+  surpriseMe: vi.fn(),
+}));
+
+import { listPublicWishes, surpriseMe, type PublicWish } from "@/lib/api/discovery";
 
 import { DiscoverFeed } from "./discover-feed";
 
 const mockedList = vi.mocked(listPublicWishes);
+const mockedSurprise = vi.mocked(surpriseMe);
 
 function makeWish(overrides: Partial<PublicWish> = {}): PublicWish {
   return {
@@ -28,6 +36,7 @@ function makeWish(overrides: Partial<PublicWish> = {}): PublicWish {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  sessionStorage.clear();
 });
 
 describe("DiscoverFeed", () => {
@@ -47,6 +56,22 @@ describe("DiscoverFeed", () => {
       "href",
       "/wishes/wish-1",
     );
+  });
+
+  it("picks a Surprise Me wish and remembers session skips", async () => {
+    const user = userEvent.setup();
+    mockedList.mockResolvedValue({ wishes: [], nextCursor: null, seed: null });
+    mockedSurprise.mockResolvedValue(makeWish({ id: "wish-2" }));
+
+    render(<DiscoverFeed />);
+
+    await user.click(screen.getByRole("button", { name: /surprise me/i }));
+
+    await waitFor(() => {
+      expect(routerPush).toHaveBeenCalledWith("/wishes/wish-2");
+    });
+    expect(mockedSurprise).toHaveBeenCalledWith([]);
+    expect(sessionStorage.getItem("kindly:surprise-skips")).toContain("wish-2");
   });
 
   it("renders an empty state when no wishes are open", async () => {

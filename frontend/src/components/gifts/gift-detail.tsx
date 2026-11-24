@@ -10,10 +10,12 @@ import {
   confirmRecipientOutcome,
   createSupportCase,
   getGift,
+  getShareCard,
   newIdempotencyKey,
   type Gift,
   type Reaction,
   type RecipientOutcome,
+  type ShareCard,
   type SupportCase,
   type SupportCaseType,
 } from "@/lib/api/gifts";
@@ -288,6 +290,9 @@ function SupportPanel({ gift }: { gift: Gift }) {
 export function GiftDetail({ giftId }: { giftId: string }) {
   const [pageState, setPageState] = useState<PageState>("loading");
   const [gift, setGift] = useState<Gift | null>(null);
+  const [shareCard, setShareCard] = useState<ShareCard | null>(null);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [shareBusy, setShareBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -323,6 +328,18 @@ export function GiftDetail({ giftId }: { giftId: string }) {
       cancelled = true;
     };
   }, [giftId]);
+
+  async function handleShareCard() {
+    setShareBusy(true);
+    setShareError(null);
+    try {
+      setShareCard(await getShareCard(giftId));
+    } catch (shareLoadError) {
+      setShareError(errorMessage(shareLoadError));
+    } finally {
+      setShareBusy(false);
+    }
+  }
 
   if (pageState === "loading") {
     return (
@@ -410,9 +427,17 @@ export function GiftDetail({ giftId }: { giftId: string }) {
             </p>
           )}
         {gift.giftStatus === "RECIPIENT_CONFIRMED" && (
-          <p className="mt-4 rounded-xl bg-green-50 p-3 text-sm text-green-900">
-            Recipient confirmed this gift. No further payment action is needed.
-          </p>
+          <div className="mt-4 rounded-xl bg-green-50 p-3 text-sm text-green-900">
+            <p>Recipient confirmed this gift. No further payment action is needed.</p>
+            {(gift.reaction || gift.thankYouMessage) && (
+              <p className="mt-2">
+                {gift.reaction === "HEART" && "❤️ "}
+                {gift.reaction === "PRAY" && "🙏 "}
+                {gift.reaction === "SMILE" && "😊 "}
+                {gift.thankYouMessage ?? ""}
+              </p>
+            )}
+          </div>
         )}
         {gift.giftStatus === "DISPUTED" && (
           <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
@@ -438,6 +463,45 @@ export function GiftDetail({ giftId }: { giftId: string }) {
           </p>
         )}
       </header>
+
+      {gift.giftStatus === "RECIPIENT_CONFIRMED" && (
+        <section className="rounded-2xl border border-kindly-border bg-white p-5">
+          <h2 className="text-lg font-semibold">Share this kindness</h2>
+          <p className="mt-1 text-sm text-kindly-muted">
+            The share card never includes the donor identity, UPI ID, phone, UTR or payment link.
+          </p>
+          {shareCard ? (
+            <div className="mt-3 rounded-xl bg-kindly-accent-soft p-4 text-sm">
+              <p>{shareCard.shareText}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  if (navigator.clipboard) {
+                    void navigator.clipboard.writeText(shareCard.shareText);
+                  }
+                }}
+                className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border bg-white px-4 py-2 text-sm font-semibold hover:bg-kindly-accent-soft"
+              >
+                Copy share text
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={shareBusy}
+              onClick={handleShareCard}
+              className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-4 py-2 text-sm font-semibold hover:bg-kindly-accent-soft disabled:opacity-60"
+            >
+              {shareBusy ? "Preparing…" : "Create share card"}
+            </button>
+          )}
+          {shareError && (
+            <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+              {shareError}
+            </p>
+          )}
+        </section>
+      )}
 
       {!isRecipient && <GiftHandoff gift={gift} onUpdated={setGift} />}
       {isRecipient && gift.giftStatus === "DONOR_CLAIMED_PAID" && (

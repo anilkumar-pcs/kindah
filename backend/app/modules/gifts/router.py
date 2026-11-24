@@ -12,6 +12,7 @@ from app.modules.gifts.schemas import (
     GiftListResponse,
     GiftResponse,
     RecipientConfirmationRequest,
+    ShareCardResponse,
 )
 from app.modules.gifts.service import GiftService
 from app.modules.identity.dependencies import require_active_auth
@@ -98,6 +99,15 @@ def get_gift(
     service: GiftService = Depends(get_gift_service),
 ) -> GiftResponse:
     return service.get_gift(auth.user, gift_id)
+
+
+@router.get("/gifts/{gift_id}/share-card", response_model=ShareCardResponse)
+def get_share_card(
+    gift_id: UUID,
+    auth: AuthContext = Depends(require_active_auth),
+    service: GiftService = Depends(get_gift_service),
+) -> ShareCardResponse:
+    return service.share_card(auth.user, gift_id)
 
 
 @router.get(
