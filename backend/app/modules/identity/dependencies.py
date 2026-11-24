@@ -85,6 +85,8 @@ def require_admin(
     auth: AuthContext = Depends(require_admin_role),
 ) -> AuthContext:
     settings = request.app.state.settings
+    if not settings.admin_mfa_required:
+        return auth
     if auth.user.mfa_enabled_at is None:
         raise AppError(
             403,

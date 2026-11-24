@@ -96,7 +96,7 @@ class AdminService:
         return AdminMfaStatusResponse(
             role=effective_role(user),
             mfa_enabled=user.mfa_enabled_at is not None,
-            mfa_required=True,
+            mfa_required=self.settings.admin_mfa_required,
             recovery_codes_remaining=len(user.mfa_recovery_codes_hashed or []),
         )
 

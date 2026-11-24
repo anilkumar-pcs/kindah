@@ -87,6 +87,7 @@ class Settings(BaseSettings):
     cheer_max_chars: int = Field(default=80, gt=0, le=120)
     report_rate_limit_per_hour: int = Field(default=10, gt=0, le=100)
     auto_hide_report_threshold: int = Field(default=3, ge=2, le=20)
+    admin_mfa_required: bool = False
     admin_mfa_ttl_minutes: int = Field(default=15, gt=0, le=60)
     admin_mfa_issuer: str = "Kindly Admin"
     outbox_max_attempts: int = Field(default=5, ge=1, le=20)

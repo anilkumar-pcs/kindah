@@ -10,8 +10,8 @@ outside this repository. Do not place phone numbers, credentials or customer dat
 ## 1. Late payment or old UPI handoff
 
 Follow `RUNBOOK_LATE_PAYMENT.md`. Summary: support-only; no platform refund, reversal,
-reassignment or automatic reopening; admin sees the gift/support detail with MFA and resolves
-with an audited note.
+reassignment or automatic reopening; an admin DB role can see the gift/support detail and resolve
+with an audited note. MFA is optional and currently disabled by owner override.
 
 ## 2. Recipient dispute / “I did not receive it”
 
@@ -19,7 +19,7 @@ with an audited note.
    `DISPUTED` and the wish `DISPUTED`.
 2. The donor receives an in-app notification. No karma is awarded.
 3. Support creates a case (`RECIPIENT_DISPUTE` or `OTHER`) from the gift.
-4. Admin with MFA reviews the case, gift status, payment reference, masked VPA, UTR if supplied,
+4. An admin DB role reviews the case, gift status, payment reference, masked VPA, UTR if supplied,
    and participant names. Never share raw VPA, phone, UTR or UPI URI outside the admin console.
 5. Resolve with a factual note. Do not promise a refund or bank verification. Advise the donor to
    contact their bank/UPI provider if they believe money moved.
@@ -52,7 +52,8 @@ with an audited note.
 
 1. Reports are deduplicated per reporter/target; three unique wish reports may move an active
    OPEN wish to `UNDER_REVIEW`. This is not proof of wrongdoing.
-2. Admin signs in with a moderator/admin role, verifies TOTP MFA and opens `/admin`.
+2. Admin signs in with a moderator/admin DB role and opens `/admin`. TOTP MFA is optional and
+   currently disabled by owner override; if `ADMIN_MFA_REQUIRED=true`, verify it before proceeding.
 3. Review the report queue and target context. Apply HIDE, RESTORE, REMOVE, WARN, RESTRICT,
    SUSPEND, BAN or REACTIVATE with a mandatory reason. Every action writes an append-only
    `admin_audit_logs` row with a request ID.
@@ -75,7 +76,8 @@ with an audited note.
 
 ## 7. Outbox dead letters and notification delivery
 
-1. Check `/admin` → Outbox or `GET /api/v1/admin/outbox/dead-letters` with MFA.
+1. Check `/admin` → Outbox or `GET /api/v1/admin/outbox/dead-letters` with an admin DB role
+   (and MFA if `ADMIN_MFA_REQUIRED=true`).
 2. Dead letters have already committed domain state; retrying must use only an idempotent handler.
 3. Do not delete dead-letter rows. Investigate the event type, attempts and handler error class;
    escalate to engineering.
@@ -87,7 +89,8 @@ with an audited note.
 1. Restore the latest approved PostgreSQL backup into a separate database first.
 2. Run `alembic upgrade head`, verify migration revisions, then start the API with the restored
    database and confirm `/healthz`, `/api/v1/meta` and authentication.
-3. Smoke-test: guest feed, OTP sign-in, one wish, one test handoff, support report, admin MFA/login.
+3. Smoke-test: guest feed, OTP sign-in, one wish, one test handoff, support report, admin role login
+   (and MFA if enabled).
    Do not use real money; production handoff remains disabled.
 4. Record RPO/RTO and the drill outcome. RPO/RTO and backup provider selection remain external
    gates. Never restore over production without owner approval.
@@ -118,6 +121,6 @@ one becomes available.
 - [ ] Recipient saves a masked VPA and publishes a wish.
 - [ ] Donor creates a whole-INR handoff and receives a UPI URI/QR.
 - [ ] Donor attests paid; recipient sees the claim and confirms or disputes.
-- [ ] A support case is created and an admin with MFA can see full details and resolve it.
+- [ ] A support case is created and an admin DB role can see full details and resolve it.
 - [ ] Audit entry contains actor, action, reason, request ID and no raw VPA/phone/UTR/URI.
 - [ ] No real money is moved; production handoff remains disabled.

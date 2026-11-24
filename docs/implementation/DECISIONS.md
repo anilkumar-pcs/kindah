@@ -39,7 +39,7 @@ This approves:
 - Badge defaults: FIRST_GIFT (1 confirmed sent), KIND_HEART (5), KIND_SOUL (10), GRATEFUL (thanks received), STREAK_3 (3 IST giving days). Badge definitions are DB-backed and admin-configurable (add/update/deactivate) in one registry.
 - No wish exposure tracking/caps for now.
 
-`DEC-I13` (admin MFA mechanism) remains pending because the owner did not explicitly confirm TOTP versus passkeys; the TOTP implementation stays in place and production admin activation remains gated.
+`DEC-I13` is now an **owner override**: MFA is not required for admins; the database role alone grants access. TOTP/recovery-code code remains available but is disabled by default via `ADMIN_MFA_REQUIRED=false`. The owner accepted the account-compromise risk; this is recorded as a production risk-acceptance item.
 
 This does **not** approve external legal/provider gates. Other decisions — `DEC-O3`, `DEC-O4`, `DEC-O6`, `DEC-O8`–`DEC-O10`, `DEC-I05`–`DEC-I10`, `DEC-I13`, `DEC-I15`, `DEC-I16`, `DEC-I18` and `DEC-A01` — remain `PENDING` unless separately recorded. External gates remain `EXTERNAL_BLOCKED`.
 
@@ -70,7 +70,7 @@ This does **not** approve external legal/provider gates. Other decisions — `DE
 | DEC-I10 | Payment handoff provider | Interface + test adapter; no production adapter | PENDING / EXTERNAL | P5.5, P5.15 |
 | DEC-I11 | API error format | RFC 9457 `problem+json` with spec codes | APPROVED (Phase 1) | P1.3 |
 | DEC-I12 | Migration policy | Forward-only in production; up/down tested in dev/CI | APPROVED (Phase 1) | P1.5 |
-| DEC-I13 | Admin MFA | TOTP + recovery codes | IMPLEMENTED DEFAULT — OWNER CONFIRMATION PENDING | P6.5 |
+| DEC-I13 | Admin MFA | Role-only admin access; MFA optional | OWNER OVERRIDE — MFA NOT REQUIRED (2026-11-24) | P6.5, Phase 8 |
 | DEC-I14 | PWA caching | Static shell only; no private response caching | APPROVED (Phase 1) | P1.4, P8.7 |
 | DEC-I15 | Avatar approach | Generated preset avatars; no uploads in MVP | PENDING | P2.5 |
 | DEC-I16 | Karma write path | Synchronous ledger write in confirmation transaction | PENDING | P5.12, P7.1 |
@@ -329,7 +329,7 @@ This does **not** approve external legal/provider gates. Other decisions — `DE
 | Question | Which MFA mechanism protects admin/moderator accounts? |
 | Options | **A.** TOTP (RFC 6238) + single-use recovery codes. **B.** WebAuthn/passkeys. **C.** SMS OTP. |
 | Recommendation | **A for MVP**, with WebAuthn considered later. MFA is mandatory before any admin route is exposed. Never SMS-only. |
-| Owner decision | **NOT YET APPROVED.** The recommended option A was implemented on 2026-11-24 to keep P6.5 moving under the owner's phase-automation instruction. Admin access remains local/test only; production activation stays gated until the owner confirms A or selects B/C. |
+| Owner decision | **OWNER OVERRIDE (2026-11-24): skip MFA for admins.** The DB role alone grants admin access. TOTP + recovery-code code remains implemented but is not enforced by default (`ADMIN_MFA_REQUIRED=false`). The owner accepted the increased account-compromise risk. Re-enable with `ADMIN_MFA_REQUIRED=true` before production if the risk posture changes. |
 | Date | 2026-11-24 |
 | Affects | P6.5, Phase 8 |
 

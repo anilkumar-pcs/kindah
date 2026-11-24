@@ -113,6 +113,11 @@ export function AdminConsole() {
         const mfaStatus = await getAdminMfaStatus();
         if (!cancelled) {
           setStatus(mfaStatus);
+          if (!mfaStatus.mfaRequired) {
+            const token = "mfa-not-required";
+            setMfaToken(token);
+            await loadData(token);
+          }
           setState("ready");
         }
       })
@@ -369,10 +374,12 @@ export function AdminConsole() {
           </span>
         </div>
         <p className="mt-2 text-sm text-kindly-muted">
-          Moderator actions require a verified authenticator session. Never share payment details,
-          UTRs or moderation notes outside this console.
+          {status?.mfaRequired
+            ? "Moderator actions require a verified authenticator session."
+            : "Admin access is granted by the database role (MFA is currently disabled by owner policy)."}{" "}
+          Never share payment details, UTRs or moderation notes outside this console.
         </p>
-        {unlocked && (
+        {unlocked && status?.mfaRequired && (
           <button
             type="button"
             onClick={() => {
@@ -407,7 +414,7 @@ export function AdminConsole() {
         </section>
       )}
 
-      {status && !status.mfaEnabled && !setup && (
+      {status && status.mfaRequired && !status.mfaEnabled && !setup && (
         <section className="rounded-2xl border border-kindly-border bg-white p-5">
           <h2 className="text-lg font-semibold">Set up authenticator MFA</h2>
           <p className="mt-1 text-sm text-kindly-muted">
@@ -424,7 +431,7 @@ export function AdminConsole() {
         </section>
       )}
 
-      {setup && !mfaToken && (
+      {setup && status?.mfaRequired && !mfaToken && (
         <section className="rounded-2xl border border-kindly-border bg-white p-5">
           <h2 className="text-lg font-semibold">Scan and confirm</h2>
           <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -469,7 +476,7 @@ export function AdminConsole() {
         </section>
       )}
 
-      {status?.mfaEnabled && !mfaToken && (
+      {status?.mfaRequired && status.mfaEnabled && !mfaToken && (
         <section className="rounded-2xl border border-kindly-border bg-white p-5">
           <h2 className="text-lg font-semibold">Verify MFA</h2>
           <p className="mt-1 text-sm text-kindly-muted">

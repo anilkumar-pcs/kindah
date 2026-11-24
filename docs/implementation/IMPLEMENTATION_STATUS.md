@@ -50,7 +50,7 @@ Completed:
 - P6.2 block/unblock APIs plus wish-scoped block-owner aliases; two-way discovery/detail/select/gift/report exclusion; My Space blocked-account list with unblock; report/block UI on wish detail.
 - P6.3 atomic auto-hide on the third unique wish report (OPEN→UNDER_REVIEW only, once), moderator-only `/admin/reports` queue with target previews and unique report counts, and feed/detail exclusion under review.
 - P6.4 protected Next.js `/admin` console with role gating, MFA setup/verify, report queue, support detail/resolution and audit view; loading, empty, denied and error states.
-- P6.5 `USER`/`MODERATOR`/`ADMIN` database roles as the sole admin authority, enforced TOTP MFA with single-use recovery codes and session-bound 15-minute tokens, admin user search/role management (self-change guarded, audited), and append-only `admin_audit_logs` with request IDs and encrypted resolution notes. Bootstrap CLI: `backend/scripts/grant_role.py`.
+- P6.5 `USER`/`MODERATOR`/`ADMIN` database roles as the sole admin authority; owner override (DEC-I13) disables required MFA, while TOTP/recovery-code code remains optional. Admin user search/role management (self-change guarded, audited) and append-only `admin_audit_logs` with request IDs and encrypted resolution notes. Bootstrap CLI: `backend/scripts/grant_role.py`. `AnilKumar` is the bootstrapped local DB admin.
 - P6.6 warning, restrict, suspend, ban and reactivate user actions plus hide, restore and remove wish actions, with mandatory reasons, encrypted `moderation_actions`, audit entries, self-moderation and privileged-target guards, and unresolved-gift/expiry restore guards. Admin UI exposes actions inline in the report queue.
 - P6.7 one appeal per restricted/suspended/banned action, encrypted appeal/resolution text, user appeals page, admin appeals queue/resolution with audit, banned users able to authenticate for appeals while interactive actions stay blocked, and MFA-protected support/gift dispute visibility for staff.
 - P6.8 non-destructive account deletion requests guarded by active wishes/gifts, `DELETION_PENDING` status, cancellation, encrypted optional reason and MFA-only admin queue. No deletion or anonymisation occurs pending DEC-O8.
@@ -99,7 +99,7 @@ Blocked/partial:
 | B-007 | Production SMS/OTP provider not selected | `OPEN` |
 | B-008 | Production KMS not selected | `OPEN` |
 | B-009 | VPA beneficiary validation unresolved | `OPEN` |
-| B-010 | Admin MFA mechanism (DEC-I13) implemented as recommended TOTP default; owner confirmation required before production | `OPEN` |
+| B-010 | Admin MFA mechanism (DEC-I13) | `RISK ACCEPTED` — owner chose role-only admin access; TOTP optional, disabled by default (2026-11-24) |
 | B-011 | Moderation-removal cooldown policy (DEC-O7) | `RESOLVED` — approved no extra cooldown (2026-11-24) |
 | B-012 | Retention schedule (DEC-O8) unresolved; deletion requests are recorded but no data is deleted/anonymised | `EXTERNAL_BLOCKED` |
 | B-013 | Deployed staging environment and approved RPO/RTO not available; local staging exercise recorded, remote drill pending | `EXTERNAL_BLOCKED` |
@@ -136,8 +136,8 @@ Blocked/partial:
 
 | Check | Result |
 |---|---|
-| Backend tests | 176 passed (14 gift, 2 support-case, 4 reporting/block/auto-hide, 8 admin security/moderation/appeal/role, 2 deletion, 3 notifications, 4 outbox, 3 karma/badge config, 2 Surprise Me) |
-| Frontend tests | 54 passed (12 test files) |
+| Backend tests | 177 passed (14 gift, 2 support-case, 4 reporting/block/auto-hide, 9 admin security/moderation/appeal/role, 2 deletion, 3 notifications, 4 outbox, 3 karma/badge config, 2 Surprise Me) |
+| Frontend tests | 55 passed (12 test files) |
 | Dependency/security scans | `npm audit` 0; `pip-audit` 0 known; Bandit medium/high clean; no tracked env/secrets |
 | Local restore drill | PASS — dump/restore at `0014_badge_definitions`; users=3, badge_definitions=5, wishes=3, gifts=1 |
 | Local load smoke | 500 requests, 50 concurrency, 0 errors, p95 90.3 ms (not capacity sign-off) |
@@ -146,6 +146,8 @@ Blocked/partial:
 | Frontend quality | ESLint, Prettier, tsc, production build pass |
 | Migrations | 0001–0014 apply; 0014 badge-definition migration validated at head |
 | DB roles/badge config | PASS — DB role sole admin authority; user search/role API/UI; badge definitions admin CRUD |
+| Admin MFA policy | Owner override recorded: role-only admin access; TOTP optional/disabled by default |
+| Local admin bootstrap | `AnilKumar` local account renamed from ChaiExplorer and set to DB `ADMIN` |
 | Staging exercise | PASS — separate `kindah_staging_exercise` DB; OTP→VPA→wish→gift→PAID→dispute→support→admin MFA→resolve→audit |
 | Phase 5 race suite | PASS — concurrent donors, idempotency, PAID-vs-expiry, confirmation-vs-timeout, re-reservation |
 | Phase 5 UI | PASS — full-stack donor gift, recipient confirmation and support report |
@@ -176,6 +178,6 @@ Implemented: `0006_support_cases`, participant case creation, admin list/detail/
 ## Next session handoff
 
 1. Identify and promote the owner account to DB `ADMIN` using `scripts/grant_role.py` (phone or public display name), then use the admin Users tab for any further role changes.
-2. Obtain the remaining owner decision: DEC-I13 admin MFA mechanism (TOTP is implemented; confirm or replace).
+2. Revisit DEC-I13 before production: owner accepted role-only admin access, so account-compromise risk must be covered by deployment controls or MFA re-enabled.
 3. Provision deployed staging, monitoring/alerts/on-call, KMS/OTP/UPI providers and complete legal/bank approvals before P8.3–P8.12.
 4. Run independent security review and a full WCAG 2.2 AA/manual browser matrix; keep deletion non-destructive and real-money handoff disabled.

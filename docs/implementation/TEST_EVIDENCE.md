@@ -528,10 +528,11 @@
 | Phase/task | Owner follow-up (RBAC/badges policy) |
 | Command | `cd backend && uv run alembic upgrade head && uv run ruff check . && uv run ruff format --check . && uv run mypy app tests scripts && uv run pytest -q`; `cd frontend && npm test && npm run lint && npm run typecheck && npm run build` |
 | Environment | PostgreSQL 16.16; Python 3.12.16; Next.js 16.4.6; Node 26 |
-| Result | **PASS** — `0014_badge_definitions (head)`; **176 backend tests**, **54 frontend tests**; all lint, format, type and build checks clean |
+| Result | **PASS** — `0014_badge_definitions (head)`; **177 backend tests**, **55 frontend tests**; all lint, format, type and build checks clean |
 | Roles | `users.role` is the sole admin authority; env allow-list removed. Admin can search users and promote/demote to USER/MODERATOR/ADMIN with mandatory reason, MFA and audit; self-role changes return `CANNOT_CHANGE_OWN_ROLE`; non-admin role changes denied. Role-change notification emitted. Bootstrap CLI supports phone (HMAC lookup, never printed), display name or user UUID. |
 | Badges | `badge_definitions` holds code/label/rule type/threshold/active/sort order; seeds the approved defaults. Admin CRUD creates, updates and deactivates badges with audit; deactivation stops future awards while earned badges remain; DB rule changes are used by the next confirmation. |
-| Decisions | DEC-O7 approved (no extra cooldown), badge defaults approved, no exposure tracking for now. DEC-I13 remains pending. |
+| Decisions | DEC-O7 approved (no extra cooldown), badge defaults approved, no exposure tracking for now. DEC-I13 owner override: role-only admin access, MFA optional/disabled by default. Local `ChaiExplorer` account renamed to `AnilKumar` and set to DB ADMIN. |
+| MFA-mode tests | Shared tests pin `admin_mfa_required=True` to keep the optional MFA path covered; a separate test verifies `admin_mfa_required=False` gives role-only admin access; admin console test auto-opens without MFA. |
 | Known limitation | The owner account has not been identified; bootstrap requires the owner's phone/display name. Rule types remain code-backed, so adding an entirely new rule type still needs code. |
 
 ## Summary
@@ -582,7 +583,7 @@
 | Phase 7 karma/streak/badges | PASS — 173 total backend tests, 53 frontend tests |
 | Phase 7 share/Surprise Me | PASS — privacy allow-list, exclusion and weight tests |
 | Phase 7 overall | `DONE` — 8/8 tasks; badge definitions DB-configurable |
-| DB roles/badge registry | PASS — 176 total backend tests, 54 frontend tests, migration 0014 |
+| DB roles/badge registry | PASS — 177 total backend tests, 55 frontend tests, migration 0014; role-only admin MFA override |
 | Phase 8 threat model/scans | PASS (local scope) — npm/pip/Bandit/secret checks |
 | Phase 8 restore/load/a11y smoke | PASS locally — restore at head, p95 90.3 ms, a11y 100 on 4 pages |
 | Phase 8 overall | `BLOCKED` — deployed staging, monitoring/RPO/RTO, independent security review, legal/provider gates |

@@ -12,7 +12,9 @@ from sqlalchemy import create_engine, select, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
+from app.core.config import Settings
 from app.core.security import totp_code
+from app.main import create_app
 from app.modules.admin.models import AdminAuditLog, ModerationAction, ModerationAppeal
 from app.modules.identity.models import User, UserRole, UserStatus
 from app.modules.wishes.models import Wish, WishStatus
@@ -583,6 +585,24 @@ def test_badge_definitions_are_admin_configurable(client: TestClient) -> None:
     assert "BADGE_DEFINITION_CREATED" in actions
     assert "BADGE_DEFINITION_UPDATED" in actions
     assert "BADGE_DEFINITION_DEACTIVATED" in actions
+
+
+def test_admin_role_works_without_mfa_when_owner_disables_it(settings: Settings) -> None:
+    app = create_app(settings.model_copy(update={"admin_mfa_required": False}))
+    with TestClient(app) as client:
+        session, headers, _ = complete_setup(
+            client,
+            phone="9876502061",
+            display_name="RoleOnlyAdmin",
+            vpa="roleonlyadmin@okhdfc",
+        )
+        _set_role(str(session["user"]["id"]), UserRole.ADMIN)
+
+        status = client.get("/api/v1/admin/mfa/status", headers=headers)
+        assert status.status_code == 200
+        assert status.json()["mfaRequired"] is False
+        assert client.get("/api/v1/admin/reports", headers=headers).status_code == 200
+        assert client.get("/api/v1/admin/users", headers=headers).status_code == 200
 
 
 def test_non_admin_cannot_use_mfa_or_audit_endpoints(client: TestClient) -> None:

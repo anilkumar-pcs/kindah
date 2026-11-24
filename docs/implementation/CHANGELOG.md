@@ -2,6 +2,21 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-24 — Role-only admin access and owner bootstrap
+
+### Changed
+
+- `ADMIN_MFA_REQUIRED` added; default is `false` per owner override DEC-I13. TOTP/recovery-code
+  code remains available but is not enforced unless the flag is enabled. The admin console
+  auto-opens for a DB admin role when MFA is disabled.
+- Local `ChaiExplorer` account renamed to `AnilKumar` and promoted to DB `ADMIN`; role is the sole
+  admin authority.
+- Recorded the increased account-compromise risk and production compensating-control requirement.
+
+### Verification
+
+- 177 backend tests, 55 frontend tests; role-only and MFA-enabled modes both covered.
+
 ## 2026-11-24 — DB-only roles, admin role management and configurable badges
 
 ### Added

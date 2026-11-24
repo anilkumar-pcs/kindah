@@ -36,7 +36,8 @@ API: `POST /api/v1/gifts/{gift_id}/support-cases` (authenticated participant).
 ## Administrator flow
 
 Administrator authorization uses the `users.role` column in PostgreSQL (`ADMIN` or
-`MODERATOR`) plus a verified MFA session. The database role is the sole authority. Use
+`MODERATOR`). The database role is the sole authority; MFA is optional and currently disabled by
+owner override (`ADMIN_MFA_REQUIRED=false`). Use
 `backend/scripts/grant_role.py` only for initial bootstrap or recovery, then manage roles through
 the admin Users tab. Do not create environment allow-lists.
 

@@ -41,7 +41,7 @@ local/test adapters. Production UPI handoff is disabled and external gates are n
 | Donor/recipient privacy leakage | Public DTOs exclude phone/VPA/UTR/URI/donor identity; share cards allow-listed; logs redact sensitive shapes | Future analytics/delivery adapters must reuse allow-lists |
 | Double reservation / duplicate karma | Wish row locks, one ACTIVE reservation, unique karma idempotency keys, gift state guards | Concurrency tests must remain green |
 | Race between PAID and expiry/confirmation | Row locks + state re-checks; true race tests in `test_gifts.py` | DB/provider latency not load-tested at beta scale |
-| Admin compromise | DB role + TOTP MFA (provisional DEC-I13), recovery codes hashed/one-time, session-bound token, append-only audit | Owner confirmation, role provisioning UI and MFA recovery policy pending |
+| Admin compromise | Database `users.role` is the only authority; admins log in normally; TOTP/recovery-code MFA code remains optional; append-only audit | **Owner override DEC-I13 disables required MFA (high residual risk for production).** Compensating controls: DB access restriction, strong OTP provider, session/device monitoring, short token TTL and audit review. Re-enable MFA before production if possible. |
 | Moderator abuse | Mandatory reasons, self/privileged-target guards, append-only audit, appeals | No second-admin approval for high-impact actions |
 | Report brigading / ban evasion | Unique reporter/target, hourly cap, threshold auto-hide once, blocks, account statuses | Phone/device provenance and appeal abuse are operational concerns |
 | Deletion/retention misuse | Non-destructive request, active-transaction guards, no anonymisation before DEC-O8 | Retention approval and account-linking policy external |
@@ -52,7 +52,7 @@ local/test adapters. Production UPI handoff is disabled and external gates are n
 ## Security review checklist
 
 - [x] Passwords/OTP/PINs never logged; log redaction covers phone/VPA/UPI URI/bearer tokens.
-- [x] Raw VPA/phone/UTR not returned in public payloads; admin access requires role+MFA.
+- [x] Raw VPA/phone/UTR not returned in public payloads; admin access requires a DB role. TOTP MFA is implemented but disabled by owner override (DEC-I13).
 - [x] Session refresh rotation, CSRF header+`SameSite` cookie, CORS allow-list.
 - [x] PostgreSQL constraints/locks/idempotency enforce one reservation and one karma award.
 - [x] Append-only admin audit trigger rejects UPDATE/DELETE.
@@ -64,8 +64,9 @@ local/test adapters. Production UPI handoff is disabled and external gates are n
 
 ## Open findings and gates
 
-1. **DEC-I13 admin MFA** is an implemented recommended default, not an owner-approved decision;
-   production admin activation remains blocked.
+1. **DEC-I13 admin MFA** is an owner override: role-only admin access is enabled and MFA is
+   optional/disabled (`ADMIN_MFA_REQUIRED=false`). The owner accepted the account-compromise risk;
+   production activation still needs compensating controls or MFA re-enablement.
 2. **DEC-O7 removal cooldown** and **badge thresholds** are provisional implementation defaults.
 3. Deployed staging and approved RPO/RTO are unavailable; only a local restore drill is recorded.
 4. No production payment handoff, KMS, OTP or push/SMS provider is selected.

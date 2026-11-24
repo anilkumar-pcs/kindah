@@ -41,6 +41,7 @@ def settings() -> Settings:
         otp_hmac_key="test-only-otp-hmac-key-minimum-32-characters",
         payments_live_enabled=False,
         handoff_mode="test",
+        admin_mfa_required=True,
         db_connect_timeout_seconds=2,
         redis_timeout_seconds=0.2,
     )

@@ -133,6 +133,23 @@ beforeEach(() => {
 });
 
 describe("AdminConsole", () => {
+  it("opens the console without MFA when owner policy disables it", async () => {
+    mockedStatus.mockResolvedValue({
+      role: "ADMIN",
+      mfaEnabled: false,
+      mfaRequired: false,
+      recoveryCodesRemaining: 0,
+    });
+
+    render(<AdminConsole />);
+
+    expect(await screen.findByRole("heading", { name: /moderation queue/i })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: /set up authenticator mfa/i }),
+    ).not.toBeInTheDocument();
+    expect(mockedReports).toHaveBeenCalledWith("mfa-not-required");
+  });
+
   it("denies ordinary users without loading admin data", async () => {
     mockedRestore.mockResolvedValue(makeUser("USER"));
 
