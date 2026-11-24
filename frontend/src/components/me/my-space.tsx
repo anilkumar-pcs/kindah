@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
+import { Icon } from "@/components/ui/icon";
 import { ApiError } from "@/lib/api/client";
 import { listMyGifts, type Gift } from "@/lib/api/gifts";
 import { getKarmaSummary, type KarmaSummary } from "@/lib/api/karma";
@@ -224,11 +225,7 @@ export function MySpace() {
 
   if (state === "loading") {
     return (
-      <section
-        aria-busy="true"
-        aria-live="polite"
-        className="mx-auto max-w-3xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border"
-      >
+      <section aria-busy="true" aria-live="polite" className="kindly-card mx-auto max-w-3xl p-6">
         <p className="text-sm text-kindly-muted">Loading your space…</p>
       </section>
     );
@@ -236,15 +233,17 @@ export function MySpace() {
 
   if (state === "guest") {
     return (
-      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">My Kindness</h1>
+      <section className="kindly-card mx-auto max-w-xl p-6 sm:p-8">
+        <span className="grid h-12 w-12 place-items-center rounded-full bg-kindly-accent-soft text-kindly-accent">
+          <Icon name="heart" className="h-6 w-6" />
+        </span>
+        <h1 className="mt-4 font-display text-3xl font-semibold tracking-[-0.055em]">
+          My Kindness
+        </h1>
         <p className="mt-3 text-sm leading-6 text-kindly-muted">
           Sign in to save a UPI ID, publish one wish and see your history.
         </p>
-        <Link
-          href="/sign-in"
-          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800"
-        >
+        <Link href="/sign-in" className="kindly-btn-primary mt-6">
           Sign in
         </Link>
       </section>
@@ -253,15 +252,17 @@ export function MySpace() {
 
   if (state === "error" || !user) {
     return (
-      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">My Kindness</h1>
-        <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+      <section className="kindly-card mx-auto max-w-xl p-6 sm:p-8">
+        <span className="grid h-12 w-12 place-items-center rounded-full bg-kindly-accent-soft text-kindly-accent">
+          <Icon name="heart" className="h-6 w-6" />
+        </span>
+        <h1 className="mt-4 font-display text-3xl font-semibold tracking-[-0.055em]">
+          My Kindness
+        </h1>
+        <p role="alert" className="kindly-status-error mt-4">
           {error ?? "Could not load your space."}
         </p>
-        <Link
-          href="/sign-in"
-          className="mt-6 inline-block text-sm font-semibold text-kindly-accent"
-        >
+        <Link href="/sign-in" className="kindly-btn-quiet mt-4 !px-0">
           Sign in again
         </Link>
       </section>
@@ -273,49 +274,60 @@ export function MySpace() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
-      <header>
-        <p className="text-sm font-semibold tracking-wide text-kindly-accent uppercase">
-          My Kindness
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-          {user.displayName ?? "Your space"}
-        </h1>
-        <p className="mt-2 text-sm text-kindly-muted">
-          Your UPI ID is private. Donors only see your pseudonym and wish.
-        </p>
-        <div className="mt-2 flex flex-wrap gap-4 text-sm">
-          <Link href="/notifications" className="font-semibold text-kindly-accent underline">
-            Notifications
-          </Link>
-          <Link href="/appeals" className="font-semibold text-kindly-accent underline">
-            Moderation appeals
-          </Link>
-          <Link href="/account-deletion" className="font-semibold text-kindly-accent underline">
-            Account deletion
-          </Link>
+      <section className="relative overflow-hidden rounded-[2rem] bg-kindly-accent-soft p-5 sm:p-7">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-16 -right-12 h-48 w-48 rounded-full bg-kindly-marigold/50 blur-2xl"
+        />
+        <div className="relative flex flex-wrap items-center gap-4">
+          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-kindly-card font-display text-2xl font-bold text-kindly-coral shadow-[0_3px_0_rgb(23_59_51_/_8%)]">
+            {(user.displayName ?? "K").slice(0, 1).toUpperCase()}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="kindly-eyebrow">Your little corner</p>
+            <h1 className="mt-1 font-display text-4xl font-semibold tracking-[-0.06em]">
+              {user.displayName ?? "Your space"}
+            </h1>
+            <p className="mt-1 text-sm leading-6 text-kindly-muted">
+              Your UPI ID is private. Donors only see your pseudonym and wish.
+            </p>
+          </div>
+          <span className="kindly-chip">
+            <Icon name="heart" className="h-3 w-3" /> Little things add up
+          </span>
         </div>
-      </header>
+        {karma && (
+          <div className="relative mt-5 grid grid-cols-2 gap-2 sm:max-w-md">
+            <div className="rounded-2xl bg-kindly-card/80 p-3">
+              <strong className="font-display text-2xl font-bold tracking-[-0.04em] text-kindly-accent">
+                {karma.balance}
+              </strong>
+              <span className="ml-1 text-xs font-semibold text-kindly-muted">karma</span>
+            </div>
+            <div className="rounded-2xl bg-kindly-card/80 p-3">
+              <strong className="font-display text-2xl font-bold tracking-[-0.04em] text-kindly-accent">
+                {karma.streak}
+              </strong>
+              <span className="ml-1 text-xs font-semibold text-kindly-muted">day streak</span>
+            </div>
+          </div>
+        )}
+      </section>
 
       {karma && (
-        <section
-          aria-labelledby="karma-heading"
-          className="rounded-2xl border border-kindly-border bg-white p-5"
-        >
-          <h2 id="karma-heading" className="text-lg font-semibold">
+        <section aria-labelledby="karma-heading" className="kindly-card p-5 sm:p-6">
+          <h2 id="karma-heading" className="font-display text-2xl font-semibold tracking-[-0.04em]">
             Karma & badges
           </h2>
           <p className="mt-2 text-sm text-kindly-muted">
             Karma has no cash value or redemption. It is derived from the immutable ledger.
           </p>
-          <div className="mt-3 flex flex-wrap gap-4 text-sm">
-            <p>
-              <span className="text-2xl font-semibold">{karma.balance}</span> karma
+          {karma.badges.length === 0 && karma.events.length === 0 && (
+            <p className="kindly-card-soft mt-4 p-4 text-sm leading-6 text-kindly-muted">
+              Your first confirmed gift starts your little badge collection. No pressure — just
+              because is enough.
             </p>
-            <p>
-              <span className="text-2xl font-semibold">{karma.streak}</span>
-              -day giving streak
-            </p>
-          </div>
+          )}
           {karma.badges.length > 0 && (
             <ul className="mt-3 flex flex-wrap gap-2">
               {karma.badges.map((badge) => (
@@ -345,7 +357,7 @@ export function MySpace() {
       )}
 
       {error && (
-        <div role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
+        <div role="alert" className="kindly-status-error">
           <p>{error}</p>
           {reauthRequired && (
             <Link href="/reauth" className="mt-2 inline-block font-semibold underline">
@@ -355,11 +367,11 @@ export function MySpace() {
         </div>
       )}
 
-      <section
-        aria-labelledby="payment-method-heading"
-        className="rounded-2xl border border-kindly-border bg-white p-5"
-      >
-        <h2 id="payment-method-heading" className="text-lg font-semibold">
+      <section aria-labelledby="payment-method-heading" className="kindly-card p-5 sm:p-6">
+        <h2
+          id="payment-method-heading"
+          className="font-display text-2xl font-semibold tracking-[-0.04em]"
+        >
           Receiving UPI ID
         </h2>
 
@@ -380,7 +392,7 @@ export function MySpace() {
                 setPrivacyAck(false);
                 setError(null);
               }}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-4 py-2 text-sm font-semibold hover:bg-kindly-accent-soft"
+              className="kindly-btn-secondary"
             >
               Change UPI ID
             </button>
@@ -388,7 +400,7 @@ export function MySpace() {
         ) : (
           <form className="mt-4 space-y-4" onSubmit={handleSaveVpa}>
             <div>
-              <label htmlFor="vpa" className="block text-sm font-medium">
+              <label htmlFor="vpa" className="kindly-label">
                 UPI ID
               </label>
               <input
@@ -401,10 +413,10 @@ export function MySpace() {
                 value={vpa}
                 onChange={(event) => setVpa(event.target.value)}
                 placeholder="name@provider"
-                className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+                className="kindly-input mt-1"
                 aria-describedby="vpa-help"
               />
-              <p id="vpa-help" className="mt-1 text-xs text-kindly-muted">
+              <p id="vpa-help" className="kindly-help">
                 We check the format only. We cannot verify ownership or that the UPI ID can receive
                 money.
               </p>
@@ -418,11 +430,7 @@ export function MySpace() {
               />
               <span>I understand my UPI app may show my bank-registered name to the donor.</span>
             </label>
-            <button
-              type="submit"
-              disabled={busy}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
-            >
+            <button type="submit" disabled={busy} className="kindly-btn-primary">
               {busy ? "Saving…" : "Save UPI ID"}
             </button>
           </form>
@@ -430,11 +438,11 @@ export function MySpace() {
       </section>
 
       {activeWish && (
-        <section
-          aria-labelledby="active-wish-heading"
-          className="rounded-2xl border border-kindly-border bg-white p-5"
-        >
-          <h2 id="active-wish-heading" className="text-lg font-semibold">
+        <section aria-labelledby="active-wish-heading" className="kindly-card p-5 sm:p-6">
+          <h2
+            id="active-wish-heading"
+            className="font-display text-2xl font-semibold tracking-[-0.04em]"
+          >
             Your active wish
           </h2>
           <div className="mt-3 space-y-2 text-sm">
@@ -451,7 +459,7 @@ export function MySpace() {
               type="button"
               disabled={busy}
               onClick={() => handleWithdraw(activeWish.id)}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-4 py-2 text-sm font-semibold hover:bg-kindly-accent-soft disabled:opacity-60"
+              className="kindly-btn-secondary"
             >
               {busy ? "Withdrawing…" : "Withdraw wish"}
             </button>
@@ -460,19 +468,19 @@ export function MySpace() {
       )}
 
       {!activeWish && cooldownUntil && (
-        <section className="rounded-2xl border border-kindly-border bg-kindly-accent-soft p-5 text-sm">
-          <h2 className="text-lg font-semibold">Cooldown</h2>
+        <section className="kindly-card-soft p-5 text-sm">
+          <h2 className="font-display text-2xl font-semibold tracking-[-0.04em]">Cooldown</h2>
           <p className="mt-2 text-kindly-muted">
             You can publish another wish after {formatDate(cooldownUntil.toISOString())}.
           </p>
         </section>
       )}
 
-      <section
-        aria-labelledby="create-wish-heading"
-        className="rounded-2xl border border-kindly-border bg-white p-5"
-      >
-        <h2 id="create-wish-heading" className="text-lg font-semibold">
+      <section aria-labelledby="create-wish-heading" className="kindly-card p-5 sm:p-6">
+        <h2
+          id="create-wish-heading"
+          className="font-display text-2xl font-semibold tracking-[-0.04em]"
+        >
           Create a wish
         </h2>
 
@@ -491,7 +499,7 @@ export function MySpace() {
         {canPublish && (
           <form className="mt-4 space-y-4" onSubmit={handleCreateWish}>
             <div>
-              <label htmlFor="wish-message" className="block text-sm font-medium">
+              <label htmlFor="wish-message" className="kindly-label">
                 Wish message
               </label>
               <textarea
@@ -503,24 +511,24 @@ export function MySpace() {
                 rows={3}
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
-                className="mt-1 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+                className="kindly-input mt-1"
                 aria-describedby="wish-message-help"
               />
-              <p id="wish-message-help" className="mt-1 text-xs text-kindly-muted">
+              <p id="wish-message-help" className="kindly-help">
                 {charCount}/120 characters. No links, phone numbers, UPI IDs or HTML.
               </p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label htmlFor="wish-mood" className="block text-sm font-medium">
+                <label htmlFor="wish-mood" className="kindly-label">
                   Mood
                 </label>
                 <select
                   id="wish-mood"
                   value={mood}
                   onChange={(event) => setMood(event.target.value as WishMood)}
-                  className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
+                  className="kindly-input mt-1"
                 >
                   {MOODS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -530,7 +538,7 @@ export function MySpace() {
                 </select>
               </div>
               <div>
-                <label htmlFor="wish-amount" className="block text-sm font-medium">
+                <label htmlFor="wish-amount" className="kindly-label">
                   Suggested amount (optional)
                 </label>
                 <input
@@ -542,14 +550,14 @@ export function MySpace() {
                   step={1}
                   value={amount}
                   onChange={(event) => setAmount(event.target.value)}
-                  className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+                  className="kindly-input mt-1"
                   placeholder="₹10–₹100"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="wish-city" className="block text-sm font-medium">
+              <label htmlFor="wish-city" className="kindly-label">
                 City (optional)
               </label>
               <input
@@ -559,11 +567,11 @@ export function MySpace() {
                 maxLength={60}
                 value={city}
                 onChange={(event) => setCity(event.target.value)}
-                className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+                className="kindly-input mt-1"
               />
             </div>
 
-            <div className="rounded-xl bg-kindly-accent-soft p-4 text-sm">
+            <div className="kindly-card-soft p-4 text-sm">
               <p className="text-xs font-semibold tracking-wide text-kindly-accent uppercase">
                 Preview
               </p>
@@ -575,11 +583,7 @@ export function MySpace() {
               </p>
             </div>
 
-            <button
-              type="submit"
-              disabled={busy}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
-            >
+            <button type="submit" disabled={busy} className="kindly-btn-primary">
               {busy ? "Publishing…" : "Publish wish"}
             </button>
           </form>
@@ -587,7 +591,7 @@ export function MySpace() {
       </section>
 
       <section aria-labelledby="history-heading">
-        <h2 id="history-heading" className="text-lg font-semibold">
+        <h2 id="history-heading" className="font-display text-2xl font-semibold tracking-[-0.04em]">
           Wish history
         </h2>
         {wishes.length === 0 ? (
@@ -595,10 +599,7 @@ export function MySpace() {
         ) : (
           <ul className="mt-3 space-y-3">
             {wishes.map((wish) => (
-              <li
-                key={wish.id}
-                className="rounded-2xl border border-kindly-border bg-white p-4 text-sm"
-              >
+              <li key={wish.id} className="kindly-card p-4 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-semibold">{wish.status}</span>
                   <span className="text-xs text-kindly-muted">{formatDate(wish.createdAt)}</span>
@@ -618,7 +619,10 @@ export function MySpace() {
       </section>
 
       <section aria-labelledby="gift-history-heading">
-        <h2 id="gift-history-heading" className="text-lg font-semibold">
+        <h2
+          id="gift-history-heading"
+          className="font-display text-2xl font-semibold tracking-[-0.04em]"
+        >
           Gift history
         </h2>
         {gifts.length === 0 ? (
@@ -629,7 +633,7 @@ export function MySpace() {
               <li key={gift.giftId}>
                 <Link
                   href={`/gifts/${gift.giftId}`}
-                  className="block rounded-2xl border border-kindly-border bg-white p-4 text-sm hover:border-kindly-accent"
+                  className="kindly-card block p-4 text-sm hover:border-kindly-accent"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-semibold">₹{gift.amountInr}</span>
@@ -642,7 +646,7 @@ export function MySpace() {
                       ? `You sent this to ${gift.recipientDisplayName ?? "a recipient"}.`
                       : "A kind donor sent this to you."}
                   </p>
-                  <p className="mt-1 text-xs text-kindly-muted">
+                  <p className="kindly-help">
                     {formatDate(gift.createdAt)} · reference {gift.paymentRefCode}
                   </p>
                 </Link>
@@ -654,7 +658,10 @@ export function MySpace() {
 
       {blocks.length > 0 && (
         <section aria-labelledby="blocked-accounts-heading">
-          <h2 id="blocked-accounts-heading" className="text-lg font-semibold">
+          <h2
+            id="blocked-accounts-heading"
+            className="font-display text-2xl font-semibold tracking-[-0.04em]"
+          >
             Blocked accounts
           </h2>
           <p className="mt-1 text-sm text-kindly-muted">
@@ -666,7 +673,7 @@ export function MySpace() {
               return (
                 <li
                   key={block.blockedUserId}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-kindly-border bg-white p-4 text-sm"
+                  className="kindly-card flex flex-wrap items-center justify-between gap-3 p-4 text-sm"
                 >
                   <span className="font-semibold">{name}</span>
                   <button
@@ -674,7 +681,7 @@ export function MySpace() {
                     disabled={busy}
                     aria-label={`Unblock ${name}`}
                     onClick={() => handleUnblock(block.blockedUserId)}
-                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-4 py-2 text-sm font-semibold hover:bg-kindly-accent-soft disabled:opacity-60"
+                    className="kindly-btn-secondary"
                   >
                     Unblock
                   </button>

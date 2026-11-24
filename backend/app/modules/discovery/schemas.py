@@ -18,6 +18,7 @@ class PublicWish(ApiModel):
     mood: WishMood
     message: str
     suggested_amount_inr: int | None
+    is_own_wish: bool = False
 
 
 class FeedResponse(ApiModel):

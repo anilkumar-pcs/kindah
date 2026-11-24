@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 
 import { GiftHandoff } from "@/components/gifts/gift-handoff";
+import { Icon } from "@/components/ui/icon";
 import { ApiError } from "@/lib/api/client";
 import { getPublicWish, type PublicWish } from "@/lib/api/discovery";
 import { createGift, newIdempotencyKey, type Gift, type GiftCreateInput } from "@/lib/api/gifts";
@@ -15,6 +16,43 @@ type PageState = "loading" | "guest" | "ready" | "error";
 type Step = "amount" | "review" | "handoff";
 
 const QUICK_AMOUNTS = [10, 25, 50, 100];
+
+function GiftSteps({ current }: { current: Step }) {
+  const order: Step[] = ["amount", "review", "handoff"];
+  const labels = { amount: "Amount", review: "Review", handoff: "UPI" } as const;
+  const currentIndex = order.indexOf(current);
+
+  return (
+    <div className="flex items-center gap-2">
+      {order.map((item, index) => {
+        const active = index <= currentIndex;
+        return (
+          <div key={item} className="flex flex-1 items-center gap-2">
+            <span
+              className={`inline-flex min-h-8 items-center gap-1.5 rounded-full px-2.5 text-[10px] font-extrabold ${
+                active
+                  ? "bg-kindly-accent text-white"
+                  : "border border-kindly-border bg-kindly-card text-kindly-muted"
+              }`}
+            >
+              <span className="grid h-4 w-4 place-items-center rounded-full border border-current text-[9px]">
+                {index + 1}
+              </span>
+              {labels[item]}
+            </span>
+            {index < order.length - 1 && (
+              <span
+                className={`h-px flex-1 ${
+                  index < currentIndex ? "bg-kindly-accent" : "bg-kindly-border"
+                }`}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
@@ -37,13 +75,22 @@ export function GiftFlow({ wishId }: { wishId: string }) {
   useEffect(() => {
     let cancelled = false;
 
-    Promise.all([restoreSession(), getPublicWish(wishId)])
-      .then(([session, loadedWish]) => {
+    restoreSession()
+      .then(async (session) => {
         if (cancelled) {
           return;
         }
         if (!session) {
           setPageState("guest");
+          return;
+        }
+        const loadedWish = await getPublicWish(wishId);
+        if (cancelled) {
+          return;
+        }
+        if (loadedWish.isOwnWish) {
+          setError("This is your own wish. You can manage it from My Space.");
+          setPageState("error");
           return;
         }
         setWish(loadedWish);
@@ -125,29 +172,34 @@ export function GiftFlow({ wishId }: { wishId: string }) {
 
   if (pageState === "loading") {
     return (
-      <section
-        aria-busy="true"
-        aria-live="polite"
-        className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border"
-      >
-        <p className="text-sm text-kindly-muted">Preparing your gift…</p>
+      <section aria-busy="true" aria-live="polite" className="mx-auto max-w-2xl">
+        <div className="kindly-card p-6">
+          <div className="h-3 w-20 animate-pulse rounded-full bg-kindly-accent-soft" />
+          <div className="mt-5 h-10 w-2/3 animate-pulse rounded-2xl bg-kindly-accent-soft/70" />
+          <p className="mt-5 text-sm text-kindly-muted">Preparing your gift…</p>
+        </div>
       </section>
     );
   }
 
   if (pageState === "guest") {
     return (
-      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Sign in to send a gift</h1>
+      <section className="kindly-card mx-auto max-w-xl p-7 sm:p-9">
+        <span className="grid h-12 w-12 place-items-center rounded-full bg-kindly-accent-soft text-kindly-accent">
+          <Icon name="gift" className="h-6 w-6" />
+        </span>
+        <h1 className="mt-4 font-display text-3xl font-semibold tracking-[-0.055em]">
+          Sign in to send a gift
+        </h1>
         <p className="mt-3 text-sm leading-6 text-kindly-muted">
           You can browse anonymously. Signing in is required before reserving a wish and opening a
           UPI handoff.
         </p>
         <Link
-          href="/sign-in"
-          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800"
+          href={`/sign-in?next=${encodeURIComponent(`/gifts/new/${wishId}`)}`}
+          className="kindly-btn-primary mt-6"
         >
-          Sign in
+          Sign in to continue <Icon name="arrow-right" className="h-4 w-4" />
         </Link>
       </section>
     );
@@ -155,15 +207,17 @@ export function GiftFlow({ wishId }: { wishId: string }) {
 
   if (pageState === "error" || !wish) {
     return (
-      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Could not start this gift</h1>
-        <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+      <section className="kindly-card mx-auto max-w-xl p-7 sm:p-9">
+        <span className="grid h-12 w-12 place-items-center rounded-full bg-kindly-blush text-kindly-coral">
+          <Icon name="gift" className="h-6 w-6" />
+        </span>
+        <h1 className="mt-4 font-display text-3xl font-semibold tracking-[-0.055em]">
+          Could not start this gift
+        </h1>
+        <p role="alert" className="kindly-status-error mt-3">
           {error ?? "This wish is unavailable."}
         </p>
-        <Link
-          href="/"
-          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800"
-        >
+        <Link href="/" className="kindly-btn-primary mt-6">
           Back to discovery
         </Link>
       </section>
@@ -173,30 +227,42 @@ export function GiftFlow({ wishId }: { wishId: string }) {
   const status = gift ? giftStatusLabel(gift.giftStatus) : null;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <header>
-        <p className="text-sm font-semibold tracking-wide text-kindly-accent uppercase">Gift</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">For {wish.displayName}</h1>
-        <p className="mt-2 text-sm leading-6 text-kindly-muted">{wish.message}</p>
-      </header>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <div>
+        <Link href={`/wishes/${wish.id}`} className="kindly-btn-quiet !min-h-9 !px-2">
+          <span aria-hidden="true">←</span> Back to the wish
+        </Link>
+        <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="kindly-eyebrow">A little gift</p>
+            <h1 className="mt-2 font-display text-3xl font-semibold tracking-[-0.055em] sm:text-4xl">
+              For {wish.displayName}
+            </h1>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-kindly-muted">{wish.message}</p>
+          </div>
+          <span className="kindly-chip">
+            <Icon name="shield" className="h-3 w-3" /> Direct UPI
+          </span>
+        </div>
+      </div>
+
+      <GiftSteps current={step} />
 
       {error && (
-        <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+        <p role="alert" className="kindly-status-error">
           {error}
         </p>
       )}
 
       {step === "amount" && (
-        <form
-          noValidate
-          onSubmit={handleReview}
-          className="rounded-2xl border border-kindly-border bg-white p-5"
-        >
-          <h2 className="text-lg font-semibold">Choose an amount</h2>
-          <p className="mt-1 text-sm text-kindly-muted">
+        <form noValidate onSubmit={handleReview} className="kindly-card p-5 sm:p-7">
+          <h2 className="font-display text-2xl font-semibold tracking-[-0.045em]">
+            Choose an amount
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-kindly-muted">
             Whole rupees only, from ₹10 to ₹100. You pay directly over UPI.
           </p>
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-5 grid grid-cols-4 gap-2">
             {QUICK_AMOUNTS.map((value) => (
               <button
                 key={value}
@@ -206,18 +272,18 @@ export function GiftFlow({ wishId }: { wishId: string }) {
                   setAmount(String(value));
                   createKeyRef.current = null;
                 }}
-                className={`min-h-11 rounded-xl border px-4 py-2 text-sm font-semibold ${
+                className={`min-h-12 rounded-2xl border px-2 py-2 font-display text-lg font-bold ${
                   amount === String(value)
                     ? "border-kindly-accent bg-kindly-accent text-white"
-                    : "border-kindly-border bg-white hover:bg-kindly-accent-soft"
+                    : "border-kindly-border bg-kindly-card text-kindly-ink hover:bg-kindly-accent-soft"
                 }`}
               >
                 ₹{value}
               </button>
             ))}
           </div>
-          <div className="mt-4">
-            <label htmlFor="gift-amount" className="block text-sm font-medium">
+          <div className="mt-5">
+            <label htmlFor="gift-amount" className="kindly-label">
               Amount in rupees
             </label>
             <input
@@ -234,13 +300,13 @@ export function GiftFlow({ wishId }: { wishId: string }) {
                 setAmount(event.target.value);
                 createKeyRef.current = null;
               }}
-              className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+              className="kindly-input mt-1"
               placeholder="10–100"
             />
           </div>
           <div className="mt-4">
-            <label htmlFor="cheer-note" className="block text-sm font-medium">
-              Cheer note (optional)
+            <label htmlFor="cheer-note" className="kindly-label">
+              Cheer note <span className="font-medium text-kindly-muted">(optional)</span>
             </label>
             <input
               id="cheer-note"
@@ -252,49 +318,46 @@ export function GiftFlow({ wishId }: { wishId: string }) {
                 setCheer(event.target.value);
                 createKeyRef.current = null;
               }}
-              className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+              className="kindly-input mt-1"
               placeholder="A short, kind note"
               aria-describedby="cheer-note-help"
             />
-            <p id="cheer-note-help" className="mt-1 text-xs text-kindly-muted">
+            <p id="cheer-note-help" className="kindly-help">
               {cheer.length}/80 characters. No phone numbers, UPI IDs, links or HTML.
             </p>
           </div>
-          <button
-            type="submit"
-            className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800"
-          >
-            Review gift
+          <button type="submit" className="kindly-btn-primary mt-5 w-full">
+            Review gift <Icon name="arrow-right" className="h-4 w-4" />
           </button>
         </form>
       )}
 
       {step === "review" && (
-        <section
-          aria-labelledby="review-heading"
-          className="rounded-2xl border border-kindly-border bg-white p-5"
-        >
-          <h2 id="review-heading" className="text-lg font-semibold">
+        <section aria-labelledby="review-heading" className="kindly-card p-5 sm:p-7">
+          <h2
+            id="review-heading"
+            className="font-display text-2xl font-semibold tracking-[-0.045em]"
+          >
             Review your gift
           </h2>
-          <dl className="mt-4 space-y-3 text-sm">
-            <div className="flex items-center justify-between gap-4">
+          <dl className="mt-5 divide-y divide-kindly-border/70 text-sm">
+            <div className="flex items-center justify-between gap-4 py-3">
               <dt className="text-kindly-muted">Recipient</dt>
-              <dd className="font-semibold">{wish.displayName}</dd>
+              <dd className="font-bold">{wish.displayName}</dd>
             </div>
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center justify-between gap-4 py-3">
               <dt className="text-kindly-muted">Amount</dt>
-              <dd className="text-xl font-semibold">₹{amount}</dd>
+              <dd className="font-display text-2xl font-bold tracking-[-0.04em]">₹{amount}</dd>
             </div>
             {cheer.trim() && (
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start justify-between gap-4 py-3">
                 <dt className="text-kindly-muted">Cheer note</dt>
                 <dd className="text-right">{cheer.trim()}</dd>
               </div>
             )}
           </dl>
-          <div className="mt-4 rounded-xl bg-kindly-accent-soft p-4 text-sm leading-6">
-            <p className="font-semibold">Before you continue</p>
+          <div className="kindly-card-soft mt-4 p-4 text-sm leading-6">
+            <p className="font-bold">Before you continue</p>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-kindly-muted">
               <li>The next step opens your UPI app with the recipient&apos;s payment details.</li>
               <li>Kindly does not hold, escrow or verify the money.</li>
@@ -307,9 +370,10 @@ export function GiftFlow({ wishId }: { wishId: string }) {
               type="button"
               disabled={busy}
               onClick={handleCreate}
-              className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
+              className="kindly-btn-primary flex-1"
             >
               {busy ? "Creating handoff…" : "Create UPI handoff"}
+              <Icon name="arrow-right" className="h-4 w-4" />
             </button>
             <button
               type="button"
@@ -318,7 +382,7 @@ export function GiftFlow({ wishId }: { wishId: string }) {
                 setError(null);
                 setStep("amount");
               }}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-5 py-3 text-sm font-semibold hover:bg-kindly-accent-soft disabled:opacity-60"
+              className="kindly-btn-secondary"
             >
               Change amount
             </button>
@@ -330,12 +394,12 @@ export function GiftFlow({ wishId }: { wishId: string }) {
         <>
           <div
             aria-live="polite"
-            className={`rounded-2xl p-4 ring-1 ${giftStatusTone(gift.giftStatus)}`}
+            className={`rounded-2xl p-5 ring-1 ${giftStatusTone(gift.giftStatus)}`}
           >
-            <p className="text-xs font-semibold tracking-wide uppercase">Gift status</p>
-            <p className="mt-1 text-lg font-semibold">{status}</p>
+            <p className="text-[10px] font-extrabold tracking-[0.14em] uppercase">Gift status</p>
+            <p className="mt-1 font-display text-xl font-semibold tracking-[-0.04em]">{status}</p>
             {gift.giftStatus === "DONOR_CLAIMED_PAID" && (
-              <p className="mt-1 text-sm">
+              <p className="mt-1 text-sm leading-6">
                 You have told us the payment was made. The recipient now has 24 hours to confirm
                 receipt.
               </p>
@@ -343,16 +407,10 @@ export function GiftFlow({ wishId }: { wishId: string }) {
           </div>
           <GiftHandoff gift={gift} onUpdated={setGift} />
           <div className="flex flex-wrap gap-3 text-sm">
-            <Link
-              href={`/gifts/${gift.giftId}`}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border bg-white px-5 py-3 font-semibold hover:bg-kindly-accent-soft"
-            >
+            <Link href={`/gifts/${gift.giftId}`} className="kindly-btn-secondary">
               View gift details
             </Link>
-            <Link
-              href="/me"
-              className="inline-flex min-h-11 items-center justify-center rounded-xl px-2 py-3 font-semibold text-kindly-accent underline"
-            >
+            <Link href="/me" className="kindly-btn-quiet">
               My space
             </Link>
           </div>

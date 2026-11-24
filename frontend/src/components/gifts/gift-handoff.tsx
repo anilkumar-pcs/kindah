@@ -26,19 +26,19 @@ const OUTCOME_BUTTONS: Array<{
     outcome: "PAID",
     label: "Donor says paid",
     description: "Your UPI app showed a successful payment.",
-    className: "bg-kindly-accent text-white hover:bg-orange-800",
+    className: "bg-kindly-accent text-white hover:bg-kindly-accent-dark",
   },
   {
     outcome: "STILL_PROCESSING",
     label: "Payment still processing",
     description: "Your UPI app has not shown a final result yet.",
-    className: "border border-kindly-border bg-white hover:bg-kindly-accent-soft",
+    className: "border border-kindly-border bg-kindly-card hover:bg-kindly-accent-soft",
   },
   {
     outcome: "FAILED",
     label: "Payment failed / not paid",
     description: "The payment failed, was cancelled, or you did not pay.",
-    className: "border border-kindly-border bg-white hover:bg-kindly-accent-soft",
+    className: "border border-kindly-border bg-kindly-card hover:bg-kindly-accent-soft",
   },
 ];
 
@@ -93,11 +93,8 @@ export function GiftHandoff({ gift, onUpdated }: GiftHandoffProps) {
   }
 
   return (
-    <section
-      aria-labelledby="handoff-heading"
-      className="rounded-2xl border border-kindly-border bg-white p-5"
-    >
-      <h2 id="handoff-heading" className="text-lg font-semibold">
+    <section aria-labelledby="handoff-heading" className="kindly-card p-5 sm:p-7">
+      <h2 id="handoff-heading" className="font-display text-2xl font-semibold tracking-[-0.045em]">
         Pay ₹{gift.amountInr} directly over UPI
       </h2>
       <p className="mt-2 text-sm leading-6 text-kindly-muted">
@@ -110,17 +107,14 @@ export function GiftHandoff({ gift, onUpdated }: GiftHandoffProps) {
         {gift.qrPayload && (
           <div
             aria-label="UPI payment QR code"
-            className="w-fit rounded-2xl border border-kindly-border bg-white p-3"
+            className="w-fit rounded-2xl border border-kindly-border bg-kindly-card p-3"
           >
             <QRCodeSVG value={gift.qrPayload} size={168} level="M" />
           </div>
         )}
         <div className="space-y-3 text-sm">
           {gift.upiIntentUri && (
-            <a
-              href={gift.upiIntentUri}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 font-semibold text-white hover:bg-orange-800"
-            >
+            <a href={gift.upiIntentUri} className="kindly-btn-primary">
               Open UPI app
             </a>
           )}
@@ -135,14 +129,16 @@ export function GiftHandoff({ gift, onUpdated }: GiftHandoffProps) {
         </div>
       </div>
 
-      <div className="mt-6 rounded-xl bg-kindly-accent-soft p-4">
-        <h3 className="font-semibold">Back from your UPI app?</h3>
+      <div className="kindly-card-soft mt-6 p-4">
+        <h3 className="font-display text-xl font-semibold tracking-[-0.04em]">
+          Back from your UPI app?
+        </h3>
         <p className="mt-1 text-sm text-kindly-muted">
           These are your attestations, not bank verification. The recipient must confirm receipt
           before the gift is complete.
         </p>
         <div className="mt-4">
-          <label htmlFor="utr-reference" className="block text-sm font-medium">
+          <label htmlFor="utr-reference" className="kindly-label">
             UTR or reference (optional)
           </label>
           <input
@@ -154,7 +150,7 @@ export function GiftHandoff({ gift, onUpdated }: GiftHandoffProps) {
             onChange={(event) => setUtr(event.target.value)}
             autoComplete="off"
             spellCheck={false}
-            className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
+            className="kindly-input mt-1"
             placeholder="Only if your UPI app showed one"
           />
         </div>
@@ -165,7 +161,7 @@ export function GiftHandoff({ gift, onUpdated }: GiftHandoffProps) {
               type="button"
               disabled={busy !== null}
               onClick={() => handleOutcome(item.outcome)}
-              className={`min-h-11 rounded-xl px-4 py-3 text-left text-sm font-semibold disabled:opacity-60 ${item.className}`}
+              className={`min-h-11 rounded-2xl px-4 py-3 text-left text-sm font-semibold disabled:opacity-60 ${item.className}`}
             >
               <span className="block">{busy === item.outcome ? "Recording…" : item.label}</span>
               <span className="mt-1 block text-xs font-normal opacity-80">{item.description}</span>
@@ -173,7 +169,7 @@ export function GiftHandoff({ gift, onUpdated }: GiftHandoffProps) {
           ))}
         </div>
         {error && (
-          <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+          <p role="alert" className="kindly-status-error mt-3">
             {error}
           </p>
         )}

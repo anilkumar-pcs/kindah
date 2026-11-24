@@ -60,7 +60,7 @@ export function AppealResolutionForm({
             id={`appeal-outcome-${appealId}`}
             value={outcome}
             onChange={(event) => setOutcome(event.target.value as "ACCEPTED" | "REJECTED")}
-            className="mt-1 min-h-11 rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
+            className="kindly-input mt-1"
           >
             <option value="ACCEPTED">ACCEPTED</option>
             <option value="REJECTED">REJECTED</option>
@@ -78,7 +78,7 @@ export function AppealResolutionForm({
             maxLength={1000}
             value={note}
             onChange={(event) => setNote(event.target.value)}
-            className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
+            className="kindly-input mt-1"
           />
         </div>
       </div>
@@ -92,11 +92,7 @@ export function AppealResolutionForm({
           {message}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={busy}
-        className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
-      >
+      <button type="submit" disabled={busy} className="kindly-btn-primary">
         {busy ? "Resolving…" : "Resolve appeal"}
       </button>
     </form>

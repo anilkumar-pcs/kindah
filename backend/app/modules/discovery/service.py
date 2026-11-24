@@ -170,9 +170,10 @@ class DiscoveryService:
         wish, user = self._load(wish_id)
         if wish is None or user is None:
             raise self._not_found()
-        if not self._eligible(wish, user, viewer_id):
+        is_own_wish = viewer_id is not None and wish.user_id == viewer_id
+        if not self._eligible(wish, user, viewer_id, allow_owner=True):
             raise self._not_found()
-        return self._card(wish, user)
+        return self._card(wish, user, is_own_wish=is_own_wish)
 
     def select(self, wish_id: UUID, viewer_id: UUID) -> PublicWish:
         wish, user = self._load(wish_id)
@@ -298,7 +299,14 @@ class DiscoveryService:
             return None, None
         return row[0], row[1]
 
-    def _eligible(self, wish: Wish, user: User, viewer_id: UUID | None) -> bool:
+    def _eligible(
+        self,
+        wish: Wish,
+        user: User,
+        viewer_id: UUID | None,
+        *,
+        allow_owner: bool = False,
+    ) -> bool:
         now = datetime.now(UTC)
         if wish.status != WishStatus.OPEN or wish.expires_at <= now:
             return False
@@ -306,7 +314,7 @@ class DiscoveryService:
             return False
         if not user.display_name or not user.avatar:
             return False
-        if viewer_id is not None and wish.user_id == viewer_id:
+        if viewer_id is not None and wish.user_id == viewer_id and not allow_owner:
             return False
         payment_method = self.session.scalar(
             select(RecipientPaymentMethod.id).where(
@@ -335,7 +343,7 @@ class DiscoveryService:
                 return False
         return True
 
-    def _card(self, wish: Wish, user: User) -> PublicWish:
+    def _card(self, wish: Wish, user: User, *, is_own_wish: bool = False) -> PublicWish:
         return PublicWish(
             id=wish.id,
             display_name=user.display_name or "Kindly user",
@@ -345,6 +353,7 @@ class DiscoveryService:
             mood=wish.mood,
             message=wish.message,
             suggested_amount_inr=wish.suggested_amount_inr,
+            is_own_wish=is_own_wish,
         )
 
     @staticmethod

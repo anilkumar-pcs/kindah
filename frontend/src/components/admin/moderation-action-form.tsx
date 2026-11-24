@@ -79,7 +79,7 @@ export function ModerationActionForm({
             id={`moderation-action-${targetId}`}
             value={action}
             onChange={(event) => setAction(event.target.value)}
-            className="mt-1 min-h-11 rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
+            className="kindly-input mt-1"
           >
             {actions.map((value) => (
               <option key={value} value={value}>
@@ -100,7 +100,7 @@ export function ModerationActionForm({
             maxLength={1000}
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
+            className="kindly-input mt-1"
           />
         </div>
       </div>
@@ -114,11 +114,7 @@ export function ModerationActionForm({
           {message}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={busy}
-        className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
-      >
+      <button type="submit" disabled={busy} className="kindly-btn-primary">
         {busy ? "Applying…" : "Apply action"}
       </button>
     </form>

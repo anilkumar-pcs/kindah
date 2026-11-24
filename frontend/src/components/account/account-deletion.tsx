@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 
+import { PageHeader } from "@/components/ui/page-header";
 import { ApiError } from "@/lib/api/client";
 import {
   cancelDeletion,
@@ -110,11 +111,7 @@ export function AccountDeletion() {
 
   if (state === "loading") {
     return (
-      <section
-        aria-busy="true"
-        aria-live="polite"
-        className="mx-auto max-w-2xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border"
-      >
+      <section aria-busy="true" aria-live="polite" className="kindly-card mx-auto max-w-2xl p-6">
         <p className="text-sm text-kindly-muted">Loading account settings…</p>
       </section>
     );
@@ -122,15 +119,14 @@ export function AccountDeletion() {
 
   if (state === "guest") {
     return (
-      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Account deletion</h1>
+      <section className="kindly-card mx-auto max-w-xl p-6 sm:p-8">
+        <h1 className="font-display text-3xl font-semibold tracking-[-0.055em]">
+          Account deletion
+        </h1>
         <p className="mt-3 text-sm text-kindly-muted">
           Sign in to request or manage account deletion.
         </p>
-        <Link
-          href="/sign-in"
-          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800"
-        >
+        <Link href="/sign-in" className="kindly-btn-primary mt-6">
           Sign in
         </Link>
       </section>
@@ -139,12 +135,14 @@ export function AccountDeletion() {
 
   if (state === "error") {
     return (
-      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Account deletion unavailable</h1>
-        <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+      <section className="kindly-card mx-auto max-w-xl p-6 sm:p-8">
+        <h1 className="font-display text-3xl font-semibold tracking-[-0.055em]">
+          Account deletion unavailable
+        </h1>
+        <p role="alert" className="kindly-status-error mt-3">
           {error ?? "Could not load account deletion details."}
         </p>
-        <Link href="/me" className="mt-6 inline-block text-sm font-semibold text-kindly-accent">
+        <Link href="/me" className="kindly-btn-quiet mt-4 !px-0">
           Back to My Space
         </Link>
       </section>
@@ -155,25 +153,23 @@ export function AccountDeletion() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <header>
-        <p className="text-sm font-semibold tracking-wide text-kindly-accent uppercase">Account</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">Account deletion</h1>
-        <p className="mt-2 text-sm leading-6 text-kindly-muted">
-          This records a deletion request only. No account or financial data is deleted now.
-          Anonymisation waits for a counsel-approved retention policy; financial and audit records
-          are preserved.
-        </p>
-      </header>
+      <PageHeader
+        eyebrow="Account"
+        title="Account deletion"
+        description="This records a deletion request only. No account or financial data is deleted now. Anonymisation waits for a counsel-approved retention policy; financial and audit records are preserved."
+      />
 
       {error && (
-        <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+        <p role="alert" className="kindly-status-error">
           {error}
         </p>
       )}
 
       {pending && request ? (
-        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
-          <h2 className="text-lg font-semibold">Deletion request received</h2>
+        <section className="rounded-[1.5rem] border border-kindly-marigold/50 bg-kindly-marigold/20 p-5 text-sm text-kindly-ink">
+          <h2 className="font-display text-2xl font-semibold tracking-[-0.04em]">
+            Deletion request received
+          </h2>
           <p className="mt-2">
             Requested {formatDate(request.requestedAt)}. Your account is pending deletion and normal
             interactive actions are disabled. You can still cancel this request.
@@ -183,19 +179,18 @@ export function AccountDeletion() {
             type="button"
             disabled={busy}
             onClick={handleCancel}
-            className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border bg-white px-4 py-2 text-sm font-semibold hover:bg-kindly-accent-soft disabled:opacity-60"
+            className="kindly-btn-secondary mt-4"
           >
             {busy ? "Cancelling…" : "Cancel deletion request"}
           </button>
         </section>
       ) : (
-        <form
-          onSubmit={handleRequest}
-          className="rounded-2xl border border-kindly-border bg-white p-5"
-        >
-          <h2 className="text-lg font-semibold">Request account deletion</h2>
+        <form onSubmit={handleRequest} className="kindly-card p-5 sm:p-6">
+          <h2 className="font-display text-2xl font-semibold tracking-[-0.04em]">
+            Request account deletion
+          </h2>
           {request?.status === "CANCELLED" && (
-            <p className="mt-2 rounded-xl bg-kindly-accent-soft p-3 text-sm">
+            <p className="kindly-card-soft mt-2 p-3 text-sm">
               Your previous request was cancelled {formatDate(request.cancelledAt)}. You may request
               deletion again.
             </p>
@@ -205,7 +200,7 @@ export function AccountDeletion() {
             wish starts the normal cooldown.
           </p>
           <div className="mt-4">
-            <label htmlFor="deletion-reason" className="block text-sm font-medium">
+            <label htmlFor="deletion-reason" className="kindly-label">
               Reason (optional)
             </label>
             <textarea
@@ -214,28 +209,15 @@ export function AccountDeletion() {
               maxLength={500}
               value={reason}
               onChange={(event) => setReason(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+              className="kindly-input mt-1"
               placeholder="Optional context for the operations team"
             />
           </div>
-          <button
-            type="submit"
-            disabled={busy}
-            className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
-          >
+          <button type="submit" disabled={busy} className="kindly-btn-primary mt-4">
             {busy ? "Recording…" : "Request deletion"}
           </button>
         </form>
       )}
-
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Link href="/appeals" className="font-semibold text-kindly-accent underline">
-          Moderation appeals
-        </Link>
-        <Link href="/me" className="font-semibold text-kindly-accent underline">
-          My Space
-        </Link>
-      </div>
     </div>
   );
 }

@@ -2,6 +2,128 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-24 — Direction A applied across the app
+
+### Changed
+
+- Applied the Direction A visual system to sign-in/onboarding, wish detail, gift flow/handoff/detail,
+  My Space, Notifications, Appeals, Account deletion, admin screens and error/loading/not-found
+  states.
+- Added shared page-header, card, button, input and status primitives; converted legacy white/orange
+  surfaces and hover states to paper, green, sage, blush and marigold tokens.
+- Added the My Space profile hero with avatar, karma/streak stats and badge empty state; added
+  Direction A styling to gift progression, verification panels, QR handoff and admin queues.
+- Updated the guest/desktop header, PWA icon/theme and all consumer copy surfaces without changing
+  backend behavior.
+
+### Verification
+
+- 177 backend tests and 72 frontend tests across 15 files pass; Ruff, mypy, ESLint, Prettier,
+  TypeScript and production build are clean.
+- Browser review covered guest sign-in, Home, wish detail, gift flow, My Space, Notifications and
+  admin on desktop; Home and mobile shell were also checked at mobile width.
+
+### Scope note
+
+- The full visual redesign is complete for the current screen set. A temporary preview wish was used
+  for populated wish/gift screenshots and removed afterwards.
+
+## 2026-11-24 — Direction A design system, mobile shell and Home
+
+### Added
+
+- Shared Direction A tokens: warm paper, deep green ink, leafy primary action, marigold/coral accents,
+  Bricolage Grotesque display type, Plus Jakarta Sans UI type and Caveat note accents.
+- Shared SVG icon set and updated PWA icon/theme colours.
+- Mobile app shell: fixed bottom tab bar with Discover, My Space, Updates and Account, safe-area
+  padding, an account bottom sheet and focused-flow hiding on sign-in/reauth/new-gift routes.
+- Redesigned Home: editorial hero, original CSS/SVG sun/postcard artwork and restyled discovery,
+  Surprise Me and wish-card treatment.
+
+### Changed
+
+- Desktop header remains the primary navigation; mobile primary navigation moved to the bottom bar
+  and the duplicate mobile hamburger menu was removed.
+- Legacy orange hover states were replaced with the new green/ink tokens across existing screens.
+
+### Verification
+
+- 177 backend tests and 72 frontend tests across 15 files pass; Ruff, mypy, ESLint, Prettier,
+  TypeScript and production build are clean.
+- Browser-checked desktop Home, mobile Home/bottom tabs/account sheet and typography/colour tokens.
+- Home captures: `docs/design/screenshots/app-home-desktop.png`,
+  `app-home-feed.png`, `app-home-mobile.png`.
+
+### Scope note
+
+- Other page layouts still use their previous structure and will be redesigned in later Direction A
+  slices. A temporary preview wish was used for populated-feed captures and removed afterwards.
+
+## 2026-11-24 — Profile menu replaces the second account header
+
+### Changed
+
+- Removed the account sub-navigation bar from My Space, Notifications, Appeals and Account deletion.
+- **Appeals**, **Account deletion** and **Sign out** now live in a dropdown opened from the signed-in
+  profile chip. My Space and Notifications remain only in the primary header, removing duplicates.
+- The mobile menu now groups the same account-only actions without repeating My Space or
+  Notifications; the non-clickable identity summary replaces the duplicate profile link.
+- Profile dropdown closes on Escape, outside press, navigation and sign-out.
+
+### Verification
+
+- 68 frontend tests across 14 files; ESLint, Prettier, TypeScript and production build clean.
+- Browser check on `/me` and `/appeals` confirmed one header and the profile dropdown.
+
+## 2026-11-24 — Onboarding context, wish detail and account navigation
+
+### Changed
+
+- Onboarding now explains the fixed six-symbol avatar in place, says it is decorative and not a
+  photo/identity, and presents the options as an accessible visual picker.
+- Successful OTP verification and onboarding now redirect to `/me` (or `/appeals` for non-active
+  accounts) instead of rendering a no-value welcome screen. A safe `next` path returns users to the
+  gift flow when they started from a wish.
+- A wish detail page no longer requires a separate “Select this wish” call. Signed-in donors see
+  **Send a gift**, which continues to the existing amount/review/UPI handoff flow; guests see
+  **Sign in to send a gift** with a return path.
+- `GET /wishes/{id}` now returns `isOwnWish` when the authenticated viewer owns the wish and shows an
+  owner-specific message instead of an unexplained selection error. Feed, detail and gift-flow
+  requests wait for session restoration to avoid auth-dependent flicker.
+- Removed the city filter and service-status panel from the consumer discovery page.
+- Added a consistent account sub-navigation at the top of My Space, Notifications, Appeals and
+  Account deletion; removed duplicate bottom navigation links.
+
+### Verification
+
+- 177 backend tests and 69 frontend tests across 15 files pass; Ruff, mypy, ESLint, Prettier,
+  TypeScript and the Next.js production build pass.
+- Browser verification covered the signed-in home, non-owner wish detail, guest wish CTA,
+  account sub-navigation, and the absence of the city filter/service panel.
+
+## 2026-11-24 — Session-aware navigation and admin discoverability
+
+### Fixed
+
+- The primary header was static and always showed “Sign in” after authentication. It now restores
+  the session, shows the signed-in pseudonym and profile link, and replaces “Sign in” with
+  “Sign out”.
+- Session changes propagate immediately after OTP verification, onboarding profile save and sign-out
+  without requiring a reload.
+- Administrators and moderators now see an **Admin console** link in the header and My Space; the
+  sign-in success screen also links to `/admin`.
+- The home hero now shows “Go to My space”/“Browse wishes” for signed-in users instead of the guest
+  “Sign in to give” CTA.
+- Wrapped the pathname-aware header in a Suspense boundary so dynamic gift/wish routes still
+  prerender in the production build.
+
+### Verification
+
+- 64 frontend tests across 14 files; ESLint, Prettier, TypeScript and the Next.js production build
+  pass.
+- Browser check covered guest header, OTP login, live header update during onboarding, admin link,
+  `/admin` access, sign-out and the mobile menu.
+
 ## 2026-11-24 — Role-only admin access and owner bootstrap
 
 ### Changed

@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "A pseudonymous micro-gifting platform for spontaneous small acts of kindness.",
     start_url: "/",
     display: "standalone",
-    background_color: "#fff7ed",
-    theme_color: "#c2410c",
+    background_color: "#fff8ec",
+    theme_color: "#fff8ec",
     icons: [
       {
         src: "/icon.svg",

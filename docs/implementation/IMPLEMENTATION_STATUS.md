@@ -114,6 +114,11 @@ Blocked/partial:
 
 | Date | Phase/task | Change | Evidence |
 |---|---|---|---|
+| 2026-11-24 | Owner follow-up | Direction A applied across all consumer, account, gift and admin screens | `TEST_EVIDENCE.md` VE-048 |
+| 2026-11-24 | Owner follow-up | Direction A design system, mobile bottom-tab shell and redesigned Home | `TEST_EVIDENCE.md` VE-047 |
+| 2026-11-24 | Owner follow-up | Replaced duplicate account header with profile dropdown: Appeals, Account deletion, Sign out | `TEST_EVIDENCE.md` VE-046 |
+| 2026-11-24 | Owner follow-up | Onboarding avatar context/redirects, wish owner handling and direct gift CTA, discovery cleanup, account navigation | `TEST_EVIDENCE.md` VE-045 |
+| 2026-11-24 | Owner follow-up | Session-aware header, signed-in CTAs and admin console discoverability | `TEST_EVIDENCE.md` VE-044 |
 | 2026-11-24 | Owner follow-up | DB-only admin roles, admin role management, DB badge registry, DEC-O7/badge/exposure approvals | `TEST_EVIDENCE.md` VE-043 |
 | 2026-11-24 | P8.1, P8.2 + local checks | Threat model, scans, restore/load smoke, accessibility audits | `TEST_EVIDENCE.md` VE-041, VE-042 |
 | 2026-11-24 | P7.1–P7.6 | Karma/streak/badges, reactions, share cards, Surprise Me | `TEST_EVIDENCE.md` VE-040 |
@@ -137,7 +142,7 @@ Blocked/partial:
 | Check | Result |
 |---|---|
 | Backend tests | 177 passed (14 gift, 2 support-case, 4 reporting/block/auto-hide, 9 admin security/moderation/appeal/role, 2 deletion, 3 notifications, 4 outbox, 3 karma/badge config, 2 Surprise Me) |
-| Frontend tests | 55 passed (12 test files) |
+| Frontend tests | 72 passed (15 test files) |
 | Dependency/security scans | `npm audit` 0; `pip-audit` 0 known; Bandit medium/high clean; no tracked env/secrets |
 | Local restore drill | PASS — dump/restore at `0014_badge_definitions`; users=3, badge_definitions=5, wishes=3, gifts=1 |
 | Local load smoke | 500 requests, 50 concurrency, 0 errors, p95 90.3 ms (not capacity sign-off) |
@@ -162,6 +167,10 @@ Blocked/partial:
 | Phase 6 overall | `DONE` — 11/11 tasks; external launch gates remain blocked |
 | Phase 7 karma/streak/badges | PASS — ledger projection, IST boundaries, idempotent badges |
 | Phase 7 reactions/share/Surprise Me | PASS — participant-only thanks/share card, weighted exclusion-based selection |
+| Session-aware navigation | PASS — signed-in identity replaces Sign in; admin/moderator console link visible; live OTP/profile/logout sync |
+| Onboarding/wish/account UX | PASS — avatar context/fixed-set copy; post-auth redirect; owner wish message and direct gift CTA; city/service panels removed; account actions in profile dropdown with no duplicate nav |
+| Direction A shell/Home | PASS — shared tokens/fonts/icons; mobile bottom tabs and account sheet; editorial Home hero and wish feed; desktop/mobile browser review |
+| Direction A full rollout | PASS — consumer, account, gift and admin screens restyled; 72 frontend tests; desktop/mobile browser review |
 | Phase 7 overall | `DONE` — 8/8 tasks; badge definitions DB-configurable |
 | Phase 5 overall | `DONE` — 15/15 tasks |
 
@@ -177,7 +186,7 @@ Implemented: `0006_support_cases`, participant case creation, admin list/detail/
 
 ## Next session handoff
 
-1. Identify and promote the owner account to DB `ADMIN` using `scripts/grant_role.py` (phone or public display name), then use the admin Users tab for any further role changes.
+1. Confirm the owner account remains DB `ADMIN`; use the visible admin console link or `/admin`, then the admin Users tab for further role changes.
 2. Revisit DEC-I13 before production: owner accepted role-only admin access, so account-compromise risk must be covered by deployment controls or MFA re-enabled.
 3. Provision deployed staging, monitoring/alerts/on-call, KMS/OTP/UPI providers and complete legal/bank approvals before P8.3–P8.12.
 4. Run independent security review and a full WCAG 2.2 AA/manual browser matrix; keep deletion non-destructive and real-money handoff disabled.

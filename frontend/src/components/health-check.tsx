@@ -40,10 +40,7 @@ export function HealthCheck() {
   }, []);
 
   return (
-    <section
-      aria-labelledby="service-status"
-      className="rounded-2xl border border-kindly-border bg-white p-5"
-    >
+    <section aria-labelledby="service-status" className="kindly-card p-5">
       <h2 id="service-status" className="text-sm font-semibold">
         Service status
       </h2>

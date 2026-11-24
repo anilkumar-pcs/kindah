@@ -1,10 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/api/discovery", () => ({
   getPublicWish: vi.fn(),
-  selectWish: vi.fn(),
 }));
 
 vi.mock("@/lib/api/safety", () => ({
@@ -21,18 +20,43 @@ vi.mock("@/lib/api/safety", () => ({
   },
 }));
 
+vi.mock("@/lib/auth/session", () => ({
+  restoreSession: vi.fn(),
+}));
+
 import { ApiError } from "@/lib/api/client";
-import { getPublicWish, selectWish, type PublicWish } from "@/lib/api/discovery";
+import { getPublicWish, type PublicWish } from "@/lib/api/discovery";
 import { blockWishOwner, reportWish } from "@/lib/api/safety";
+import { restoreSession, type UserProfile } from "@/lib/auth/session";
 
 import { WishDetail } from "./wish-detail";
 
 const mockedGetWish = vi.mocked(getPublicWish);
-const mockedSelectWish = vi.mocked(selectWish);
 const mockedReportWish = vi.mocked(reportWish);
 const mockedBlockOwner = vi.mocked(blockWishOwner);
+const mockedRestore = vi.mocked(restoreSession);
 
-function makeWish(): PublicWish {
+function makeUser(overrides: Partial<UserProfile> = {}): UserProfile {
+  return {
+    id: "22222222-2222-2222-2222-222222222222",
+    displayName: "KindDonor",
+    avatar: "CHAI",
+    city: "Bengaluru",
+    status: "ACTIVE",
+    role: "USER",
+    onboardingRequired: false,
+    karma: 0,
+    streak: 0,
+    cooldownUntil: null,
+    ageConfirmedAt: "2026-11-24T00:00:00Z",
+    termsAcceptedAt: "2026-11-24T00:00:00Z",
+    privacyAcceptedAt: "2026-11-24T00:00:00Z",
+    guidelinesAcceptedAt: "2026-11-24T00:00:00Z",
+    ...overrides,
+  };
+}
+
+function makeWish(overrides: Partial<PublicWish> = {}): PublicWish {
   return {
     id: "wish-1",
     displayName: "ChaiLover",
@@ -42,49 +66,75 @@ function makeWish(): PublicWish {
     mood: "LONG_DAY",
     message: "A warm chai for a long day",
     suggestedAmountInr: 25,
+    isOwnWish: false,
+    ...overrides,
   };
 }
 
 beforeEach(() => {
   vi.resetAllMocks();
+  mockedRestore.mockResolvedValue(makeUser());
 });
 
 describe("WishDetail", () => {
-  it("renders a public wish and selects it", async () => {
-    const user = userEvent.setup();
+  it("shows a direct gift action for a signed-in donor", async () => {
     mockedGetWish.mockResolvedValue(makeWish());
-    mockedSelectWish.mockResolvedValue(makeWish());
 
     render(<WishDetail wishId="wish-1" />);
 
     expect(await screen.findByText("ChaiLover")).toBeInTheDocument();
     expect(screen.getByText("A warm chai for a long day")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /select this wish/i }));
-
-    expect(await screen.findByText("Wish selected.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /choose amount/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Send a gift" })).toHaveAttribute(
       "href",
       "/gifts/new/wish-1",
     );
-    expect(mockedSelectWish).toHaveBeenCalledWith("wish-1");
+    expect(screen.queryByRole("button", { name: /select this wish/i })).not.toBeInTheDocument();
   });
 
-  it("prompts a guest to sign in when selection is unauthenticated", async () => {
-    const user = userEvent.setup();
-    mockedGetWish.mockResolvedValue(makeWish());
-    mockedSelectWish.mockRejectedValue(
-      new ApiError("Authentication required", 401, "AUTH_REQUIRED"),
+  it("waits for session restoration before loading the wish", async () => {
+    let resolveSession: (value: UserProfile | null) => void = () => undefined;
+    mockedRestore.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSession = resolve;
+      }),
     );
+    mockedGetWish.mockResolvedValue(makeWish());
 
     render(<WishDetail wishId="wish-1" />);
 
-    await screen.findByText("ChaiLover");
-    await user.click(screen.getByRole("button", { name: /select this wish/i }));
+    expect(mockedGetWish).not.toHaveBeenCalled();
+    await act(async () => {
+      resolveSession(makeUser());
+    });
+    await waitFor(() => {
+      expect(mockedGetWish).toHaveBeenCalledWith("wish-1");
+    });
+  });
 
-    expect(await screen.findByRole("link", { name: /sign in to continue/i })).toHaveAttribute(
+  it("prompts a guest to sign in with the gift flow as the return path", async () => {
+    mockedRestore.mockResolvedValue(null);
+    mockedGetWish.mockResolvedValue(makeWish());
+
+    render(<WishDetail wishId="wish-1" />);
+
+    expect(await screen.findByRole("link", { name: /sign in to send a gift/i })).toHaveAttribute(
       "href",
-      "/sign-in",
+      "/sign-in?next=%2Fgifts%2Fnew%2Fwish-1",
     );
+  });
+
+  it("explains that an owner cannot gift their own wish", async () => {
+    mockedGetWish.mockResolvedValue(makeWish({ isOwnWish: true }));
+
+    render(<WishDetail wishId="wish-1" />);
+
+    expect(await screen.findByText("This is your wish.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /manage in my space/i })).toHaveAttribute(
+      "href",
+      "/me",
+    );
+    expect(screen.queryByRole("link", { name: "Send a gift" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /report this wish/i })).not.toBeInTheDocument();
   });
 
   it("submits a private report with a reason", async () => {

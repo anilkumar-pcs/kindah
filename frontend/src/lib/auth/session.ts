@@ -1,5 +1,6 @@
 import { apiFetch, API_BASE_URL, refreshAccessToken } from "@/lib/api/client";
 import { CSRF_COOKIE, readCookie } from "@/lib/auth/cookies";
+import { notifySessionChanged } from "@/lib/auth/events";
 import { clearAccessToken, getAccessToken, setAccessToken } from "@/lib/auth/token-store";
 
 export type UserStatus =
@@ -70,6 +71,7 @@ export async function verifyOtp(phone: string, code: string): Promise<SessionRes
     { retryOn401: false },
   );
   setAccessToken(session.accessToken);
+  notifySessionChanged(session.user);
   return session;
 }
 
@@ -104,19 +106,23 @@ export async function restoreSession(): Promise<UserProfile | null> {
 }
 
 export async function saveConsent(input: ConsentInput): Promise<UserProfile> {
-  return apiFetch<UserProfile>("/api/v1/me/consent", {
+  const user = await apiFetch<UserProfile>("/api/v1/me/consent", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
+  notifySessionChanged(user);
+  return user;
 }
 
 export async function updateProfile(input: ProfileUpdateInput): Promise<UserProfile> {
-  return apiFetch<UserProfile>("/api/v1/me", {
+  const user = await apiFetch<UserProfile>("/api/v1/me", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
+  notifySessionChanged(user);
+  return user;
 }
 
 export async function logout(): Promise<void> {
@@ -133,4 +139,5 @@ export async function logout(): Promise<void> {
     }
   }
   clearAccessToken();
+  notifySessionChanged(null);
 }

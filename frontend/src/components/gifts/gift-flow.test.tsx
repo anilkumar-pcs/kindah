@@ -46,7 +46,7 @@ function makeUser(): UserProfile {
   };
 }
 
-function makeWish(): PublicWish {
+function makeWish(overrides: Partial<PublicWish> = {}): PublicWish {
   return {
     id: "wish-1",
     displayName: "RecipientOne",
@@ -56,6 +56,8 @@ function makeWish(): PublicWish {
     mood: "LONG_DAY",
     message: "A warm chai for a long day",
     suggestedAmountInr: 25,
+    isOwnWish: false,
+    ...overrides,
   };
 }
 
@@ -143,6 +145,20 @@ describe("GiftFlow", () => {
     expect(
       await screen.findByRole("heading", { name: /sign in to send a gift/i }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /sign in to continue/i })).toHaveAttribute(
+      "href",
+      "/sign-in?next=%2Fgifts%2Fnew%2Fwish-1",
+    );
+    expect(mockedGetWish).not.toHaveBeenCalled();
+    expect(mockedCreateGift).not.toHaveBeenCalled();
+  });
+
+  it("does not offer a gift form for the owner's own wish", async () => {
+    mockedGetWish.mockResolvedValue(makeWish({ isOwnWish: true }));
+    render(<GiftFlow wishId="wish-1" />);
+
+    expect(await screen.findByText(/this is your own wish/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/amount in rupees/i)).not.toBeInTheDocument();
     expect(mockedCreateGift).not.toHaveBeenCalled();
   });
 

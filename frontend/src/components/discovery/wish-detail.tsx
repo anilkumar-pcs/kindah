@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 
+import { Icon, type IconName } from "@/components/ui/icon";
 import { ApiError } from "@/lib/api/client";
-import { getPublicWish, selectWish, type PublicWish } from "@/lib/api/discovery";
+import { getPublicWish, type PublicWish } from "@/lib/api/discovery";
 import {
   blockWishOwner,
   reportWish,
@@ -13,6 +14,7 @@ import {
   type ReportReason,
 } from "@/lib/api/safety";
 import type { WishMood } from "@/lib/api/wishes";
+import { useSessionUser } from "@/lib/auth/use-session-user";
 
 const MOOD_LABELS: Record<WishMood, string> = {
   CHAI_SNACK: "Chai & snack",
@@ -21,13 +23,26 @@ const MOOD_LABELS: Record<WishMood, string> = {
   TINY_TREAT: "Tiny treat",
 };
 
+const MOOD_ICONS: Record<WishMood, IconName> = {
+  CHAI_SNACK: "cup",
+  JUST_BECAUSE: "sparkle",
+  LONG_DAY: "cup",
+  TINY_TREAT: "gift",
+};
+
+function formatDate(value: string): string {
+  return new Date(value).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "long",
+  });
+}
+
 export function WishDetail({ wishId }: { wishId: string }) {
+  const { user } = useSessionUser();
   const [wish, setWish] = useState<PublicWish | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsAuth, setNeedsAuth] = useState(false);
-  const [selected, setSelected] = useState(false);
-  const [busy, setBusy] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState<ReportReason>("HARASSMENT_ABUSE");
   const [reportMessage, setReportMessage] = useState<string | null>(null);
@@ -36,6 +51,10 @@ export function WishDetail({ wishId }: { wishId: string }) {
   const [safetyError, setSafetyError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (user === undefined) {
+      return;
+    }
+
     let cancelled = false;
     getPublicWish(wishId)
       .then((data) => {
@@ -60,29 +79,7 @@ export function WishDetail({ wishId }: { wishId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [wishId]);
-
-  async function handleSelect() {
-    setBusy(true);
-    setError(null);
-    setNeedsAuth(false);
-    try {
-      await selectWish(wishId);
-      setSelected(true);
-    } catch (selectError) {
-      if (selectError instanceof ApiError) {
-        if (selectError.status === 401) {
-          setNeedsAuth(true);
-        } else {
-          setError(selectError.message);
-        }
-      } else {
-        setError("Could not select this wish.");
-      }
-    } finally {
-      setBusy(false);
-    }
-  }
+  }, [wishId, user]);
 
   async function handleReport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -136,198 +133,259 @@ export function WishDetail({ wishId }: { wishId: string }) {
 
   if (loading) {
     return (
-      <section
-        aria-busy="true"
-        aria-live="polite"
-        className="mx-auto max-w-2xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border"
-      >
-        <p className="text-sm text-kindly-muted">Loading wish…</p>
+      <section aria-busy="true" aria-live="polite" className="mx-auto max-w-3xl">
+        <div className="kindly-card p-6 sm:p-8">
+          <div className="h-3 w-24 animate-pulse rounded-full bg-kindly-accent-soft" />
+          <div className="mt-6 h-16 w-2/3 animate-pulse rounded-2xl bg-kindly-accent-soft/70" />
+          <div className="mt-3 h-4 w-1/2 animate-pulse rounded-full bg-kindly-accent-soft/60" />
+          <p className="mt-6 text-sm text-kindly-muted">Loading wish…</p>
+        </div>
       </section>
     );
   }
 
   if (!wish) {
     return (
-      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 text-center shadow-sm ring-1 ring-kindly-border sm:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Wish unavailable</h1>
+      <section className="kindly-card mx-auto max-w-xl p-8 text-center">
+        <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-kindly-accent-soft text-kindly-accent">
+          <Icon name="cup" className="h-7 w-7" />
+        </span>
+        <h1 className="mt-4 font-display text-3xl font-semibold tracking-[-0.055em]">
+          Wish unavailable
+        </h1>
         <p role="alert" className="mt-3 text-sm leading-6 text-kindly-muted">
           {error ?? "This wish is no longer visible."}
         </p>
-        <Link
-          href="/"
-          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800"
-        >
+        <Link href="/" className="kindly-btn-primary mt-6">
           Back to discovery
         </Link>
       </section>
     );
   }
 
+  const initial = wish.displayName.slice(0, 1).toUpperCase();
+  const moodIcon = MOOD_ICONS[wish.mood];
+
   return (
-    <article className="mx-auto max-w-2xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
-      <p className="text-sm font-semibold tracking-wide text-kindly-accent uppercase">Wish</p>
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight">{wish.displayName}</h1>
-      <p className="mt-1 text-sm text-kindly-muted">
-        {wish.city ? `${wish.city} · ` : ""}
-        {new Date(wish.createdAt).toLocaleDateString("en-IN", {
-          day: "numeric",
-          month: "long",
-        })}
-      </p>
+    <article className="mx-auto max-w-3xl">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link href="/" className="kindly-btn-quiet !min-h-9 !px-2">
+          <span aria-hidden="true">←</span> Back to discovery
+        </Link>
+        <span className="kindly-chip">
+          <Icon name="sparkle" className="h-3 w-3" /> A little wish
+        </span>
+      </div>
 
-      <p className="mt-5 text-lg leading-8">{wish.message}</p>
-
-      <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-2">
-        <div className="rounded-xl bg-kindly-accent-soft p-4">
-          <dt className="font-medium text-kindly-muted">Mood</dt>
-          <dd className="mt-1 font-semibold">{MOOD_LABELS[wish.mood]}</dd>
+      <header className="mt-5 flex items-center gap-3">
+        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-kindly-blush font-display text-base font-bold text-kindly-ink">
+          {initial}
+        </span>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate font-display text-3xl font-semibold tracking-[-0.055em] sm:text-4xl">
+            {wish.displayName}
+          </h1>
+          <p className="mt-1 text-xs text-kindly-muted">
+            {wish.city ? `${wish.city} · ` : ""}
+            {formatDate(wish.createdAt)}
+          </p>
         </div>
-        <div className="rounded-xl bg-kindly-accent-soft p-4">
-          <dt className="font-medium text-kindly-muted">Amount</dt>
-          <dd className="mt-1 font-semibold">
-            {wish.suggestedAmountInr
-              ? `₹${wish.suggestedAmountInr} suggested`
-              : "You choose between ₹10 and ₹100"}
-          </dd>
-        </div>
-      </dl>
+        <span className="kindly-chip">
+          <Icon name={moodIcon} className="h-3 w-3" /> {MOOD_LABELS[wish.mood]}
+        </span>
+      </header>
 
-      <p className="mt-5 rounded-xl border border-kindly-border p-4 text-sm text-kindly-muted">
-        Kindly does not hold your money. A gift is paid directly over UPI, and the recipient&apos;s
-        phone number and UPI ID are never shown publicly.
-      </p>
+      <section className="relative mt-5 overflow-hidden rounded-[2rem] bg-kindly-accent-soft p-6 sm:p-9">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-16 -right-16 h-52 w-52 rounded-full bg-kindly-marigold/50 blur-2xl"
+        />
+        <p className="kindly-eyebrow relative">The little note</p>
+        <p className="relative mt-3 max-w-2xl font-display text-3xl leading-[1.03] font-semibold tracking-[-0.055em] text-kindly-ink sm:text-4xl">
+          {wish.message}
+        </p>
+        <div className="relative mt-8 flex flex-wrap items-end justify-between gap-3 border-t border-kindly-accent/15 pt-4">
+          <span className="kindly-chip">
+            <Icon name={moodIcon} className="h-3 w-3" /> {MOOD_LABELS[wish.mood]}
+          </span>
+          <span className="font-display text-2xl font-bold tracking-[-0.04em] text-kindly-coral">
+            {wish.suggestedAmountInr ? (
+              <>
+                ₹{wish.suggestedAmountInr}{" "}
+                <span className="font-sans text-[10px] font-semibold tracking-normal text-kindly-muted">
+                  suggested
+                </span>
+              </>
+            ) : (
+              <span className="text-sm text-kindly-accent">You choose</span>
+            )}
+          </span>
+        </div>
+      </section>
+
+      <div className="mt-4 flex items-start gap-2 rounded-2xl border border-kindly-border bg-kindly-card p-4 text-xs leading-5 text-kindly-muted">
+        <Icon name="shield" className="mt-0.5 h-4 w-4 shrink-0 text-kindly-accent" />
+        <p>
+          Kindly never holds your money. This gift is paid directly over UPI, and the
+          recipient&apos;s phone number and UPI ID stay private.
+        </p>
+      </div>
 
       {error && (
-        <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+        <p role="alert" className="kindly-status-error mt-4">
           {error}
         </p>
       )}
 
-      <section aria-labelledby="safety-heading" className="mt-6 border-t border-kindly-border pt-5">
-        <h2 id="safety-heading" className="text-lg font-semibold">
-          Report or block
-        </h2>
-        <p className="mt-1 text-sm leading-6 text-kindly-muted">
-          Reports are private and never shown to the person you report. A temporary hide is not
-          proof of wrongdoing.
-        </p>
-        {reportMessage && (
-          <p aria-live="polite" className="mt-3 rounded-xl bg-green-50 p-3 text-sm text-green-900">
-            {reportMessage}
-          </p>
-        )}
-        {blockMessage && (
-          <p aria-live="polite" className="mt-3 rounded-xl bg-green-50 p-3 text-sm text-green-900">
-            {blockMessage}
-          </p>
-        )}
-        {safetyError && (
-          <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">
-            {safetyError}
-          </p>
-        )}
-
-        {!reportMessage && !blockMessage && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={safetyBusy}
-              onClick={() => {
-                setReportOpen((current) => !current);
-                setSafetyError(null);
-              }}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-4 py-2 text-sm font-semibold hover:bg-kindly-accent-soft disabled:opacity-60"
-            >
-              Report this wish
-            </button>
-            <button
-              type="button"
-              disabled={safetyBusy}
-              onClick={handleBlock}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-4 py-2 text-sm font-semibold hover:bg-kindly-accent-soft disabled:opacity-60"
-            >
-              {safetyBusy ? "Working…" : "Block this person"}
-            </button>
-          </div>
-        )}
-
-        {reportOpen && !reportMessage && !blockMessage && (
-          <form onSubmit={handleReport} className="mt-4 space-y-3">
+      {wish.isOwnWish ? (
+        <section className="kindly-card mt-5 p-5 sm:p-6">
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-kindly-marigold/35 text-kindly-ink">
+              <Icon name="heart" className="h-5 w-5" />
+            </span>
             <div>
-              <label htmlFor="report-reason" className="block text-sm font-medium">
-                Why are you reporting this wish?
-              </label>
-              <select
-                id="report-reason"
-                value={reportReason}
-                onChange={(event) => setReportReason(event.target.value as ReportReason)}
-                className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
-              >
-                {(Object.keys(REPORT_REASON_LABELS) as ReportReason[]).map((value) => (
-                  <option key={value} value={value}>
-                    {REPORT_REASON_LABELS[value]}
-                  </option>
-                ))}
-              </select>
+              <p className="font-display text-xl font-semibold tracking-[-0.04em]">
+                This is your wish.
+              </p>
+              <p className="mt-1 text-sm leading-6 text-kindly-muted">
+                You cannot send a gift to yourself. Manage this wish, check its status, or withdraw
+                it from My Space.
+              </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+          </div>
+          <Link href="/me" className="kindly-btn-primary mt-4">
+            Manage in My Space
+          </Link>
+        </section>
+      ) : (
+        <section className="mt-5 rounded-[1.75rem] bg-kindly-accent p-5 text-white sm:p-6">
+          <p className="text-[10px] font-extrabold tracking-[0.16em] text-kindly-accent-soft uppercase">
+            Send a little lift
+          </p>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-white/75">
+            You&apos;ll choose an amount from ₹10 to ₹100 next, then pay {wish.displayName} directly
+            on UPI.
+          </p>
+          <div className="mt-4">
+            <Link
+              href={
+                user
+                  ? `/gifts/new/${wish.id}`
+                  : `/sign-in?next=${encodeURIComponent(`/gifts/new/${wish.id}`)}`
+              }
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-kindly-card px-5 py-3 text-sm font-bold text-kindly-accent shadow-[0_4px_0_rgb(0_0_0_/_12%)] hover:bg-kindly-cream sm:w-auto"
+            >
+              {user ? "Send a gift" : "Sign in to send a gift"}
+              <Icon name="arrow-right" className="h-4 w-4" />
+            </Link>
+          </div>
+          <p className="mt-3 flex items-center gap-1.5 text-[10px] font-semibold text-white/65">
+            <Icon name="shield" className="h-3.5 w-3.5" /> Direct UPI · no fees · no middleman
+          </p>
+        </section>
+      )}
+
+      {needsAuth && (
+        <p role="alert" className="kindly-status-error mt-3">
+          Your session expired.{" "}
+          <Link href="/sign-in" className="font-semibold underline">
+            Sign in again
+          </Link>{" "}
+          to report, block or send a gift.
+        </p>
+      )}
+
+      {!wish.isOwnWish && (
+        <section aria-labelledby="safety-heading" className="kindly-card mt-5 p-5 sm:p-6">
+          <h2
+            id="safety-heading"
+            className="font-display text-2xl font-semibold tracking-[-0.04em]"
+          >
+            Report or block
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-kindly-muted">
+            Reports are private and never shown to the person you report. A temporary hide is not
+            proof of wrongdoing.
+          </p>
+          {reportMessage && (
+            <p aria-live="polite" className="kindly-status-success mt-3">
+              {reportMessage}
+            </p>
+          )}
+          {blockMessage && (
+            <p aria-live="polite" className="kindly-status-success mt-3">
+              {blockMessage}
+            </p>
+          )}
+          {safetyError && (
+            <p role="alert" className="kindly-status-error mt-3">
+              {safetyError}
+            </p>
+          )}
+
+          {!reportMessage && !blockMessage && (
+            <div className="mt-3 flex flex-wrap gap-2">
               <button
-                type="submit"
+                type="button"
                 disabled={safetyBusy}
-                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
+                onClick={() => {
+                  setReportOpen((current) => !current);
+                  setSafetyError(null);
+                }}
+                className="kindly-btn-secondary !min-h-10 !px-4 !py-2"
               >
-                {safetyBusy ? "Sending…" : "Send report"}
+                Report this wish
               </button>
               <button
                 type="button"
-                onClick={() => setReportOpen(false)}
-                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-4 py-2 text-sm font-semibold hover:bg-kindly-accent-soft"
+                disabled={safetyBusy}
+                onClick={handleBlock}
+                className="kindly-btn-secondary !min-h-10 !px-4 !py-2"
               >
-                Cancel
+                {safetyBusy ? "Working…" : "Block this person"}
               </button>
             </div>
-          </form>
-        )}
-      </section>
+          )}
 
-      {selected ? (
-        <div className="mt-6 rounded-xl bg-green-50 p-4 text-sm text-green-800">
-          <p className="font-semibold">Wish selected.</p>
-          <p className="mt-1">Choose a whole-rupee amount between ₹10 and ₹100.</p>
-          <Link
-            href={`/gifts/new/${wish.id}`}
-            className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 font-semibold text-white hover:bg-orange-800"
-          >
-            Choose amount
-          </Link>
-        </div>
-      ) : needsAuth ? (
-        <div className="mt-6 rounded-xl border border-kindly-border p-4 text-sm">
-          <p>Sign in before selecting, reporting or blocking.</p>
-          <Link
-            href="/sign-in"
-            className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 font-semibold text-white hover:bg-orange-800"
-          >
-            Sign in to continue
-          </Link>
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={handleSelect}
-          disabled={busy}
-          className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
-        >
-          {busy ? "Selecting…" : "Select this wish"}
-        </button>
+          {reportOpen && !reportMessage && !blockMessage && (
+            <form onSubmit={handleReport} className="mt-4 space-y-3">
+              <div>
+                <label htmlFor="report-reason" className="kindly-label">
+                  Why are you reporting this wish?
+                </label>
+                <select
+                  id="report-reason"
+                  value={reportReason}
+                  onChange={(event) => setReportReason(event.target.value as ReportReason)}
+                  className="kindly-input mt-1"
+                >
+                  {(Object.keys(REPORT_REASON_LABELS) as ReportReason[]).map((value) => (
+                    <option key={value} value={value}>
+                      {REPORT_REASON_LABELS[value]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="submit"
+                  disabled={safetyBusy}
+                  className="kindly-btn-primary !min-h-10 !px-4 !py-2"
+                >
+                  {safetyBusy ? "Sending…" : "Send report"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReportOpen(false)}
+                  className="kindly-btn-secondary !min-h-10 !px-4 !py-2"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+        </section>
       )}
-
-      <Link
-        href="/"
-        className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl px-2 py-2 text-sm font-semibold text-kindly-accent underline"
-      >
-        Back to discovery
-      </Link>
     </article>
   );
 }

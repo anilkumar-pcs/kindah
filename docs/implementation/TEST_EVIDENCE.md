@@ -1,8 +1,9 @@
 # Test Evidence — Chillar / Kindly
 
-**Last updated:** 2026-11-23
+**Last updated:** 2026-11-24
 **Environment:** macOS 15.8.3 (arm64); working directory `/Users/pcsanilkumar/Work/kindah`
-**Application state:** No application code exists. No automated application tests can run. Records below are Phase 0 inspection and documentation evidence.
+**Application state:** Phases 0–7 complete; Phase 8 local hardening complete, with external launch
+gates blocked. Automated test and browser evidence is recorded below.
 
 ## Evidence records
 
@@ -535,6 +536,76 @@
 | MFA-mode tests | Shared tests pin `admin_mfa_required=True` to keep the optional MFA path covered; a separate test verifies `admin_mfa_required=False` gives role-only admin access; admin console test auto-opens without MFA. |
 | Known limitation | The owner account has not been identified; bootstrap requires the owner's phone/display name. Rule types remain code-backed, so adding an entirely new rule type still needs code. |
 
+### VE-044 — Session-aware header and admin navigation
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | Owner follow-up (signed-in header and admin discoverability) |
+| Command | `cd frontend && npm test && npm run lint && npm run format && npm run typecheck && npm run build` |
+| Environment | Next.js 16.4.6; Node 26; local FastAPI/PostgreSQL dev stack |
+| Result | **PASS** — **64 frontend tests across 14 files**; ESLint, Prettier, TypeScript and production build clean (14 routes) |
+| Browser validation | Guest header showed **Sign in**; OTP verification immediately changed it to the pseudonym and **Sign out**; onboarding profile save refreshed the displayed name; **Admin console** link appeared only for the DB `ADMIN` account and opened `/admin`; sign-out returned to discovery and restored the guest header; mobile menu exposed the same links |
+| Fixes | Static header replaced by a session-aware client header; session-change event synchronizes OTP login, profile updates and logout without reload; admin/moderator link added to the header, sign-in success card and My Space; signed-in home CTA replaced the guest “Sign in to give” action; Suspense boundary preserves production prerendering of dynamic routes |
+| Known limitation | The header falls back to a skeleton until session restore completes; admin visibility still depends on the `/api/v1/me` role payload. No backend or API changes were made. |
+
+### VE-045 — Onboarding, wish detail and account navigation pass
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | Owner follow-up (onboarding, discovery, wish detail and account navigation) |
+| Command | `cd backend && uv run pytest -q && uv run ruff check . && uv run ruff format --check . && uv run mypy app tests scripts`; `cd frontend && npm test && npm run lint && npm run typecheck && npm run build` |
+| Environment | PostgreSQL 16.16; Python 3.12.16; Next.js 16.4.6; Node 26; local dev stack |
+| Result | **PASS** — **177 backend tests**, **69 frontend tests across 15 files**; Ruff, format, mypy, ESLint, Prettier, TypeScript and production build clean |
+| API contract | `GET /api/v1/wishes/{id}` adds `isOwnWish`; an authenticated owner can load their own public wish while selection remains forbidden. Feed/detail/gift clients wait for session restoration before requesting viewer-aware data. |
+| Wish flow | Removed the frontend `selectWish` call and separate selection screen. A signed-in non-owner gets **Send a gift** to `/gifts/new/{id}`; a guest gets **Sign in to send a gift** with `next` set to the gift flow; an owner gets **This is your wish** and a My Space link. Gift creation remains the reservation/lock boundary. |
+| Onboarding | Avatar is presented as a fixed six-symbol decorative picker with explanatory copy. Successful authentication/onboarding redirects to `/me`, `/appeals` for non-active accounts, or a validated same-origin `next` path. |
+| Discovery/navigation | City filter and service-status panel removed from the consumer page; consistent account sub-navigation added at the top of My Space, Notifications, Appeals and Account deletion. |
+| Browser validation | Signed-in home rendered without city/service panels; non-owner wish showed **Send a gift**; guest wish showed **Sign in to send a gift** with the encoded return path; account navigation appeared at the top of My Space and Notifications. |
+| Known limitation | The owner-specific browser state was covered by integration and component tests; the live browser session used during validation was a non-owner admin. Real-money UPI remains disabled. |
+
+### VE-046 — Profile menu replaces duplicate account navigation
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | Owner follow-up (header duplication correction) |
+| Command | `cd frontend && npm test && npm run lint && npm run typecheck && npm run build` |
+| Environment | Next.js 16.4.6; Node 26; local FastAPI/PostgreSQL dev stack |
+| Result | **PASS** — **68 frontend tests across 14 files**; ESLint, Prettier, TypeScript and production build clean |
+| Change | Removed the account sub-navigation bar. Appeals, Account deletion and Sign out moved into the signed-in profile dropdown. My Space and Notifications remain only in the primary header; the mobile menu lists account-only actions once. |
+| Browser validation | `/me` and `/appeals` render one header; the profile dropdown opens with the three account actions and no duplicate Notifications/My Space links. |
+| Known limitation | Dropdown uses disclosure semantics rather than an ARIA menu widget; keyboard Escape/outside-click closing is covered by implementation, not a separate browser test. |
+
+### VE-047 — Direction A design system, mobile shell and Home
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | Owner-approved Direction A implementation slice |
+| Command | `cd backend && uv run pytest -q`; `cd frontend && npm run lint && npm run typecheck && npm test && npm run build` |
+| Environment | PostgreSQL 16.16; Python 3.12.16; Next.js 16.4.6; Node 26; local dev stack |
+| Result | **PASS** — 177 backend tests; **72 frontend tests across 15 files**; Ruff/mypy/ESLint/Prettier/TypeScript/build clean |
+| Design system | Direction A tokens, Bricolage Grotesque/Plus Jakarta Sans/Caveat via `next/font`, shared SVG icons, updated manifest/theme colour and app icon |
+| Shell | Desktop top navigation retained; mobile fixed bottom tabs (Discover, My Space, Updates, Account) with `env(safe-area-inset-bottom)`, account bottom sheet and route-based hiding for focused auth/new-gift flows |
+| Home | New editorial hero with CSS artwork and restyled discovery, Surprise Me and wish cards |
+| Browser validation | Desktop Home at 1440px; mobile Home at 500px with bottom tabs; account sheet opens with Appeals/Account deletion/Admin/Sign out; populated feed card checked with a temporary local preview wish |
+| Known limitation | Other page layouts remain on their prior structure while inheriting the new tokens; mobile tab bar applies below the `md` breakpoint; the account sheet has basic Escape/outside-close and initial focus but no full focus trap. |
+
+### VE-048 — Direction A applied across all screens
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | Owner-approved full Direction A rollout |
+| Command | `cd backend && uv run pytest -q`; `cd frontend && npm run format && npm run lint && npm run typecheck && npm test && npm run build` |
+| Environment | PostgreSQL 16.16; Python 3.12.16; Next.js 16.4.6; Node 26; local dev stack |
+| Result | **PASS** — 177 backend tests; **72 frontend tests across 15 files**; Prettier, ESLint, TypeScript, Ruff, mypy and production build clean |
+| Screens | Sign-in/onboarding, wish detail, gift flow/handoff/detail, My Space, Notifications, Appeals, Account deletion, admin console, error/loading/not-found |
+| Browser review | Desktop guest sign-in, Home, wish detail, gift flow, My Space, Notifications and admin; mobile Home + bottom tabs; account sheet; no console errors observed on reviewed pages |
+| Known limitation | Full manual WCAG/keyboard/screen-reader and physical-device matrix still belongs to Phase 8 external sign-off. A temporary preview wish was removed after review. |
+
 ## Summary
 
 | Verification | Result |
@@ -584,6 +655,11 @@
 | Phase 7 share/Surprise Me | PASS — privacy allow-list, exclusion and weight tests |
 | Phase 7 overall | `DONE` — 8/8 tasks; badge definitions DB-configurable |
 | DB roles/badge registry | PASS — 177 total backend tests, 55 frontend tests, migration 0014; role-only admin MFA override |
+| Session-aware header/admin navigation | PASS — 64 frontend tests across 14 files; lint/format/type/build clean; browser guest/login/admin/sign-out flow verified |
+| Onboarding/wish/account navigation pass | PASS — 177 backend tests, 69 frontend tests across 15 files; owner flag, direct gift CTA, redirect and account navigation verified |
+| Profile-menu header correction | PASS — 68 frontend tests across 14 files; single header, profile dropdown, no duplicate primary links |
+| Direction A shell/Home | PASS — 177 backend tests, 72 frontend tests across 15 files; desktop/mobile browser review; build clean |
+| Direction A full rollout | PASS — all consumer/admin screens restyled; 177 backend and 72 frontend tests; browser review and build clean |
 | Phase 8 threat model/scans | PASS (local scope) — npm/pip/Bandit/secret checks |
 | Phase 8 restore/load/a11y smoke | PASS locally — restore at head, p95 90.3 ms, a11y 100 on 4 pages |
 | Phase 8 overall | `BLOCKED` — deployed staging, monitoring/RPO/RTO, independent security review, legal/provider gates |

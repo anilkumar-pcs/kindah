@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { PageHeader } from "@/components/ui/page-header";
 import { ApiError } from "@/lib/api/client";
 import {
   listNotifications,
@@ -120,11 +121,7 @@ export function NotificationsCenter() {
 
   if (state === "loading") {
     return (
-      <section
-        aria-busy="true"
-        aria-live="polite"
-        className="mx-auto max-w-2xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border"
-      >
+      <section aria-busy="true" aria-live="polite" className="kindly-card mx-auto max-w-2xl p-6">
         <p className="text-sm text-kindly-muted">Loading notifications…</p>
       </section>
     );
@@ -132,15 +129,12 @@ export function NotificationsCenter() {
 
   if (state === "guest") {
     return (
-      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Notifications</h1>
+      <section className="kindly-card mx-auto max-w-xl p-6 sm:p-8">
+        <h1 className="font-display text-3xl font-semibold tracking-[-0.055em]">Notifications</h1>
         <p className="mt-3 text-sm text-kindly-muted">
           Sign in to see gift, wish, moderation and support updates.
         </p>
-        <Link
-          href="/sign-in"
-          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800"
-        >
+        <Link href="/sign-in" className="kindly-btn-primary mt-6">
           Sign in
         </Link>
       </section>
@@ -149,12 +143,14 @@ export function NotificationsCenter() {
 
   if (state === "error") {
     return (
-      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Notifications unavailable</h1>
-        <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+      <section className="kindly-card mx-auto max-w-xl p-6 sm:p-8">
+        <h1 className="font-display text-3xl font-semibold tracking-[-0.055em]">
+          Notifications unavailable
+        </h1>
+        <p role="alert" className="kindly-status-error mt-3">
           {error ?? "Could not load notifications."}
         </p>
-        <Link href="/" className="mt-6 inline-block text-sm font-semibold text-kindly-accent">
+        <Link href="/" className="kindly-btn-quiet mt-4 !px-0">
           Back to discovery
         </Link>
       </section>
@@ -163,36 +159,32 @@ export function NotificationsCenter() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold tracking-wide text-kindly-accent uppercase">Inbox</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight">Notifications</h1>
-          <p className="mt-1 text-sm text-kindly-muted">
-            {unreadCount === 0 ? "You are all caught up." : `${unreadCount} unread`}
-          </p>
-        </div>
-        {unreadCount > 0 && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={handleMarkAll}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-4 py-2 text-sm font-semibold hover:bg-kindly-accent-soft disabled:opacity-60"
-          >
-            Mark all read
-          </button>
-        )}
-      </header>
+      <PageHeader
+        eyebrow="Your little inbox"
+        title="Notifications"
+        description={unreadCount === 0 ? "You are all caught up." : `${unreadCount} unread`}
+        aside={
+          unreadCount > 0 ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={handleMarkAll}
+              className="kindly-btn-secondary"
+            >
+              Mark all read
+            </button>
+          ) : undefined
+        }
+      />
 
       {error && (
-        <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+        <p role="alert" className="kindly-status-error">
           {error}
         </p>
       )}
 
       {notifications.length === 0 ? (
-        <p className="rounded-2xl border border-kindly-border bg-white p-5 text-sm text-kindly-muted">
-          No notifications yet.
-        </p>
+        <p className="kindly-card p-5 text-sm text-kindly-muted">No notifications yet.</p>
       ) : (
         <ul className="space-y-3">
           {notifications.map((notification) => {
@@ -201,10 +193,10 @@ export function NotificationsCenter() {
             return (
               <li
                 key={notification.id}
-                className={`rounded-2xl border p-5 text-sm ${
+                className={`rounded-[1.4rem] border p-5 text-sm ${
                   unread
-                    ? "border-kindly-accent bg-kindly-accent-soft"
-                    : "border-kindly-border bg-white"
+                    ? "border-kindly-accent/50 bg-kindly-accent-soft"
+                    : "border-kindly-border bg-kindly-card"
                 }`}
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
@@ -217,9 +209,7 @@ export function NotificationsCenter() {
                       <span className="font-semibold">{notification.title}</span>
                     )}
                     {unread && (
-                      <span className="ml-2 rounded-full bg-kindly-accent px-2 py-0.5 text-xs font-semibold text-white">
-                        New
-                      </span>
+                      <span className="kindly-chip ml-2 !px-2 !py-0.5 !text-[9px]">New</span>
                     )}
                   </div>
                   <span className="text-xs text-kindly-muted">
@@ -232,7 +222,7 @@ export function NotificationsCenter() {
                     type="button"
                     disabled={busy}
                     onClick={() => handleMarkRead(notification.id)}
-                    className="mt-3 inline-flex min-h-9 items-center justify-center rounded-lg border border-kindly-border bg-white px-3 py-1 text-xs font-semibold hover:bg-kindly-accent-soft disabled:opacity-60"
+                    className="kindly-btn-secondary mt-3 !min-h-9 !px-3 !py-1 !text-xs"
                   >
                     Mark read
                   </button>
@@ -242,10 +232,6 @@ export function NotificationsCenter() {
           })}
         </ul>
       )}
-
-      <Link href="/me" className="inline-block text-sm font-semibold text-kindly-accent underline">
-        My Space
-      </Link>
     </div>
   );
 }

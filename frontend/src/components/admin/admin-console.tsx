@@ -304,11 +304,7 @@ export function AdminConsole() {
 
   if (state === "loading") {
     return (
-      <section
-        aria-busy="true"
-        aria-live="polite"
-        className="mx-auto max-w-3xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border"
-      >
+      <section aria-busy="true" aria-live="polite" className="kindly-card mx-auto max-w-3xl p-6">
         <p className="text-sm text-kindly-muted">Checking admin access…</p>
       </section>
     );
@@ -316,14 +312,14 @@ export function AdminConsole() {
 
   if (state === "guest") {
     return (
-      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Admin sign in</h1>
+      <section className="kindly-card mx-auto max-w-xl p-6 sm:p-8">
+        <h1 className="font-display text-3xl font-semibold tracking-[-0.055em]">Admin sign in</h1>
         <p className="mt-3 text-sm text-kindly-muted">
           Sign in with an authorized moderator or administrator account.
         </p>
         <Link
           href="/sign-in"
-          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800"
+          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-kindly-accent-dark"
         >
           Sign in
         </Link>
@@ -333,12 +329,14 @@ export function AdminConsole() {
 
   if (state === "denied") {
     return (
-      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Admin access required</h1>
-        <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+      <section className="kindly-card mx-auto max-w-xl p-6 sm:p-8">
+        <h1 className="font-display text-3xl font-semibold tracking-[-0.055em]">
+          Admin access required
+        </h1>
+        <p role="alert" className="kindly-status-error mt-3">
           This account does not have moderator or administrator access.
         </p>
-        <Link href="/" className="mt-6 inline-block text-sm font-semibold text-kindly-accent">
+        <Link href="/" className="kindly-btn-quiet mt-4 !px-0">
           Back to discovery
         </Link>
       </section>
@@ -347,12 +345,14 @@ export function AdminConsole() {
 
   if (state === "error") {
     return (
-      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Admin unavailable</h1>
-        <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+      <section className="kindly-card mx-auto max-w-xl p-6 sm:p-8">
+        <h1 className="font-display text-3xl font-semibold tracking-[-0.055em]">
+          Admin unavailable
+        </h1>
+        <p role="alert" className="kindly-status-error mt-3">
           {error ?? "Could not load the admin area."}
         </p>
-        <Link href="/" className="mt-6 inline-block text-sm font-semibold text-kindly-accent">
+        <Link href="/" className="kindly-btn-quiet mt-4 !px-0">
           Back to discovery
         </Link>
       </section>
@@ -363,12 +363,12 @@ export function AdminConsole() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <header className="rounded-2xl border border-kindly-border bg-white p-5">
+      <header className="kindly-card p-5">
         <p className="text-sm font-semibold tracking-wide text-kindly-accent uppercase">
           Protected operations
         </p>
         <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Admin console</h1>
+          <h1 className="font-display text-3xl font-semibold tracking-[-0.055em]">Admin console</h1>
           <span className="rounded-full bg-kindly-accent-soft px-3 py-1 text-xs font-semibold text-kindly-accent">
             {status?.role ?? user?.role}
           </span>
@@ -395,14 +395,16 @@ export function AdminConsole() {
       </header>
 
       {error && (
-        <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+        <p role="alert" className="kindly-status-error">
           {error}
         </p>
       )}
 
       {recoveryCodes.length > 0 && (
-        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
-          <h2 className="text-lg font-semibold">Save your recovery codes</h2>
+        <section className="rounded-[1.5rem] border border-kindly-marigold/50 bg-kindly-marigold/20 p-5 text-sm text-kindly-ink">
+          <h2 className="font-display text-2xl font-semibold tracking-[-0.04em]">
+            Save your recovery codes
+          </h2>
           <p className="mt-1">
             Each code works once. Store them offline; they will not be shown again.
           </p>
@@ -415,8 +417,10 @@ export function AdminConsole() {
       )}
 
       {status && status.mfaRequired && !status.mfaEnabled && !setup && (
-        <section className="rounded-2xl border border-kindly-border bg-white p-5">
-          <h2 className="text-lg font-semibold">Set up authenticator MFA</h2>
+        <section className="kindly-card p-5">
+          <h2 className="font-display text-2xl font-semibold tracking-[-0.04em]">
+            Set up authenticator MFA
+          </h2>
           <p className="mt-1 text-sm text-kindly-muted">
             Admin routes stay locked until an authenticator app is enrolled.
           </p>
@@ -424,7 +428,7 @@ export function AdminConsole() {
             type="button"
             disabled={busy}
             onClick={handleStartSetup}
-            className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
+            className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-kindly-accent-dark disabled:opacity-60"
           >
             {busy ? "Preparing…" : "Set up authenticator"}
           </button>
@@ -432,8 +436,10 @@ export function AdminConsole() {
       )}
 
       {setup && status?.mfaRequired && !mfaToken && (
-        <section className="rounded-2xl border border-kindly-border bg-white p-5">
-          <h2 className="text-lg font-semibold">Scan and confirm</h2>
+        <section className="kindly-card p-5">
+          <h2 className="font-display text-2xl font-semibold tracking-[-0.04em]">
+            Scan and confirm
+          </h2>
           <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-center">
             <div
               aria-label="Authenticator setup QR code"
@@ -451,7 +457,7 @@ export function AdminConsole() {
           </div>
           <form onSubmit={handleEnable} className="mt-4 flex flex-wrap items-end gap-2">
             <div>
-              <label htmlFor="mfa-enable-code" className="block text-sm font-medium">
+              <label htmlFor="mfa-enable-code" className="kindly-label">
                 Authenticator code
               </label>
               <input
@@ -462,14 +468,10 @@ export function AdminConsole() {
                 required
                 value={code}
                 onChange={(event) => setCode(event.target.value)}
-                className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+                className="kindly-input mt-1"
               />
             </div>
-            <button
-              type="submit"
-              disabled={busy}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
-            >
+            <button type="submit" disabled={busy} className="kindly-btn-primary">
               {busy ? "Enabling…" : "Enable MFA"}
             </button>
           </form>
@@ -477,14 +479,14 @@ export function AdminConsole() {
       )}
 
       {status?.mfaRequired && status.mfaEnabled && !mfaToken && (
-        <section className="rounded-2xl border border-kindly-border bg-white p-5">
-          <h2 className="text-lg font-semibold">Verify MFA</h2>
+        <section className="kindly-card p-5">
+          <h2 className="font-display text-2xl font-semibold tracking-[-0.04em]">Verify MFA</h2>
           <p className="mt-1 text-sm text-kindly-muted">
             Enter an authenticator code or a one-time recovery code.
           </p>
           <form onSubmit={handleVerify} className="mt-3 flex flex-wrap items-end gap-2">
             <div>
-              <label htmlFor="mfa-verify-code" className="block text-sm font-medium">
+              <label htmlFor="mfa-verify-code" className="kindly-label">
                 Authenticator or recovery code
               </label>
               <input
@@ -495,14 +497,10 @@ export function AdminConsole() {
                 required
                 value={code}
                 onChange={(event) => setCode(event.target.value)}
-                className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+                className="kindly-input mt-1"
               />
             </div>
-            <button
-              type="submit"
-              disabled={busy}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
-            >
+            <button type="submit" disabled={busy} className="kindly-btn-primary">
               {busy ? "Verifying…" : "Open admin console"}
             </button>
           </form>
@@ -516,7 +514,7 @@ export function AdminConsole() {
         <>
           <nav
             aria-label="Admin sections"
-            className="flex flex-wrap gap-1 rounded-xl border border-kindly-border bg-white p-1"
+            className="flex flex-wrap gap-1 rounded-2xl border border-kindly-border bg-kindly-card p-1"
           >
             {(
               [
@@ -535,7 +533,7 @@ export function AdminConsole() {
                 type="button"
                 aria-pressed={tab === value}
                 onClick={() => setTab(value)}
-                className={`min-h-11 rounded-lg px-3 py-2 text-sm font-semibold ${
+                className={`min-h-11 rounded-xl px-3 py-2 text-sm font-semibold ${
                   tab === value
                     ? "bg-kindly-accent text-white"
                     : "text-kindly-muted hover:bg-kindly-accent-soft"
@@ -548,19 +546,17 @@ export function AdminConsole() {
 
           {tab === "reports" && (
             <section aria-labelledby="admin-reports-heading" className="space-y-3">
-              <h2 id="admin-reports-heading" className="text-xl font-semibold">
+              <h2
+                id="admin-reports-heading"
+                className="font-display text-2xl font-semibold tracking-[-0.04em]"
+              >
                 Moderation queue
               </h2>
               {data.reports.length === 0 ? (
-                <p className="rounded-2xl border border-kindly-border bg-white p-5 text-sm text-kindly-muted">
-                  No open reports.
-                </p>
+                <p className="kindly-card p-5 text-sm text-kindly-muted">No open reports.</p>
               ) : (
                 data.reports.map((report) => (
-                  <article
-                    key={report.id}
-                    className="rounded-2xl border border-kindly-border bg-white p-5 text-sm"
-                  >
+                  <article key={report.id} className="kindly-card p-5 text-sm">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-semibold">
                         {report.targetDisplayName ?? "Unknown target"} ·{" "}
@@ -597,19 +593,17 @@ export function AdminConsole() {
 
           {tab === "support" && (
             <section aria-labelledby="admin-support-heading" className="space-y-3">
-              <h2 id="admin-support-heading" className="text-xl font-semibold">
+              <h2
+                id="admin-support-heading"
+                className="font-display text-2xl font-semibold tracking-[-0.04em]"
+              >
                 Support cases
               </h2>
               {data.supportCases.length === 0 ? (
-                <p className="rounded-2xl border border-kindly-border bg-white p-5 text-sm text-kindly-muted">
-                  No support cases.
-                </p>
+                <p className="kindly-card p-5 text-sm text-kindly-muted">No support cases.</p>
               ) : (
                 data.supportCases.map((item) => (
-                  <article
-                    key={item.id}
-                    className="rounded-2xl border border-kindly-border bg-white p-5 text-sm"
-                  >
+                  <article key={item.id} className="kindly-card p-5 text-sm">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-semibold">
                         {SUPPORT_CASE_LABELS[item.caseType]} · ₹{item.amountInr}
@@ -640,10 +634,7 @@ export function AdminConsole() {
                       </p>
                     ) : (
                       <div className="mt-3 space-y-2">
-                        <label
-                          htmlFor={`resolution-${item.id}`}
-                          className="block text-sm font-medium"
-                        >
+                        <label htmlFor={`resolution-${item.id}`} className="kindly-label">
                           Resolution note
                         </label>
                         <textarea
@@ -663,7 +654,7 @@ export function AdminConsole() {
                           type="button"
                           disabled={busy}
                           onClick={() => handleResolve(item.id)}
-                          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
+                          className="kindly-btn-primary"
                         >
                           {busy ? "Resolving…" : "Resolve case"}
                         </button>
@@ -677,19 +668,17 @@ export function AdminConsole() {
 
           {tab === "appeals" && (
             <section aria-labelledby="admin-appeals-heading" className="space-y-3">
-              <h2 id="admin-appeals-heading" className="text-xl font-semibold">
+              <h2
+                id="admin-appeals-heading"
+                className="font-display text-2xl font-semibold tracking-[-0.04em]"
+              >
                 Appeals queue
               </h2>
               {data.appeals.length === 0 ? (
-                <p className="rounded-2xl border border-kindly-border bg-white p-5 text-sm text-kindly-muted">
-                  No open appeals.
-                </p>
+                <p className="kindly-card p-5 text-sm text-kindly-muted">No open appeals.</p>
               ) : (
                 data.appeals.map((appeal) => (
-                  <article
-                    key={appeal.id}
-                    className="rounded-2xl border border-kindly-border bg-white p-5 text-sm"
-                  >
+                  <article key={appeal.id} className="kindly-card p-5 text-sm">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-semibold">
                         {appeal.userDisplayName ?? "Unknown user"} · {appeal.action}
@@ -730,7 +719,10 @@ export function AdminConsole() {
 
           {tab === "deletion" && (
             <section aria-labelledby="admin-deletion-heading" className="space-y-3">
-              <h2 id="admin-deletion-heading" className="text-xl font-semibold">
+              <h2
+                id="admin-deletion-heading"
+                className="font-display text-2xl font-semibold tracking-[-0.04em]"
+              >
                 Account deletion requests
               </h2>
               <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
@@ -738,15 +730,12 @@ export function AdminConsole() {
                 counsel-approved retention is in place.
               </p>
               {data.deletionRequests.length === 0 ? (
-                <p className="rounded-2xl border border-kindly-border bg-white p-5 text-sm text-kindly-muted">
+                <p className="kindly-card p-5 text-sm text-kindly-muted">
                   No open deletion requests.
                 </p>
               ) : (
                 data.deletionRequests.map((item) => (
-                  <article
-                    key={item.id}
-                    className="rounded-2xl border border-kindly-border bg-white p-5 text-sm"
-                  >
+                  <article key={item.id} className="kindly-card p-5 text-sm">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-semibold">
                         {item.userDisplayName ?? "Unknown user"} · {item.userStatus}
@@ -768,12 +757,15 @@ export function AdminConsole() {
 
           {tab === "users" && (
             <section aria-labelledby="admin-users-heading" className="space-y-3">
-              <h2 id="admin-users-heading" className="text-xl font-semibold">
+              <h2
+                id="admin-users-heading"
+                className="font-display text-2xl font-semibold tracking-[-0.04em]"
+              >
                 Users and roles
               </h2>
               <form onSubmit={handleUserSearch} className="flex flex-wrap items-end gap-2">
                 <div className="min-w-48 flex-1">
-                  <label htmlFor="admin-user-search" className="block text-sm font-medium">
+                  <label htmlFor="admin-user-search" className="kindly-label">
                     Search by display name
                   </label>
                   <input
@@ -782,29 +774,20 @@ export function AdminConsole() {
                     maxLength={60}
                     value={userQuery}
                     onChange={(event) => setUserQuery(event.target.value)}
-                    className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
+                    className="kindly-input mt-1"
                   />
                 </div>
-                <button
-                  type="submit"
-                  disabled={busy}
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border bg-white px-4 py-2 text-sm font-semibold hover:bg-kindly-accent-soft disabled:opacity-60"
-                >
+                <button type="submit" disabled={busy} className="kindly-btn-secondary">
                   Search
                 </button>
               </form>
               {data.users.length === 0 ? (
-                <p className="rounded-2xl border border-kindly-border bg-white p-5 text-sm text-kindly-muted">
-                  No matching users.
-                </p>
+                <p className="kindly-card p-5 text-sm text-kindly-muted">No matching users.</p>
               ) : (
                 data.users.map((item) => {
                   const draft = roleDrafts[item.id] ?? { role: item.role, reason: "" };
                   return (
-                    <article
-                      key={item.id}
-                      className="rounded-2xl border border-kindly-border bg-white p-5 text-sm"
-                    >
+                    <article key={item.id} className="kindly-card p-5 text-sm">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="font-semibold">{item.displayName ?? "Unnamed user"}</span>
                         <span className="rounded-full bg-kindly-accent-soft px-3 py-1 text-xs font-semibold">
@@ -831,7 +814,7 @@ export function AdminConsole() {
                                 },
                               }))
                             }
-                            className="mt-1 min-h-11 rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
+                            className="kindly-input mt-1"
                           >
                             <option value="USER">USER</option>
                             <option value="MODERATOR">MODERATOR</option>
@@ -860,14 +843,14 @@ export function AdminConsole() {
                                 },
                               }))
                             }
-                            className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
+                            className="kindly-input mt-1"
                           />
                         </div>
                         <button
                           type="button"
                           disabled={busy || item.id === user?.id}
                           onClick={() => handleRoleUpdate(item)}
-                          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
+                          className="kindly-btn-primary"
                         >
                           {item.id === user?.id ? "This is you" : "Update role"}
                         </button>
@@ -893,7 +876,10 @@ export function AdminConsole() {
 
           {tab === "outbox" && (
             <section aria-labelledby="admin-outbox-heading" className="space-y-3">
-              <h2 id="admin-outbox-heading" className="text-xl font-semibold">
+              <h2
+                id="admin-outbox-heading"
+                className="font-display text-2xl font-semibold tracking-[-0.04em]"
+              >
                 Outbox dead letters
               </h2>
               <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
@@ -901,15 +887,12 @@ export function AdminConsole() {
                 only through an approved idempotent handler.
               </p>
               {data.deadLetters.length === 0 ? (
-                <p className="rounded-2xl border border-kindly-border bg-white p-5 text-sm text-kindly-muted">
+                <p className="kindly-card p-5 text-sm text-kindly-muted">
                   No dead-lettered events.
                 </p>
               ) : (
                 data.deadLetters.map((item) => (
-                  <article
-                    key={item.id}
-                    className="rounded-2xl border border-kindly-border bg-white p-5 text-sm"
-                  >
+                  <article key={item.id} className="kindly-card p-5 text-sm">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-semibold">{item.eventType}</span>
                       <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900">
@@ -929,20 +912,18 @@ export function AdminConsole() {
 
           {tab === "audit" && (
             <section aria-labelledby="admin-audit-heading" className="space-y-3">
-              <h2 id="admin-audit-heading" className="text-xl font-semibold">
+              <h2
+                id="admin-audit-heading"
+                className="font-display text-2xl font-semibold tracking-[-0.04em]"
+              >
                 Append-only audit log
               </h2>
               {data.auditLogs.length === 0 ? (
-                <p className="rounded-2xl border border-kindly-border bg-white p-5 text-sm text-kindly-muted">
-                  No audit events.
-                </p>
+                <p className="kindly-card p-5 text-sm text-kindly-muted">No audit events.</p>
               ) : (
                 <ul className="space-y-2">
                   {data.auditLogs.map((entry) => (
-                    <li
-                      key={entry.id}
-                      className="rounded-2xl border border-kindly-border bg-white p-4 text-sm"
-                    >
+                    <li key={entry.id} className="kindly-card p-4 text-sm">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="font-semibold">{entry.action}</span>
                         <span className="text-xs text-kindly-muted">

@@ -11,6 +11,7 @@ import {
   type Appeal,
   type ModerationActionSummary,
 } from "@/lib/api/appeals";
+import { PageHeader } from "@/components/ui/page-header";
 import { ApiError } from "@/lib/api/client";
 import { restoreSession } from "@/lib/auth/session";
 
@@ -80,7 +81,7 @@ function AppealForm({
     <div className="mt-3">
       {open ? (
         <form onSubmit={handleSubmit} className="space-y-2">
-          <label htmlFor={`appeal-reason-${action.id}`} className="block text-sm font-medium">
+          <label htmlFor={`appeal-reason-${action.id}`} className="kindly-label">
             Why should this be reviewed?
           </label>
           <textarea
@@ -91,37 +92,25 @@ function AppealForm({
             rows={3}
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            className="w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+            className="kindly-input mt-1"
             placeholder="Share context the moderator should consider. Do not include your UPI ID, phone number or PIN."
           />
           {error && (
-            <p role="alert" className="rounded-xl bg-red-50 p-2 text-red-700">
+            <p role="alert" className="kindly-status-error">
               {error}
             </p>
           )}
           <div className="flex flex-wrap gap-2">
-            <button
-              type="submit"
-              disabled={busy}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
-            >
+            <button type="submit" disabled={busy} className="kindly-btn-primary">
               {busy ? "Submitting…" : "Submit appeal"}
             </button>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-4 py-2 text-sm font-semibold hover:bg-kindly-accent-soft"
-            >
+            <button type="button" onClick={() => setOpen(false)} className="kindly-btn-secondary">
               Cancel
             </button>
           </div>
         </form>
       ) : (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-4 py-2 text-sm font-semibold hover:bg-kindly-accent-soft"
-        >
+        <button type="button" onClick={() => setOpen(true)} className="kindly-btn-secondary">
           Appeal this action
         </button>
       )}
@@ -179,11 +168,7 @@ export function AppealsCenter() {
 
   if (state === "loading") {
     return (
-      <section
-        aria-busy="true"
-        aria-live="polite"
-        className="mx-auto max-w-2xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border"
-      >
+      <section aria-busy="true" aria-live="polite" className="kindly-card mx-auto max-w-2xl p-6">
         <p className="text-sm text-kindly-muted">Loading moderation history…</p>
       </section>
     );
@@ -191,15 +176,12 @@ export function AppealsCenter() {
 
   if (state === "guest") {
     return (
-      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Appeals</h1>
+      <section className="kindly-card mx-auto max-w-xl p-6 sm:p-8">
+        <h1 className="font-display text-3xl font-semibold tracking-[-0.055em]">Appeals</h1>
         <p className="mt-3 text-sm text-kindly-muted">
           Sign in to view moderation actions on your account and submit an appeal.
         </p>
-        <Link
-          href="/sign-in"
-          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800"
-        >
+        <Link href="/sign-in" className="kindly-btn-primary mt-6">
           Sign in
         </Link>
       </section>
@@ -208,12 +190,14 @@ export function AppealsCenter() {
 
   if (state === "error") {
     return (
-      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Appeals unavailable</h1>
-        <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+      <section className="kindly-card mx-auto max-w-xl p-6 sm:p-8">
+        <h1 className="font-display text-3xl font-semibold tracking-[-0.055em]">
+          Appeals unavailable
+        </h1>
+        <p role="alert" className="kindly-status-error mt-3">
           {error ?? "Could not load appeals."}
         </p>
-        <Link href="/" className="mt-6 inline-block text-sm font-semibold text-kindly-accent">
+        <Link href="/" className="kindly-btn-quiet mt-4 !px-0">
           Back to discovery
         </Link>
       </section>
@@ -222,31 +206,26 @@ export function AppealsCenter() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <header>
-        <p className="text-sm font-semibold tracking-wide text-kindly-accent uppercase">
-          Account review
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">Appeals</h1>
-        <p className="mt-2 text-sm leading-6 text-kindly-muted">
-          Moderation reasons are private to you. An appeal is reviewed by an administrator; it does
-          not automatically change your account status.
-        </p>
-      </header>
+      <PageHeader
+        eyebrow="Account review"
+        title="Appeals"
+        description="Moderation reasons are private to you. An appeal is reviewed by an administrator; it does not automatically change your account status."
+      />
 
       <section aria-labelledby="moderation-actions-heading" className="space-y-3">
-        <h2 id="moderation-actions-heading" className="text-lg font-semibold">
+        <h2
+          id="moderation-actions-heading"
+          className="font-display text-2xl font-semibold tracking-[-0.04em]"
+        >
           Actions on your account
         </h2>
         {actions.length === 0 ? (
-          <p className="rounded-2xl border border-kindly-border bg-white p-5 text-sm text-kindly-muted">
+          <p className="kindly-card p-5 text-sm text-kindly-muted">
             No moderation actions on your account.
           </p>
         ) : (
           actions.map((action) => (
-            <article
-              key={action.id}
-              className="rounded-2xl border border-kindly-border bg-white p-5 text-sm"
-            >
+            <article key={action.id} className="kindly-card p-5 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-semibold">{actionLabel(action.action)}</span>
                 <span className="text-xs text-kindly-muted">{formatDate(action.createdAt)}</span>
@@ -259,26 +238,24 @@ export function AppealsCenter() {
       </section>
 
       <section aria-labelledby="my-appeals-heading" className="space-y-3">
-        <h2 id="my-appeals-heading" className="text-lg font-semibold">
+        <h2
+          id="my-appeals-heading"
+          className="font-display text-2xl font-semibold tracking-[-0.04em]"
+        >
           Your appeals
         </h2>
         {appeals.length === 0 ? (
-          <p className="rounded-2xl border border-kindly-border bg-white p-5 text-sm text-kindly-muted">
-            No appeals submitted.
-          </p>
+          <p className="kindly-card p-5 text-sm text-kindly-muted">No appeals submitted.</p>
         ) : (
           appeals.map((appeal) => (
-            <article
-              key={appeal.id}
-              className="rounded-2xl border border-kindly-border bg-white p-5 text-sm"
-            >
+            <article key={appeal.id} className="kindly-card p-5 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-semibold">{appeal.status}</span>
                 <span className="text-xs text-kindly-muted">{formatDate(appeal.createdAt)}</span>
               </div>
               <p className="mt-2">{appeal.reason}</p>
               {appeal.resolutionNote && (
-                <p className="mt-2 rounded-xl bg-green-50 p-3 text-green-900">
+                <p className="kindly-status-success mt-2">
                   Resolution: {appeal.resolutionNote} ({formatDate(appeal.resolvedAt)})
                 </p>
               )}
@@ -286,10 +263,6 @@ export function AppealsCenter() {
           ))
         )}
       </section>
-
-      <Link href="/" className="inline-block text-sm font-semibold text-kindly-accent underline">
-        Back to discovery
-      </Link>
     </div>
   );
 }

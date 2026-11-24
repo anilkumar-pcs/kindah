@@ -10,6 +10,7 @@ export type PublicWish = {
   mood: WishMood;
   message: string;
   suggestedAmountInr: number | null;
+  isOwnWish: boolean;
 };
 
 export type FeedPage = {
@@ -44,12 +45,6 @@ export async function listPublicWishes(params: FeedParams): Promise<FeedPage> {
 
 export async function getPublicWish(wishId: string): Promise<PublicWish> {
   return apiFetch<PublicWish>(`/api/v1/wishes/${wishId}`);
-}
-
-export async function selectWish(wishId: string): Promise<PublicWish> {
-  return apiFetch<PublicWish>(`/api/v1/wishes/${wishId}/select`, {
-    method: "POST",
-  });
 }
 
 export async function surpriseMe(skippedWishIds: string[]): Promise<PublicWish> {

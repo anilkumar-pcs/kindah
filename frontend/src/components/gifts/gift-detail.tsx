@@ -80,14 +80,14 @@ function RecipientConfirmation({
   }
 
   return (
-    <section
-      aria-labelledby="recipient-confirmation-heading"
-      className="rounded-2xl border border-kindly-border bg-white p-5"
-    >
+    <section aria-labelledby="recipient-confirmation-heading" className="kindly-card p-5 sm:p-6">
       <p className="text-xs font-semibold tracking-wide text-kindly-accent uppercase">
         Donor says paid
       </p>
-      <h2 id="recipient-confirmation-heading" className="mt-1 text-lg font-semibold">
+      <h2
+        id="recipient-confirmation-heading"
+        className="mt-1 font-display text-2xl font-semibold tracking-[-0.04em]"
+      >
         Did you receive this gift?
       </h2>
       <p className="mt-2 text-sm leading-6 text-kindly-muted">
@@ -98,14 +98,14 @@ function RecipientConfirmation({
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor="gift-reaction" className="block text-sm font-medium">
+          <label htmlFor="gift-reaction" className="kindly-label">
             Reaction (optional)
           </label>
           <select
             id="gift-reaction"
             value={reaction}
             onChange={(event) => setReaction(event.target.value as "" | Reaction)}
-            className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
+            className="kindly-input mt-1"
           >
             <option value="">No reaction</option>
             <option value="HEART">Heart</option>
@@ -114,7 +114,7 @@ function RecipientConfirmation({
           </select>
         </div>
         <div>
-          <label htmlFor="gift-thanks" className="block text-sm font-medium">
+          <label htmlFor="gift-thanks" className="kindly-label">
             Thank-you note (optional)
           </label>
           <input
@@ -123,14 +123,14 @@ function RecipientConfirmation({
             maxLength={120}
             value={message}
             onChange={(event) => setMessage(event.target.value)}
-            className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+            className="kindly-input mt-1"
             placeholder="Say thanks or share a smile"
           />
         </div>
       </div>
 
       {error && (
-        <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+        <p role="alert" className="kindly-status-error mt-3">
           {error}
         </p>
       )}
@@ -140,7 +140,7 @@ function RecipientConfirmation({
           type="button"
           disabled={busy !== null}
           onClick={() => handleConfirm("RECEIVED")}
-          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
+          className="kindly-btn-primary"
         >
           {busy === "RECEIVED" ? "Confirming…" : "Yes, I received it"}
         </button>
@@ -148,7 +148,7 @@ function RecipientConfirmation({
           type="button"
           disabled={busy !== null}
           onClick={() => handleConfirm("NOT_RECEIVED")}
-          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border bg-white px-5 py-3 text-sm font-semibold hover:bg-kindly-accent-soft disabled:opacity-60"
+          className="kindly-btn-secondary"
         >
           {busy === "NOT_RECEIVED" ? "Recording…" : "No, I did not receive it"}
         </button>
@@ -190,11 +190,8 @@ function SupportPanel({ gift }: { gift: Gift }) {
   }
 
   return (
-    <section
-      aria-labelledby="support-heading"
-      className="rounded-2xl border border-kindly-border bg-white p-5"
-    >
-      <h2 id="support-heading" className="text-lg font-semibold">
+    <section aria-labelledby="support-heading" className="kindly-card p-5 sm:p-6">
+      <h2 id="support-heading" className="font-display text-2xl font-semibold tracking-[-0.04em]">
         Something went wrong?
       </h2>
       <p className="mt-1 text-sm leading-6 text-kindly-muted">
@@ -203,7 +200,7 @@ function SupportPanel({ gift }: { gift: Gift }) {
       </p>
 
       {supportCase ? (
-        <div aria-live="polite" className="mt-4 rounded-xl bg-green-50 p-4 text-sm text-green-900">
+        <div aria-live="polite" className="kindly-status-success mt-4">
           <p className="font-semibold">Support case {supportCase.status}.</p>
           <p className="mt-1">
             An administrator can review the gift and your report. Keep the case reference{" "}
@@ -213,14 +210,14 @@ function SupportPanel({ gift }: { gift: Gift }) {
       ) : open ? (
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>
-            <label htmlFor="support-case-type" className="block text-sm font-medium">
+            <label htmlFor="support-case-type" className="kindly-label">
               What happened?
             </label>
             <select
               id="support-case-type"
               value={caseType}
               onChange={(event) => setCaseType(event.target.value as SupportCaseType)}
-              className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
+              className="kindly-input mt-1"
             >
               {(Object.keys(SUPPORT_CASE_LABELS) as SupportCaseType[]).map((value) => (
                 <option key={value} value={value}>
@@ -230,7 +227,7 @@ function SupportPanel({ gift }: { gift: Gift }) {
             </select>
           </div>
           <div>
-            <label htmlFor="support-description" className="block text-sm font-medium">
+            <label htmlFor="support-description" className="kindly-label">
               Tell us what happened
             </label>
             <textarea
@@ -241,7 +238,7 @@ function SupportPanel({ gift }: { gift: Gift }) {
               rows={4}
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+              className="kindly-input mt-1"
               aria-describedby="support-description-help"
               placeholder="Include what you saw in your UPI app or bank account. Do not include your UPI ID or phone number."
             />
@@ -250,16 +247,12 @@ function SupportPanel({ gift }: { gift: Gift }) {
             </p>
           </div>
           {error && (
-            <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+            <p role="alert" className="kindly-status-error">
               {error}
             </p>
           )}
           <div className="flex flex-wrap gap-2">
-            <button
-              type="submit"
-              disabled={busy}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
-            >
+            <button type="submit" disabled={busy} className="kindly-btn-primary">
               {busy ? "Sending…" : "Send to support"}
             </button>
             <button
@@ -268,7 +261,7 @@ function SupportPanel({ gift }: { gift: Gift }) {
                 setOpen(false);
                 setError(null);
               }}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-5 py-3 text-sm font-semibold hover:bg-kindly-accent-soft"
+              className="kindly-btn-secondary"
             >
               Cancel
             </button>
@@ -343,11 +336,7 @@ export function GiftDetail({ giftId }: { giftId: string }) {
 
   if (pageState === "loading") {
     return (
-      <section
-        aria-busy="true"
-        aria-live="polite"
-        className="mx-auto max-w-2xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border"
-      >
+      <section aria-busy="true" aria-live="polite" className="kindly-card mx-auto max-w-2xl p-6">
         <p className="text-sm text-kindly-muted">Loading gift…</p>
       </section>
     );
@@ -355,15 +344,14 @@ export function GiftDetail({ giftId }: { giftId: string }) {
 
   if (pageState === "guest") {
     return (
-      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Sign in to view this gift</h1>
+      <section className="kindly-card mx-auto max-w-xl p-6 sm:p-8">
+        <h1 className="font-display text-3xl font-semibold tracking-[-0.055em]">
+          Sign in to view this gift
+        </h1>
         <p className="mt-3 text-sm leading-6 text-kindly-muted">
           Gift details are visible only to the donor and recipient.
         </p>
-        <Link
-          href="/sign-in"
-          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800"
-        >
+        <Link href="/sign-in" className="kindly-btn-primary mt-6">
           Sign in
         </Link>
       </section>
@@ -372,15 +360,14 @@ export function GiftDetail({ giftId }: { giftId: string }) {
 
   if (pageState === "error" || !gift) {
     return (
-      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Gift unavailable</h1>
-        <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+      <section className="kindly-card mx-auto max-w-xl p-6 sm:p-8">
+        <h1 className="font-display text-3xl font-semibold tracking-[-0.055em]">
+          Gift unavailable
+        </h1>
+        <p role="alert" className="kindly-status-error mt-3">
           {error ?? "This gift could not be loaded."}
         </p>
-        <Link
-          href="/"
-          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800"
-        >
+        <Link href="/" className="kindly-btn-primary mt-6">
           Back to discovery
         </Link>
       </section>
@@ -391,13 +378,13 @@ export function GiftDetail({ giftId }: { giftId: string }) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <header className="rounded-2xl border border-kindly-border bg-white p-5">
+      <header className="kindly-card p-5 sm:p-6">
         <div
           className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${giftStatusTone(gift.giftStatus)}`}
         >
           {giftStatusLabel(gift.giftStatus)}
         </div>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight">
+        <h1 className="mt-3 font-display text-3xl font-semibold tracking-[-0.055em] sm:text-4xl">
           {isRecipient
             ? "A gift from a kind donor"
             : `Gift to ${gift.recipientDisplayName ?? "the recipient"}`}
@@ -415,19 +402,19 @@ export function GiftDetail({ giftId }: { giftId: string }) {
         </dl>
 
         {gift.giftStatus === "DONOR_CLAIMED_PAID" && (
-          <p className="mt-4 rounded-xl bg-kindly-accent-soft p-3 text-sm">
+          <p className="kindly-card-soft mt-4 p-3 text-sm">
             Donor says paid. Awaiting recipient confirmation.
           </p>
         )}
         {isRecipient &&
           (gift.giftStatus === "HANDOFF_ISSUED" || gift.giftStatus === "DONOR_PENDING") && (
-            <p className="mt-4 rounded-xl bg-kindly-accent-soft p-3 text-sm">
+            <p className="kindly-card-soft mt-4 p-3 text-sm">
               The donor is completing a direct UPI payment. You will be asked to confirm only after
               they say they have paid.
             </p>
           )}
         {gift.giftStatus === "RECIPIENT_CONFIRMED" && (
-          <div className="mt-4 rounded-xl bg-green-50 p-3 text-sm text-green-900">
+          <div className="kindly-status-success mt-4">
             <p>Recipient confirmed this gift. No further payment action is needed.</p>
             {(gift.reaction || gift.thankYouMessage) && (
               <p className="mt-2">
@@ -440,38 +427,40 @@ export function GiftDetail({ giftId }: { giftId: string }) {
           </div>
         )}
         {gift.giftStatus === "DISPUTED" && (
-          <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="mt-4 rounded-2xl border border-kindly-marigold/50 bg-kindly-marigold/20 p-3 text-sm text-kindly-ink">
             The recipient has disputed receipt. Support can review the case; Kindly cannot reverse
             the UPI payment.
           </p>
         )}
         {gift.giftStatus === "UNVERIFIED" && (
-          <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="mt-4 rounded-2xl border border-kindly-marigold/50 bg-kindly-marigold/20 p-3 text-sm text-kindly-ink">
             The recipient did not confirm in time. This gift is unverified. Support can review a
             report; there is no automatic reopening, refund or reassignment.
           </p>
         )}
         {gift.giftStatus === "FAILED" && (
-          <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="mt-4 rounded-2xl border border-kindly-marigold/50 bg-kindly-marigold/20 p-3 text-sm text-kindly-ink">
             No payment was recorded and the wish was released. You can return to discovery for
             another wish.
           </p>
         )}
         {(gift.giftStatus === "ABANDONED" || gift.giftStatus === "CANCELLED") && (
-          <p className="mt-4 rounded-xl bg-stone-100 p-3 text-sm text-stone-700">
+          <p className="kindly-card-soft mt-4 p-3 text-sm text-kindly-muted">
             This handoff is closed. No automatic reopening or reassignment is available.
           </p>
         )}
       </header>
 
       {gift.giftStatus === "RECIPIENT_CONFIRMED" && (
-        <section className="rounded-2xl border border-kindly-border bg-white p-5">
-          <h2 className="text-lg font-semibold">Share this kindness</h2>
+        <section className="kindly-card p-5 sm:p-6">
+          <h2 className="font-display text-2xl font-semibold tracking-[-0.04em]">
+            Share this kindness
+          </h2>
           <p className="mt-1 text-sm text-kindly-muted">
             The share card never includes the donor identity, UPI ID, phone, UTR or payment link.
           </p>
           {shareCard ? (
-            <div className="mt-3 rounded-xl bg-kindly-accent-soft p-4 text-sm">
+            <div className="kindly-card-soft mt-3 p-4 text-sm">
               <p>{shareCard.shareText}</p>
               <button
                 type="button"
@@ -480,7 +469,7 @@ export function GiftDetail({ giftId }: { giftId: string }) {
                     void navigator.clipboard.writeText(shareCard.shareText);
                   }
                 }}
-                className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border bg-white px-4 py-2 text-sm font-semibold hover:bg-kindly-accent-soft"
+                className="kindly-btn-secondary mt-3"
               >
                 Copy share text
               </button>
@@ -496,7 +485,7 @@ export function GiftDetail({ giftId }: { giftId: string }) {
             </button>
           )}
           {shareError && (
-            <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+            <p role="alert" className="kindly-status-error mt-3">
               {shareError}
             </p>
           )}
@@ -511,16 +500,10 @@ export function GiftDetail({ giftId }: { giftId: string }) {
       <SupportPanel gift={gift} />
 
       <div className="flex flex-wrap gap-3 text-sm">
-        <Link
-          href="/"
-          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border bg-white px-5 py-3 font-semibold hover:bg-kindly-accent-soft"
-        >
+        <Link href="/" className="kindly-btn-secondary">
           Discover wishes
         </Link>
-        <Link
-          href="/me"
-          className="inline-flex min-h-11 items-center justify-center rounded-xl px-2 py-3 font-semibold text-kindly-accent underline"
-        >
+        <Link href="/me" className="kindly-btn-quiet">
           My space
         </Link>
       </div>

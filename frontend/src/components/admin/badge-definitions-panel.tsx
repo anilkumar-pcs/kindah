@@ -121,19 +121,19 @@ export function BadgeDefinitionsPanel({ mfaToken, definitions, onChanged }: Prop
 
   return (
     <section aria-labelledby="badge-definitions-heading" className="space-y-3">
-      <h2 id="badge-definitions-heading" className="text-xl font-semibold">
+      <h2
+        id="badge-definitions-heading"
+        className="font-display text-2xl font-semibold tracking-[-0.04em]"
+      >
         Badge definitions
       </h2>
-      <p className="rounded-2xl border border-kindly-border bg-white p-4 text-sm text-kindly-muted">
+      <p className="kindly-card p-4 text-sm text-kindly-muted">
         This is the single configurable registry. Deactivating a badge stops future awards but keeps
         badges already earned. Rule types are code-backed; labels, thresholds, order and active
         state are database-editable.
       </p>
 
-      <form
-        onSubmit={handleCreate}
-        className="rounded-2xl border border-kindly-border bg-white p-5 text-sm"
-      >
+      <form onSubmit={handleCreate} className="kindly-card p-5 text-sm">
         <h3 className="font-semibold">Add a badge</h3>
         <div className="mt-3 grid gap-2 sm:grid-cols-5">
           <div>
@@ -147,7 +147,7 @@ export function BadgeDefinitionsPanel({ mfaToken, definitions, onChanged }: Prop
               maxLength={32}
               value={code}
               onChange={(event) => setCode(event.target.value.toUpperCase())}
-              className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+              className="kindly-input mt-1"
               placeholder="HELPER_10"
             />
           </div>
@@ -162,7 +162,7 @@ export function BadgeDefinitionsPanel({ mfaToken, definitions, onChanged }: Prop
               maxLength={64}
               value={label}
               onChange={(event) => setLabel(event.target.value)}
-              className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+              className="kindly-input mt-1"
             />
           </div>
           <div>
@@ -173,7 +173,7 @@ export function BadgeDefinitionsPanel({ mfaToken, definitions, onChanged }: Prop
               id="badge-rule"
               value={ruleType}
               onChange={(event) => setRuleType(event.target.value as BadgeDefinition["ruleType"])}
-              className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
+              className="kindly-input mt-1"
             >
               <option value="CONFIRMED_SENT">Confirmed gifts sent</option>
               <option value="THANKS_RECEIVED">Thanks received</option>
@@ -190,7 +190,7 @@ export function BadgeDefinitionsPanel({ mfaToken, definitions, onChanged }: Prop
               min={1}
               value={threshold}
               onChange={(event) => setThreshold(event.target.value)}
-              className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+              className="kindly-input mt-1"
             />
           </div>
           <div>
@@ -203,21 +203,21 @@ export function BadgeDefinitionsPanel({ mfaToken, definitions, onChanged }: Prop
               min={0}
               value={sortOrder}
               onChange={(event) => setSortOrder(event.target.value)}
-              className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+              className="kindly-input mt-1"
             />
           </div>
         </div>
         <button
           type="submit"
           disabled={busy}
-          className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
+          className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-4 py-2 text-sm font-semibold text-white hover:bg-kindly-accent-dark disabled:opacity-60"
         >
           {busy ? "Saving…" : "Add badge"}
         </button>
       </form>
 
       {error && (
-        <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+        <p role="alert" className="kindly-status-error">
           {error}
         </p>
       )}
@@ -235,10 +235,7 @@ export function BadgeDefinitionsPanel({ mfaToken, definitions, onChanged }: Prop
             [definition.code]: { ...draft, ...patch },
           }));
         return (
-          <article
-            key={definition.code}
-            className="rounded-2xl border border-kindly-border bg-white p-5 text-sm"
-          >
+          <article key={definition.code} className="kindly-card p-5 text-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-semibold">
                 {definition.label} <span className="font-mono text-xs">{definition.code}</span>
@@ -263,7 +260,7 @@ export function BadgeDefinitionsPanel({ mfaToken, definitions, onChanged }: Prop
                   id={`badge-label-${definition.code}`}
                   value={draft.label}
                   onChange={(event) => updateDraft({ label: event.target.value })}
-                  className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+                  className="kindly-input mt-1"
                 />
               </div>
               <div>
@@ -281,7 +278,7 @@ export function BadgeDefinitionsPanel({ mfaToken, definitions, onChanged }: Prop
                       ruleType: event.target.value as BadgeDefinition["ruleType"],
                     })
                   }
-                  className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
+                  className="kindly-input mt-1"
                 >
                   <option value="CONFIRMED_SENT">Confirmed gifts sent</option>
                   <option value="THANKS_RECEIVED">Thanks received</option>
@@ -301,7 +298,7 @@ export function BadgeDefinitionsPanel({ mfaToken, definitions, onChanged }: Prop
                   min={1}
                   value={draft.threshold}
                   onChange={(event) => updateDraft({ threshold: event.target.value })}
-                  className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+                  className="kindly-input mt-1"
                 />
               </div>
               <div>
@@ -317,7 +314,7 @@ export function BadgeDefinitionsPanel({ mfaToken, definitions, onChanged }: Prop
                   min={0}
                   value={draft.sortOrder}
                   onChange={(event) => updateDraft({ sortOrder: event.target.value })}
-                  className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+                  className="kindly-input mt-1"
                 />
               </div>
             </div>
@@ -326,7 +323,7 @@ export function BadgeDefinitionsPanel({ mfaToken, definitions, onChanged }: Prop
                 type="button"
                 disabled={busy}
                 onClick={() => handleSave(definition)}
-                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
+                className="kindly-btn-primary"
               >
                 Save changes
               </button>
@@ -334,7 +331,7 @@ export function BadgeDefinitionsPanel({ mfaToken, definitions, onChanged }: Prop
                 type="button"
                 disabled={busy}
                 onClick={() => handleToggleActive(definition)}
-                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-4 py-2 text-sm font-semibold hover:bg-kindly-accent-soft disabled:opacity-60"
+                className="kindly-btn-secondary"
               >
                 {definition.active ? "Deactivate" : "Reactivate"}
               </button>

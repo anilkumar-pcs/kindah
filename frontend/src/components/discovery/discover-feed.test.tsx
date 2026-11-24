@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -13,12 +13,18 @@ vi.mock("@/lib/api/discovery", () => ({
   surpriseMe: vi.fn(),
 }));
 
+vi.mock("@/lib/auth/session", () => ({
+  restoreSession: vi.fn(),
+}));
+
 import { listPublicWishes, surpriseMe, type PublicWish } from "@/lib/api/discovery";
+import { restoreSession } from "@/lib/auth/session";
 
 import { DiscoverFeed } from "./discover-feed";
 
 const mockedList = vi.mocked(listPublicWishes);
 const mockedSurprise = vi.mocked(surpriseMe);
+const mockedRestore = vi.mocked(restoreSession);
 
 function makeWish(overrides: Partial<PublicWish> = {}): PublicWish {
   return {
@@ -30,6 +36,7 @@ function makeWish(overrides: Partial<PublicWish> = {}): PublicWish {
     mood: "LONG_DAY",
     message: "A warm chai for a long day",
     suggestedAmountInr: 25,
+    isOwnWish: false,
     ...overrides,
   };
 }
@@ -37,6 +44,7 @@ function makeWish(overrides: Partial<PublicWish> = {}): PublicWish {
 beforeEach(() => {
   vi.resetAllMocks();
   sessionStorage.clear();
+  mockedRestore.mockResolvedValue(null);
 });
 
 describe("DiscoverFeed", () => {
@@ -51,11 +59,33 @@ describe("DiscoverFeed", () => {
 
     expect(await screen.findByText("ChaiLover")).toBeInTheDocument();
     expect(screen.getByText("A warm chai for a long day")).toBeInTheDocument();
-    expect(screen.getByText(/suggested ₹25/i)).toBeInTheDocument();
+    expect(screen.getByText(/₹25/i)).toBeInTheDocument();
+    expect(screen.getByText("suggested")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /chailover/i })).toHaveAttribute(
       "href",
       "/wishes/wish-1",
     );
+    expect(screen.queryByLabelText(/city filter/i)).not.toBeInTheDocument();
+  });
+
+  it("waits for session restoration before loading the feed", async () => {
+    let resolveSession: (value: null) => void = () => undefined;
+    mockedRestore.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSession = resolve;
+      }),
+    );
+    mockedList.mockResolvedValue({ wishes: [], nextCursor: null, seed: null });
+
+    render(<DiscoverFeed />);
+
+    expect(mockedList).not.toHaveBeenCalled();
+    await act(async () => {
+      resolveSession(null);
+    });
+    await waitFor(() => {
+      expect(mockedList).toHaveBeenCalled();
+    });
   });
 
   it("picks a Surprise Me wish and remembers session skips", async () => {
@@ -103,7 +133,6 @@ describe("DiscoverFeed", () => {
     expect(await screen.findByText("SecondGiver")).toBeInTheDocument();
     expect(mockedList).toHaveBeenLastCalledWith({
       sort: "fresh",
-      city: undefined,
       cursor: "cursor-1",
       seed: undefined,
       limit: 6,

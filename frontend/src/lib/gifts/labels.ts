@@ -27,7 +27,7 @@ export function giftStatusTone(status: GiftStatus): string {
   if (status === "ABANDONED" || status === "CANCELLED") {
     return "bg-stone-100 text-stone-700 ring-stone-200";
   }
-  return "bg-kindly-accent-soft text-kindly-accent ring-orange-200";
+  return "bg-kindly-accent-soft text-kindly-accent ring-kindly-border";
 }
 
 export const SUPPORT_CASE_LABELS: Record<SupportCaseType, string> = {

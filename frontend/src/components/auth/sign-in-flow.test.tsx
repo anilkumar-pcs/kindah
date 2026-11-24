@@ -2,13 +2,19 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const router = vi.hoisted(() => ({ replace: vi.fn() }));
+const replace = router.replace;
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => router,
+}));
+
 vi.mock("@/lib/auth/session", () => ({
   restoreSession: vi.fn(),
   requestOtp: vi.fn(),
   verifyOtp: vi.fn(),
   saveConsent: vi.fn(),
   updateProfile: vi.fn(),
-  logout: vi.fn(),
 }));
 
 import {
@@ -49,6 +55,7 @@ function makeUser(overrides: Partial<UserProfile> = {}): UserProfile {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  window.history.replaceState({}, "", "/sign-in");
   mockedRestore.mockResolvedValue(null);
 });
 
@@ -101,6 +108,7 @@ describe("SignInFlow", () => {
     expect(
       await screen.findByRole("heading", { name: /finish your profile/i }),
     ).toBeInTheDocument();
+    expect(screen.getByText(/one of six preset symbols/i)).toBeInTheDocument();
 
     await user.type(screen.getByLabelText(/display name/i), "ChaiLover");
     await user.click(screen.getByLabelText(/18 years or older/i));
@@ -109,7 +117,9 @@ describe("SignInFlow", () => {
     await user.click(screen.getByLabelText(/draft community guidelines/i));
     await user.click(screen.getByRole("button", { name: /finish setup/i }));
 
-    expect(await screen.findByRole("heading", { name: /welcome, chailover/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(replace).toHaveBeenCalledWith("/me");
+    });
     expect(mockedRequestOtp).toHaveBeenCalledWith("9876543210");
     expect(mockedVerifyOtp).toHaveBeenCalledWith("9876543210", "123456");
     expect(mockedSaveConsent).toHaveBeenCalledWith({
@@ -143,7 +153,7 @@ describe("SignInFlow", () => {
     expect(mockedUpdateProfile).not.toHaveBeenCalled();
   });
 
-  it("restores an existing onboarded session", async () => {
+  it("redirects a restored onboarded session to My Space", async () => {
     mockedRestore.mockResolvedValue(
       makeUser({
         displayName: "ChaiLover",
@@ -155,7 +165,24 @@ describe("SignInFlow", () => {
     render(<SignInFlow />);
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: /welcome, chailover/i })).toBeInTheDocument();
+      expect(replace).toHaveBeenCalledWith("/me");
+    });
+  });
+
+  it("returns to a safe requested path after signing in", async () => {
+    window.history.replaceState({}, "", "/sign-in?next=%2Fgifts%2Fnew%2Fwish-1");
+    mockedRestore.mockResolvedValue(
+      makeUser({
+        displayName: "ChaiLover",
+        avatar: "CHAI",
+        onboardingRequired: false,
+      }),
+    );
+
+    render(<SignInFlow />);
+
+    await waitFor(() => {
+      expect(replace).toHaveBeenCalledWith("/gifts/new/wish-1");
     });
   });
 

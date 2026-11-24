@@ -121,9 +121,11 @@ def test_public_feed_has_only_public_safe_fields(client: TestClient) -> None:
         "mood",
         "message",
         "suggestedAmountInr",
+        "isOwnWish",
     }
     assert card["displayName"] == "OwnerOne"
     assert card["city"] == "Bengaluru"
+    assert card["isOwnWish"] is False
     forbidden = {"phone", "mobile", "vpa", "maskedVpa", "userId", "utr", "paymentRef"}
     assert forbidden.isdisjoint(card)
 
@@ -260,7 +262,16 @@ def test_detail_and_selection_eligibility(client: TestClient) -> None:
     detail = client.get(f"/api/v1/wishes/{wish['id']}")
     assert detail.status_code == 200
     assert detail.json()["message"] == _VALID_MESSAGE
+    assert detail.json()["isOwnWish"] is False
     assert "phone" not in detail.json()
+
+    owner_detail = client.get(f"/api/v1/wishes/{wish['id']}", headers=owner_headers)
+    assert owner_detail.status_code == 200
+    assert owner_detail.json()["isOwnWish"] is True
+
+    viewer_detail = client.get(f"/api/v1/wishes/{wish['id']}", headers=viewer_headers)
+    assert viewer_detail.status_code == 200
+    assert viewer_detail.json()["isOwnWish"] is False
 
     assert client.post(f"/api/v1/wishes/{wish['id']}/select").status_code == 401
 

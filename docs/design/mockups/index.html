@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#101512" />
+    <title>Kindly — visual directions</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='10' fill='%23e86a4a'/%3E%3Cpath d='M25 10.5a5 5 0 0 0-7 0l-2 2-2-2a5 5 0 1 0-7 7l9 9 9-9a5 5 0 0 0 0-7Z' transform='translate(-1 -2) scale(.78)' fill='none' stroke='%23fff8ec' stroke-width='2.2' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Caveat:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="lab-header">
+      <a class="lab-brand" href="#top" aria-label="Kindly design lab">
+        <span class="lab-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+            <path
+              d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 1 0-7.8 7.8L12 21.2l8.8-8.8a5.5 5.5 0 0 0 0-7.8Z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </span>
+        <span>Kindly <em>design lab</em></span>
+      </a>
+      <div class="lab-note">Static visual explorations · current app untouched</div>
+    </header>
+
+    <main id="top" class="lab-shell">
+      <section class="lab-intro">
+        <div>
+          <p class="lab-kicker">Three ways to feel</p>
+          <h1>Kindness, but make it <span>want to tap.</span></h1>
+          <p class="lab-sub">
+            Same product. Same trust. Three different emotional temperatures. Use the tabs to compare
+            complete directions, not isolated screens.
+          </p>
+        </div>
+        <div class="lab-principles">
+          <span>warm paper</span>
+          <span>deep green ink</span>
+          <span>marigold + coral</span>
+          <span>illustrated Bengaluru</span>
+          <span>clean over cute</span>
+        </div>
+      </section>
+
+      <nav class="concept-tabs" aria-label="Visual directions">
+        <button class="concept-tab is-active" type="button" data-concept-tab="a" aria-selected="true">
+          <span class="tab-letter">A</span>
+          <span><strong>Neighbourhood Postcard</strong><small>warm · crafted · calm</small></span>
+        </button>
+        <button class="concept-tab" type="button" data-concept-tab="b" aria-selected="false">
+          <span class="tab-letter">B</span>
+          <span><strong>Sticker Scrapbook</strong><small>social · tactile · playful</small></span>
+        </button>
+        <button class="concept-tab" type="button" data-concept-tab="c" aria-selected="false">
+          <span class="tab-letter">C</span>
+          <span><strong>Afterglow</strong><small>bold · graphic · street</small></span>
+        </button>
+      </nav>
+
+      <div id="concepts"></div>
+
+      <footer class="lab-footer">
+        <p>
+          These are concept mockups, not production screens. The app currently remains on its existing
+          visual system until a direction is chosen.
+        </p>
+      </footer>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

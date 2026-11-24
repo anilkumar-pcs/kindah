@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 
+import { Icon } from "@/components/ui/icon";
 import { ApiError } from "@/lib/api/client";
 import {
-  logout,
   requestOtp,
   restoreSession,
   saveConsent,
@@ -16,12 +16,12 @@ import {
 } from "@/lib/auth/session";
 
 const AVATARS = [
-  { code: "SPARK", label: "Spark" },
-  { code: "CHAI", label: "Chai" },
-  { code: "SUN", label: "Sun" },
-  { code: "LEAF", label: "Leaf" },
-  { code: "MOON", label: "Moon" },
-  { code: "HEART", label: "Heart" },
+  { code: "SPARK", label: "Spark", symbol: "✦" },
+  { code: "CHAI", label: "Chai", symbol: "☕" },
+  { code: "SUN", label: "Sun", symbol: "☀" },
+  { code: "LEAF", label: "Leaf", symbol: "☘" },
+  { code: "MOON", label: "Moon", symbol: "☾" },
+  { code: "HEART", label: "Heart", symbol: "♥" },
 ] as const;
 
 type Step = "restoring" | "phone" | "code" | "onboarding" | "done";
@@ -33,15 +33,69 @@ function messageFor(error: unknown): string {
   return "Something went wrong. Try again.";
 }
 
+function postAuthDestination(user: UserProfile): string {
+  if (user.status !== "ACTIVE") {
+    return "/appeals";
+  }
+  if (typeof window === "undefined") {
+    return "/me";
+  }
+  const next = new URLSearchParams(window.location.search).get("next");
+  if (!next) {
+    return "/me";
+  }
+  try {
+    const destination = new URL(next, window.location.origin);
+    if (destination.origin !== window.location.origin) {
+      return "/me";
+    }
+    if (destination.pathname === "/sign-in" || destination.pathname === "/reauth") {
+      return "/me";
+    }
+    return `${destination.pathname}${destination.search}${destination.hash}`;
+  } catch {
+    return "/me";
+  }
+}
+
+function AuthVisual() {
+  return (
+    <div className="relative h-40 overflow-hidden bg-kindly-accent-soft sm:h-48">
+      <div className="absolute -top-8 -right-6 grid h-32 w-32 place-items-center rounded-full bg-kindly-marigold text-kindly-ink shadow-[inset_-8px_-8px_0_rgb(255_255_255_/_18%)] sm:h-40 sm:w-40">
+        <Icon name="sun" className="h-12 w-12 sm:h-14 sm:w-14" />
+      </div>
+      <div className="absolute right-32 bottom-5 h-12 w-12 rotate-[-10deg] rounded-full bg-kindly-blush" />
+      <div className="absolute bottom-5 left-5 w-52 rotate-[-4deg] rounded-2xl border border-kindly-border bg-kindly-card p-4 shadow-[6px_6px_0_rgb(23_59_51_/_8%)] sm:left-8 sm:w-64">
+        <span className="grid h-10 w-10 place-items-center rounded-full bg-kindly-blush text-kindly-coral">
+          <Icon name="cup" className="h-5 w-5" />
+        </span>
+        <p className="mt-2 font-hand text-2xl leading-none">come as you are</p>
+      </div>
+      <span className="absolute right-24 bottom-5 text-kindly-accent">
+        <Icon name="plant" className="h-8 w-8" />
+      </span>
+    </div>
+  );
+}
+
+function AuthPanel({ children, art = true }: { children: ReactNode; art?: boolean }) {
+  return (
+    <section className="mx-auto max-w-xl overflow-hidden rounded-[2rem] border border-kindly-border bg-kindly-card shadow-[0_2px_0_rgb(23_59_51_/_4%)]">
+      {art && <AuthVisual />}
+      <div className="p-5 sm:p-8">{children}</div>
+    </section>
+  );
+}
+
 type SignInFlowProps = {
   forceReauth?: boolean;
 };
 
 export function SignInFlow({ forceReauth = false }: SignInFlowProps) {
+  const router = useRouter();
   const [step, setStep] = useState<Step>(forceReauth ? "phone" : "restoring");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
-  const [user, setUser] = useState<UserProfile | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [avatar, setAvatar] = useState<string>("CHAI");
   const [city, setCity] = useState("");
@@ -69,17 +123,21 @@ export function SignInFlow({ forceReauth = false }: SignInFlowProps) {
         setStep("phone");
         return;
       }
-      setUser(restored);
       setDisplayName(restored.displayName ?? "");
       setAvatar(restored.avatar ?? "CHAI");
       setCity(restored.city ?? "");
-      setStep(restored.onboardingRequired ? "onboarding" : "done");
+      if (restored.onboardingRequired) {
+        setStep("onboarding");
+        return;
+      }
+      setStep("done");
+      router.replace(postAuthDestination(restored));
     });
 
     return () => {
       cancelled = true;
     };
-  }, [forceReauth]);
+  }, [forceReauth, router]);
 
   async function handleRequestOtp(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -101,11 +159,15 @@ export function SignInFlow({ forceReauth = false }: SignInFlowProps) {
     setBusy(true);
     try {
       const session = await verifyOtp(phone, code);
-      setUser(session.user);
       setDisplayName(session.user.displayName ?? "");
       setAvatar(session.user.avatar ?? "CHAI");
       setCity(session.user.city ?? "");
-      setStep(session.user.onboardingRequired ? "onboarding" : "done");
+      if (session.user.onboardingRequired) {
+        setStep("onboarding");
+      } else {
+        setStep("done");
+        router.replace(postAuthDestination(session.user));
+      }
     } catch (verifyError) {
       setError(messageFor(verifyError));
     } finally {
@@ -139,11 +201,11 @@ export function SignInFlow({ forceReauth = false }: SignInFlowProps) {
         avatar,
         ...(city.trim() ? { city: city.trim() } : {}),
       });
-      setUser(updated);
       if (updated.onboardingRequired) {
         setError("Your profile is not complete yet. Check the display name and avatar.");
       } else {
         setStep("done");
+        router.replace(postAuthDestination(updated));
       }
     } catch (onboardingError) {
       setError(messageFor(onboardingError));
@@ -152,99 +214,40 @@ export function SignInFlow({ forceReauth = false }: SignInFlowProps) {
     }
   }
 
-  async function handleLogout() {
-    setBusy(true);
-    try {
-      await logout();
-      setUser(null);
-      setPhone("");
-      setCode("");
-      setStep("phone");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   if (step === "restoring") {
     return (
-      <section
-        aria-busy="true"
-        aria-live="polite"
-        className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8"
-      >
-        <p className="text-sm text-kindly-muted">Checking your session…</p>
-      </section>
+      <AuthPanel art={false}>
+        <p aria-busy="true" aria-live="polite" className="text-sm text-kindly-muted">
+          Checking your session…
+        </p>
+      </AuthPanel>
     );
   }
 
-  if (step === "done" && user) {
+  if (step === "done") {
     return (
-      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
-        <p className="text-sm font-semibold tracking-wide text-kindly-accent uppercase">
-          Signed in
+      <AuthPanel art={false}>
+        <p aria-busy="true" aria-live="polite" className="text-sm text-kindly-muted">
+          Opening your account…
         </p>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight">
-          Welcome, {user.displayName ?? "friend"}
-        </h1>
-        <p className="mt-3 text-sm leading-6 text-kindly-muted">
-          {user.status === "ACTIVE"
-            ? "Your pseudonymous profile is ready. Your phone number is never shown publicly."
-            : `Your account status is ${user.status}. Some actions are unavailable.`}
-        </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link
-            href="/me"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800"
-          >
-            My Kindness
-          </Link>
-          <Link
-            href="/notifications"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-5 py-3 text-sm font-semibold hover:bg-kindly-accent-soft"
-          >
-            Notifications
-          </Link>
-          {user.status !== "ACTIVE" && (
-            <Link
-              href="/appeals"
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-5 py-3 text-sm font-semibold hover:bg-kindly-accent-soft"
-            >
-              View moderation & appeals
-            </Link>
-          )}
-          <Link
-            href="/"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-5 py-3 text-sm font-semibold hover:bg-kindly-accent-soft"
-          >
-            Back to discovery
-          </Link>
-          <button
-            type="button"
-            onClick={handleLogout}
-            disabled={busy}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-kindly-border px-5 py-3 text-sm font-semibold hover:bg-kindly-accent-soft disabled:opacity-60"
-          >
-            {busy ? "Signing out…" : "Sign out"}
-          </button>
-        </div>
-      </section>
+      </AuthPanel>
     );
   }
 
   if (step === "onboarding") {
     return (
-      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
-        <p className="text-sm font-semibold tracking-wide text-kindly-accent uppercase">
-          One last step
-        </p>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight">Finish your profile</h1>
+      <AuthPanel>
+        <p className="kindly-eyebrow">One last step</p>
+        <h1 className="mt-2 font-display text-3xl font-semibold tracking-[-0.055em] sm:text-4xl">
+          Finish your profile
+        </h1>
         <p className="mt-3 text-sm leading-6 text-kindly-muted">
           Kindly is 18+ only. These draft policies still require legal review; your acceptance is
           recorded with the current policy version.
         </p>
         <form className="mt-6 space-y-5" onSubmit={handleOnboarding}>
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-semibold">Confirm before continuing</legend>
+          <fieldset className="space-y-2 rounded-2xl border border-kindly-border bg-kindly-cream/60 p-4">
+            <legend className="text-sm font-bold">Confirm before continuing</legend>
             <label className="flex items-start gap-2 text-sm">
               <input
                 type="checkbox"
@@ -295,7 +298,7 @@ export function SignInFlow({ forceReauth = false }: SignInFlowProps) {
           </fieldset>
 
           <div>
-            <label htmlFor="display-name" className="block text-sm font-medium">
+            <label htmlFor="display-name" className="kindly-label">
               Display name
             </label>
             <input
@@ -309,36 +312,54 @@ export function SignInFlow({ forceReauth = false }: SignInFlowProps) {
               autoComplete="nickname"
               value={displayName}
               onChange={(event) => setDisplayName(event.target.value)}
-              className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+              className="kindly-input mt-1"
               aria-describedby="display-name-help"
             />
-            <p id="display-name-help" className="mt-1 text-xs text-kindly-muted">
+            <p id="display-name-help" className="kindly-help">
               3–24 letters, digits or underscores. This is public; never use your real name or phone
               number.
             </p>
           </div>
 
-          <div>
-            <label htmlFor="avatar" className="block text-sm font-medium">
-              Avatar
-            </label>
-            <select
-              id="avatar"
-              name="avatar"
-              value={avatar}
-              onChange={(event) => setAvatar(event.target.value)}
-              className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border bg-white px-3 py-2 text-sm"
-            >
-              {AVATARS.map((option) => (
-                <option key={option.code} value={option.code}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <fieldset>
+            <legend className="text-sm font-bold">Choose your avatar</legend>
+            <p id="avatar-help" className="kindly-help">
+              A small symbol shown beside your pseudonym. Pick one of six preset symbols — there is
+              no photo upload, and it should not reveal your identity.
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {AVATARS.map((option) => {
+                const selected = avatar === option.code;
+                return (
+                  <label
+                    key={option.code}
+                    className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm ${
+                      selected
+                        ? "border-kindly-accent bg-kindly-accent-soft"
+                        : "border-kindly-border bg-kindly-card hover:border-kindly-accent"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="avatar"
+                      value={option.code}
+                      checked={selected}
+                      onChange={() => setAvatar(option.code)}
+                      aria-describedby="avatar-help"
+                      className="h-4 w-4 accent-kindly-accent"
+                    />
+                    <span aria-hidden="true" className="text-lg leading-none">
+                      {option.symbol}
+                    </span>
+                    <span className="font-medium">{option.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
 
           <div>
-            <label htmlFor="city" className="block text-sm font-medium">
+            <label htmlFor="city" className="kindly-label">
               City (optional)
             </label>
             <input
@@ -349,42 +370,38 @@ export function SignInFlow({ forceReauth = false }: SignInFlowProps) {
               autoComplete="address-level2"
               value={city}
               onChange={(event) => setCity(event.target.value)}
-              className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+              className="kindly-input mt-1"
             />
           </div>
 
           {error && (
-            <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+            <p role="alert" className="kindly-status-error">
               {error}
             </p>
           )}
 
-          <button
-            type="submit"
-            disabled={busy}
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
-          >
+          <button type="submit" disabled={busy} className="kindly-btn-primary mt-1 w-full">
             {busy ? "Saving…" : "Finish setup"}
           </button>
         </form>
-      </section>
+      </AuthPanel>
     );
   }
 
   if (step === "code") {
     return (
-      <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
-        <p className="text-sm font-semibold tracking-wide text-kindly-accent uppercase">
-          Verify your number
-        </p>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight">Enter your one-time code</h1>
+      <AuthPanel>
+        <p className="kindly-eyebrow">Verify your number</p>
+        <h1 className="mt-2 font-display text-3xl font-semibold tracking-[-0.055em] sm:text-4xl">
+          Enter your one-time code
+        </h1>
         <p className="mt-3 text-sm leading-6 text-kindly-muted">
           If this number can be verified, a six-digit code has been sent. The code expires in five
           minutes.
         </p>
         <form className="mt-6 space-y-4" onSubmit={handleVerify}>
           <div>
-            <label htmlFor="otp-code" className="block text-sm font-medium">
+            <label htmlFor="otp-code" className="kindly-label">
               One-time code
             </label>
             <input
@@ -399,21 +416,17 @@ export function SignInFlow({ forceReauth = false }: SignInFlowProps) {
               pattern="[0-9]{6}"
               value={code}
               onChange={(event) => setCode(event.target.value)}
-              className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border px-3 py-2 text-lg tracking-[0.4em]"
+              className="kindly-input mt-1 text-lg tracking-[0.4em]"
             />
           </div>
 
           {error && (
-            <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+            <p role="alert" className="kindly-status-error">
               {error}
             </p>
           )}
 
-          <button
-            type="submit"
-            disabled={busy}
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
-          >
+          <button type="submit" disabled={busy} className="kindly-btn-primary w-full">
             {busy ? "Verifying…" : "Verify code"}
           </button>
           <button
@@ -423,21 +436,19 @@ export function SignInFlow({ forceReauth = false }: SignInFlowProps) {
               setCode("");
               setError(null);
             }}
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-kindly-border px-5 py-3 text-sm font-semibold hover:bg-kindly-accent-soft"
+            className="kindly-btn-secondary w-full"
           >
             Use a different number
           </button>
         </form>
-      </section>
+      </AuthPanel>
     );
   }
 
   return (
-    <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-kindly-border sm:p-8">
-      <p className="text-sm font-semibold tracking-wide text-kindly-accent uppercase">
-        Authentication
-      </p>
-      <h1 className="mt-3 text-2xl font-semibold tracking-tight">
+    <AuthPanel>
+      <p className="kindly-eyebrow">A little kindness starts here</p>
+      <h1 className="mt-2 font-display text-3xl font-semibold tracking-[-0.055em] sm:text-4xl">
         Sign in with your mobile number
       </h1>
       <p className="mt-3 text-sm leading-6 text-kindly-muted">
@@ -446,7 +457,7 @@ export function SignInFlow({ forceReauth = false }: SignInFlowProps) {
       </p>
       <form className="mt-6 space-y-4" onSubmit={handleRequestOtp}>
         <div>
-          <label htmlFor="phone" className="block text-sm font-medium">
+          <label htmlFor="phone" className="kindly-label">
             Mobile number
           </label>
           <input
@@ -459,28 +470,25 @@ export function SignInFlow({ forceReauth = false }: SignInFlowProps) {
             value={phone}
             onChange={(event) => setPhone(event.target.value)}
             placeholder="+91 98765 43210"
-            className="mt-1 min-h-11 w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
+            className="kindly-input mt-1"
           />
         </div>
 
         {error && (
-          <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+          <p role="alert" className="kindly-status-error">
             {error}
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={busy}
-          className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-kindly-accent px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
-        >
+        <button type="submit" disabled={busy} className="kindly-btn-primary w-full">
           {busy ? "Sending…" : "Send code"}
+          <Icon name="arrow-right" className="h-4 w-4" />
         </button>
       </form>
-      <p className="mt-4 text-xs text-kindly-muted">
+      <p className="mt-4 text-xs leading-5 text-kindly-muted">
         By continuing you confirm you are 18+ and accept the draft Terms, Privacy Notice and
         Community Guidelines. Browsing remains available without an account.
       </p>
-    </section>
+    </AuthPanel>
   );
 }

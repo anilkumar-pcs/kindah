@@ -82,6 +82,7 @@ This does **not** approve external legal/provider gates. Other decisions — `DE
 | DEC-A04 | `DONOR_PENDING` at reservation timeout | Expire wish; never reopen; support path | APPROVED (2026-11-24) | P5.7, P5.10 |
 | DEC-A05 | Visual design direction | Neutral accessible tokens until owner supplies direction | APPROVED (Phase 1) | P1.4, P4.6, P5.14 |
 | DEC-A06 | Late-payment support and admin visibility | Support-only; no refund/reassignment; admin sees details and resolves | APPROVED (2026-11-24) | P5.10, P6.7 |
+| DEC-A07 | Selected visual direction | Direction A — Neighbourhood Postcard (warm paper, deep green, crafted illustration); mobile bottom tabs | APPROVED (2026-11-24) | Design system, frontend redesign |
 
 ---
 
@@ -466,6 +467,19 @@ The `admin_audit_logs` table is append-only via a database trigger.
 | Owner decision | **APPROVED — 2026-11-24** |
 | Date | 2026-11-24 |
 | Affects | P5.10, P6.7 |
+
+### DEC-A07 — Selected visual direction
+
+| Field | Value |
+|---|---|
+| Question | Which visual direction should the product use after the three-concept design lab? |
+| Options | **A.** Neighbourhood Postcard — warm paper, deep green, illustrated everyday Bengaluru, crafted/calm. **B.** Sticker Scrapbook — tactile collage, pastels, handwritten notes. **C.** Afterglow — bold dark-green panels, oversized type, street-poster energy. |
+| Recommendation | **A** as the core product language, with C's oversized display moments and B's sticker/doodle vocabulary reserved for share cards, empty states and celebration moments. |
+| Owner decision | **APPROVED — Direction A (2026-11-24)** |
+| Owner wording | "I really like A. I like every screen in the A as well. very well designed and more aligned to the chill and fun vibe I ws thinking of. mobile bottom-tab navigation is very nice." |
+| Notes | Preserve the current app until the A design is implemented and reviewed. Mobile web uses the app-like bottom-tab shell; installation as a PWA may remove the browser chrome. |
+| Date | 2026-11-24 |
+| Affects | Design system, consumer screens, mobile navigation shell, PWA theme/manifest |
 
 ## D. Recording owner decisions
 
