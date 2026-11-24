@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
@@ -12,6 +14,9 @@ from app.modules.admin.schemas import (
     MfaSetupResponse,
     MfaVerifyRequest,
     MfaVerifyResponse,
+    ModerationActionResponse,
+    UserModerationActionRequest,
+    WishModerationActionRequest,
 )
 from app.modules.admin.service import AdminService
 from app.modules.identity.dependencies import require_admin, require_admin_role
@@ -65,6 +70,32 @@ def verify_mfa(
     service: AdminService = Depends(get_admin_service),
 ) -> MfaVerifyResponse:
     return service.verify_mfa(auth.user, auth.session.id, body.code)
+
+
+@router.post(
+    "/admin/users/{user_id}/actions",
+    response_model=ModerationActionResponse,
+)
+def moderate_user(
+    user_id: UUID,
+    body: UserModerationActionRequest,
+    auth: AuthContext = Depends(require_admin),
+    service: AdminService = Depends(get_admin_service),
+) -> ModerationActionResponse:
+    return service.moderate_user(auth.user, user_id, body)
+
+
+@router.post(
+    "/admin/wishes/{wish_id}/actions",
+    response_model=ModerationActionResponse,
+)
+def moderate_wish(
+    wish_id: UUID,
+    body: WishModerationActionRequest,
+    auth: AuthContext = Depends(require_admin),
+    service: AdminService = Depends(get_admin_service),
+) -> ModerationActionResponse:
+    return service.moderate_wish(auth.user, wish_id, body)
 
 
 @router.get("/admin/audit-logs", response_model=AdminAuditLogList)

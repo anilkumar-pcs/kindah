@@ -43,6 +43,26 @@ class MfaVerifyResponse(ApiModel):
     method: Literal["TOTP", "RECOVERY"]
 
 
+class UserModerationActionRequest(ApiModel):
+    action: Literal["WARN", "RESTRICT", "SUSPEND", "BAN", "REACTIVATE"]
+    reason: str = Field(min_length=5, max_length=1000)
+
+
+class WishModerationActionRequest(ApiModel):
+    action: Literal["HIDE", "RESTORE", "REMOVE"]
+    reason: str = Field(min_length=5, max_length=1000)
+
+
+class ModerationActionResponse(ApiModel):
+    id: UUID
+    target_type: Literal["USER", "WISH"]
+    target_id: UUID
+    action: str
+    reason: str
+    moderator_display_name: str | None
+    created_at: datetime
+
+
 class AdminAuditLogResponse(ApiModel):
     id: UUID
     actor_display_name: str | None

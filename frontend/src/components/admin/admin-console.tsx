@@ -20,6 +20,7 @@ import {
   type AdminSupportCase,
   type MfaSetup,
 } from "@/lib/api/admin";
+import { ModerationActionForm } from "@/components/admin/moderation-action-form";
 import { ApiError } from "@/lib/api/client";
 import { REPORT_REASON_LABELS } from "@/lib/api/safety";
 import { restoreSession, type UserProfile } from "@/lib/auth/session";
@@ -472,6 +473,16 @@ export function AdminConsole() {
                     <p className="mt-2 text-xs text-kindly-muted">
                       Report {report.id.slice(0, 8)} · target {report.targetId.slice(0, 8)}
                     </p>
+                    <ModerationActionForm
+                      mfaToken={mfaToken ?? ""}
+                      targetType={report.targetType}
+                      targetId={report.targetId}
+                      onApplied={async () => {
+                        if (mfaToken) {
+                          await loadData(mfaToken);
+                        }
+                      }}
+                    />
                   </article>
                 ))
               )}

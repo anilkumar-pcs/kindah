@@ -43,7 +43,7 @@ This does **not** approve external legal/provider gates. Other decisions — `DE
 | DEC-O4 | VPA beneficiary validation | Syntax-only with explicit residual risk | EXTERNAL_BLOCKED | P3.1, P8.9 |
 | DEC-O5 | Payment labels / copy freeze | Use spec's attestation labels | APPROVED (2026-11-24) | P5.5, P5.14 |
 | DEC-O6 | Phone change/recovery | Old+new OTP with support fallback | PENDING | P2.2, production auth |
-| DEC-O7 | Cooldown after moderation removal | No cooldown for platform-removed wish | PENDING | P3.7, P6.6 |
+| DEC-O7 | Cooldown after moderation removal | No cooldown for platform-removed wish | IMPLEMENTED DEFAULT — OWNER CONFIRMATION PENDING | P3.7, P6.6 |
 | DEC-O8 | Retention schedule | Configurable; numeric periods only after counsel | EXTERNAL_BLOCKED | P6.8, P8.9 |
 | DEC-O9 | Brand/trademark | Clear before public marketing | EXTERNAL_BLOCKED | P8.9 |
 | DEC-O10 | Cloud/worker platform | Provider-neutral containers; choose before staging | PENDING | P1.8, P8.8 |
@@ -138,8 +138,8 @@ This does **not** approve external legal/provider gates. Other decisions — `DE
 | Question | Does a platform-removed wish start the 72-hour cooldown? |
 | Options | **A.** No cooldown for a platform-removed wish (spec default proposal). **B.** Apply the 72-hour cooldown. |
 | Recommendation | **A**, with moderator reason/audit and a separate restriction mechanism if abuse is suspected. |
-| Owner decision | **PENDING** |
-| Date | 2026-11-23 |
+| Owner decision | **NOT YET APPROVED.** The recommended option A was implemented on 2026-11-24 under the owner's phase-automation instruction: `WISH_REMOVED` sets no cooldown, and restriction/ban remains a separate audited account action. Owner confirmation is still required before production. |
+| Date | 2026-11-24 |
 | Affects | P3.7, P6.6 |
 
 ### DEC-O8 — Retention schedule

@@ -12,6 +12,8 @@ vi.mock("@/lib/api/admin", () => ({
   listAdminAuditLogs: vi.fn(),
   listAdminReports: vi.fn(),
   listAdminSupportCases: vi.fn(),
+  moderateUser: vi.fn(),
+  moderateWish: vi.fn(),
   resolveSupportCase: vi.fn(),
   setupAdminMfa: vi.fn(),
   verifyAdminMfa: vi.fn(),
@@ -23,6 +25,7 @@ import {
   listAdminAuditLogs,
   listAdminReports,
   listAdminSupportCases,
+  moderateWish,
   resolveSupportCase,
   setupAdminMfa,
   verifyAdminMfa,
@@ -41,6 +44,7 @@ const mockedReports = vi.mocked(listAdminReports);
 const mockedSupport = vi.mocked(listAdminSupportCases);
 const mockedAudit = vi.mocked(listAdminAuditLogs);
 const mockedResolve = vi.mocked(resolveSupportCase);
+const mockedModerateWish = vi.mocked(moderateWish);
 
 function makeUser(role: "USER" | "ADMIN" = "ADMIN"): UserProfile {
   return {
@@ -176,6 +180,60 @@ describe("AdminConsole", () => {
     expect(await screen.findByRole("heading", { name: /moderation queue/i })).toBeInTheDocument();
     expect(mockedVerify).toHaveBeenCalledWith("123456");
     expect(mockedReports).toHaveBeenCalledWith("verified-token");
+  });
+
+  it("applies a wish moderation action with a mandatory reason", async () => {
+    const user = userEvent.setup();
+    mockedStatus.mockResolvedValue({
+      role: "ADMIN",
+      mfaEnabled: true,
+      mfaRequired: true,
+      recoveryCodesRemaining: 9,
+    });
+    mockedVerify.mockResolvedValue({
+      mfaToken: "verified-token",
+      expiresIn: 900,
+      method: "TOTP",
+    });
+    mockedReports.mockResolvedValue([
+      {
+        id: "report-1",
+        targetType: "WISH",
+        targetId: "wish-1",
+        reason: "INAPPROPRIATE_CONTENT",
+        status: "OPEN",
+        uniqueReportCount: 3,
+        targetDisplayName: "ReportedUser",
+        targetPreview: "A reported wish preview",
+        targetStatus: "UNDER_REVIEW",
+        createdAt: "2026-11-24T00:00:00Z",
+      },
+    ]);
+    mockedModerateWish.mockResolvedValue({
+      id: "action-1",
+      targetType: "WISH",
+      targetId: "wish-1",
+      action: "HIDE",
+      reason: "Clear policy violation.",
+      moderatorDisplayName: "AdminUser",
+      createdAt: "2026-11-24T00:00:00Z",
+    });
+
+    render(<AdminConsole />);
+
+    await user.type(await screen.findByLabelText(/authenticator or recovery code/i), "123456");
+    await user.click(screen.getByRole("button", { name: /open admin console/i }));
+    await user.type(
+      await screen.findByLabelText(/reason \(mandatory\)/i),
+      "Clear policy violation.",
+    );
+    await user.click(screen.getByRole("button", { name: /apply action/i }));
+
+    expect(await screen.findByText(/hide recorded with an audit entry/i)).toBeInTheDocument();
+    expect(mockedModerateWish).toHaveBeenCalledWith("verified-token", "wish-1", {
+      action: "HIDE",
+      reason: "Clear policy violation.",
+    });
   });
 
   it("shows full support details and resolves with an audited note", async () => {

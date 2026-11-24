@@ -407,6 +407,20 @@
 | Browser journey | Local ArjunDonor admin enrolled TOTP (QR/manual secret), received ten one-time recovery codes, unlocked the console, saw the report queue, opened the full support case (participants, amount, masked VPA, UTR, payment reference), resolved it with a note, and viewed `ADMIN_MFA_ENABLED` + `SUPPORT_CASE_RESOLVED` audit entries with request IDs. CORS preflight for `X-Admin-MFA` fixed and regression-tested. |
 | Known limitation | DEC-I13 remains an implemented recommended default pending owner confirmation; production admin activation is blocked. DB-role assignment is operational, not yet an admin role-management UI. Moderation actions/restore are P6.6. |
 
+### VE-034 — Phase 6 moderation actions and state guards
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P6.6 |
+| Command | `cd backend && uv run alembic upgrade head && uv run ruff check . && uv run ruff format --check . && uv run mypy app tests && uv run pytest -q`; `cd frontend && npm test && npm run lint && npm run typecheck && npm run build` |
+| Environment | PostgreSQL 16.16; Python 3.12.16; Next.js 16.4.6; Node 26 |
+| Result | **PASS** — `0009_moderation_actions (head)`; **158 backend tests**, **39 frontend tests**; all lint, format, type and build checks clean |
+| Automated coverage | WARN increments trust strikes; RESTRICT blocks wish creation with `ACCOUNT_RESTRICTED`; REACTIVATE restores; SUSPEND→RESTRICT rejected; BAN works; self-moderation rejected; moderator/admin target guards. Wish HIDE→UNDER_REVIEW, RESTORE→OPEN only when unexpired and no unresolved gift, REMOVE→REMOVED with no cooldown (DEC-O7 provisional); expired restore and unresolved-gift removal rejected; encrypted moderation/audit reasons and request IDs. Frontend action form covers hide with mandatory reason. |
+| Browser journey | Local admin verified TOTP, hid ChaiExplorer's reported wish from the queue (status changed to UNDER_REVIEW and audit count rose), then restored it to OPEN with a second mandatory-reason action. No console errors. |
+| Privacy checks | Reasons encrypted in both `moderation_actions` and `admin_audit_logs`; API returns them only through MFA-protected admin endpoints; no VPA/phone/UTR in action logs. |
+| Known limitation | DEC-O7 remains an implemented recommended default pending owner confirmation. Appeals and user notifications are P6.7/P6.9. |
+
 ## Summary
 
 | Verification | Result |
@@ -445,6 +459,7 @@
 | Phase 6 reporting/blocking | PASS — 152 total backend tests, 34 frontend tests, report/block browser flow |
 | Phase 6 auto-hide/queue | PASS — 153 total backend tests, threshold hides once, queue is admin-only |
 | Phase 6 admin/MFA/audit | PASS — 156 total backend tests, 38 frontend tests, full browser admin flow |
+| Phase 6 moderation actions | PASS — 158 total backend tests, 39 frontend tests, browser hide/restore |
 
 ## Rule for future entries
 

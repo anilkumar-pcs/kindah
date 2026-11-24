@@ -386,7 +386,7 @@ handling and auditable moderator actions.
     same application.
 -   [x] P6.5 Implement role checks, admin MFA requirement and
     append-only admin audit log.
--   [ ] P6.6 Implement warn/restrict/suspend/ban and wish restore/remove
+-   [x] P6.6 Implement warn/restrict/suspend/ban and wish restore/remove
     actions with state guards.
 -   [ ] P6.7 Implement basic appeal/support workflow and dispute
     visibility.

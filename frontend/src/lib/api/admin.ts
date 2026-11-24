@@ -70,6 +70,16 @@ export type AdminSupportCase = {
   createdAt: string;
 };
 
+export type ModerationActionResponse = {
+  id: string;
+  targetType: "USER" | "WISH";
+  targetId: string;
+  action: string;
+  reason: string;
+  moderatorDisplayName: string | null;
+  createdAt: string;
+};
+
 export type AdminAuditLog = {
   id: string;
   actorDisplayName: string | null;
@@ -133,6 +143,30 @@ export async function resolveSupportCase(
     method: "POST",
     headers: { "Content-Type": "application/json", ...mfaHeaders(mfaToken) },
     body: JSON.stringify({ resolutionNote }),
+  });
+}
+
+export async function moderateUser(
+  mfaToken: string,
+  userId: string,
+  input: { action: "WARN" | "RESTRICT" | "SUSPEND" | "BAN" | "REACTIVATE"; reason: string },
+): Promise<ModerationActionResponse> {
+  return apiFetch<ModerationActionResponse>(`/api/v1/admin/users/${userId}/actions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...mfaHeaders(mfaToken) },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function moderateWish(
+  mfaToken: string,
+  wishId: string,
+  input: { action: "HIDE" | "RESTORE" | "REMOVE"; reason: string },
+): Promise<ModerationActionResponse> {
+  return apiFetch<ModerationActionResponse>(`/api/v1/admin/wishes/${wishId}/actions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...mfaHeaders(mfaToken) },
+    body: JSON.stringify(input),
   });
 }
 

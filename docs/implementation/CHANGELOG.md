@@ -2,6 +2,33 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-24 — Phase 6: moderation actions and state guards
+
+### Added
+
+- `0009_moderation_actions` migration with moderator, target, action, encrypted reason and
+  timestamp records.
+- `POST /admin/users/{id}/actions`: WARN, RESTRICT, SUSPEND, BAN and REACTIVATE with
+  self-moderation/privileged-target guards, trust-strike increment and account-status changes.
+- `POST /admin/wishes/{id}/actions`: HIDE, RESTORE and REMOVE with guards for expired wishes
+  and unresolved gifts; REMOVE applies no cooldown per the provisional DEC-O7 default.
+- Admin report queue action form with mandatory reason, success/error feedback and audit refresh.
+- Moderator/admin audit entries for every action, with encrypted reasons and request IDs.
+
+### Verification
+
+- 158 backend tests and 39 frontend tests pass; all lint, format, type and build checks clean.
+- Browser hide→UNDER_REVIEW and restore→OPEN actions passed with audit entries.
+
+### Decision
+
+- `DEC-O7` no-cooldown moderation removal is implemented as the recommended default but
+  remains **pending owner confirmation**.
+
+### Open
+
+- P6.7 appeals/support disputes and P6.8 deletion workflow.
+
 ## 2026-11-24 — Phase 6: protected admin console, RBAC, MFA and audit
 
 ### Added
