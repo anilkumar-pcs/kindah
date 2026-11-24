@@ -28,6 +28,13 @@ class ModerationActionType(StrEnum):
     REMOVE = "REMOVE"
 
 
+class AppealStatus(StrEnum):
+    OPEN = "OPEN"
+    UNDER_REVIEW = "UNDER_REVIEW"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
+
+
 class ModerationAction(Base):
     __tablename__ = "moderation_actions"
     __table_args__ = (
@@ -64,6 +71,52 @@ class ModerationAction(Base):
     reason_encrypted: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class ModerationAppeal(Base):
+    __tablename__ = "moderation_appeals"
+    __table_args__ = (
+        Index("ix_moderation_appeals_status_created", "status", "created_at"),
+        Index("ix_moderation_appeals_user_created", "user_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    action_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("moderation_actions.id", ondelete="RESTRICT"),
+        nullable=False,
+        unique=True,
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    status: Mapped[AppealStatus] = mapped_column(
+        SAEnum(
+            AppealStatus,
+            name="appeal_status",
+            native_enum=True,
+            values_callable=lambda members: [member.value for member in members],
+        ),
+        nullable=False,
+        server_default=AppealStatus.OPEN.value,
+    )
+    reason_encrypted: Mapped[str] = mapped_column(Text, nullable=False)
+    resolution_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    resolved_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
 

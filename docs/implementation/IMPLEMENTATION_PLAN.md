@@ -388,7 +388,7 @@ handling and auditable moderator actions.
     append-only admin audit log.
 -   [x] P6.6 Implement warn/restrict/suspend/ban and wish restore/remove
     actions with state guards.
--   [ ] P6.7 Implement basic appeal/support workflow and dispute
+-   [x] P6.7 Implement basic appeal/support workflow and dispute
     visibility.
 -   [ ] P6.8 Implement account deletion request workflow and
     retention-safe anonymisation strategy, subject to counsel-approved

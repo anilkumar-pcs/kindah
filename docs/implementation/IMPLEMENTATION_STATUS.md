@@ -3,7 +3,7 @@
 **Last updated:** 2026-11-24
 **Current phase:** Phase 6 — Trust, safety, moderation and operational support
 **Overall status:** `IN_PROGRESS`
-**Repository state:** Phases 0–5 complete. Phase 6 is in progress: reporting, blocks, auto-hide, protected admin console, RBAC/MFA/audit and moderation actions are complete.
+**Repository state:** Phases 0–5 complete. Phase 6 is in progress: reporting, blocks, auto-hide, protected admin console, RBAC/MFA/audit, moderation actions and appeals are complete.
 
 ## Phase dashboard
 
@@ -15,7 +15,7 @@
 | 3. Recipient & wishes | `DONE` | 10 | 10 | 126 backend + 15 frontend tests |
 | 4. Discovery | `DONE` | 7 | 7 | 133 backend + 21 frontend tests |
 | 5. Gift & UPI | `DONE` | 15 | 15 | 149 backend + 31 frontend tests; full-stack gift flow and support report verified |
-| 6. Trust & safety | `IN_PROGRESS` | 6 | 11 | 158 backend + 39 frontend tests; P6.1–P6.6 done |
+| 6. Trust & safety | `IN_PROGRESS` | 7 | 11 | 159 backend + 43 frontend tests; P6.1–P6.7 done |
 | 7. Engagement | `NOT_STARTED` | 0 | 8 | Depends on Phase 5/6 |
 | 8. Hardening & beta | `NOT_STARTED` | 0 | 12 | External gates blocked |
 
@@ -52,9 +52,10 @@ Completed:
 - P6.4 protected Next.js `/admin` console with role gating, MFA setup/verify, report queue, support detail/resolution and audit view; loading, empty, denied and error states.
 - P6.5 `USER`/`MODERATOR`/`ADMIN` roles, enforced TOTP MFA with single-use recovery codes and session-bound 15-minute tokens, and append-only `admin_audit_logs` with request IDs and encrypted resolution notes.
 - P6.6 warning, restrict, suspend, ban and reactivate user actions plus hide, restore and remove wish actions, with mandatory reasons, encrypted `moderation_actions`, audit entries, self-moderation and privileged-target guards, and unresolved-gift/expiry restore guards. Admin UI exposes actions inline in the report queue.
+- P6.7 one appeal per restricted/suspended/banned action, encrypted appeal/resolution text, user appeals page, admin appeals queue/resolution with audit, banned users able to authenticate for appeals while interactive actions stay blocked, and MFA-protected support/gift dispute visibility for staff.
 
 Open:
-- **P6.7–P6.11** appeals, deletion workflow, notifications, durable outbox and runbooks.
+- **P6.8–P6.11** deletion workflow, notifications, durable outbox and runbooks.
 
 ## Remaining external blockers
 
@@ -71,6 +72,7 @@ Open:
 
 | Date | Phase/task | Change | Evidence |
 |---|---|---|---|
+| 2026-11-24 | P6.7 | Appeals, banned-user appeal access, admin appeal resolution and dispute visibility | `TEST_EVIDENCE.md` VE-035 |
 | 2026-11-24 | P6.6 | User and wish moderation actions with guards, audit and admin UI | `TEST_EVIDENCE.md` VE-034 |
 | 2026-11-24 | P6.4, P6.5 | Protected admin console, RBAC, TOTP MFA, append-only audit | `TEST_EVIDENCE.md` VE-033 |
 | 2026-11-24 | P6.3 | Auto-hide at three unique reports; moderator report queue | `TEST_EVIDENCE.md` VE-032 |
@@ -86,17 +88,18 @@ Open:
 
 | Check | Result |
 |---|---|
-| Backend tests | 158 passed (14 gift, 2 support-case, 4 reporting/block/auto-hide, 5 admin security/moderation) |
-| Frontend tests | 39 passed (9 test files) |
+| Backend tests | 159 passed (14 gift, 2 support-case, 4 reporting/block/auto-hide, 6 admin security/moderation/appeal) |
+| Frontend tests | 43 passed (10 test files) |
 | Backend quality | Ruff, format, mypy clean |
 | Frontend quality | ESLint, Prettier, tsc, production build pass |
-| Migrations | 0001–0009 apply; 0009 moderation-action migration validated at head |
+| Migrations | 0001–0010 apply; 0010 moderation-appeal migration validated at head |
 | Phase 5 race suite | PASS — concurrent donors, idempotency, PAID-vs-expiry, confirmation-vs-timeout, re-reservation |
 | Phase 5 UI | PASS — full-stack donor gift, recipient confirmation and support report |
 | Phase 6 reporting/blocks | PASS — API and browser report, block, blocked list, unblock |
 | Phase 6 auto-hide/queue | PASS — third unique report hides once; admin queue is 403 for non-admins |
 | Phase 6 admin/MFA/audit | PASS — browser TOTP enrollment, queue, support resolution, audit view; append-only DB trigger |
 | Phase 6 moderation actions | PASS — user status actions, wish hide/restore/remove, guards, audit and browser hide/restore |
+| Phase 6 appeals/disputes | PASS — appeal lifecycle, admin queue/resolution, banned-user access, MFA-only dispute data |
 | Phase 5 overall | `DONE` — 15/15 tasks |
 
 ## Completed slice — late-payment support and admin visibility
@@ -111,7 +114,7 @@ Implemented: `0006_support_cases`, participant case creation, admin list/detail/
 
 ## Next session handoff
 
-1. Implement P6.7 appeals/support dispute visibility, then P6.8 deletion requests without destructive deletion before retention approval.
+1. Implement P6.8 account deletion requests without destructive deletion before counsel-approved retention (DEC-O8 remains external).
 2. Continue P6.9–P6.11: notifications, durable outbox/retry/dead-letter and runbooks.
 3. Keep DEC-I13 and DEC-O7 provisional until owner confirmation; production admin/moderation activation remains blocked.
 4. Keep real-money handoff disabled and external gates `BLOCKED`.

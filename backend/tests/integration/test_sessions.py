@@ -190,11 +190,23 @@ def test_restricted_user_can_read_but_not_change_profile(client: TestClient) -> 
     assert consent.json()["code"] == "ACCOUNT_RESTRICTED"
 
 
-def test_banned_user_cannot_use_access_token(client: TestClient) -> None:
+def test_banned_user_can_read_profile_and_appeal_but_not_interact(client: TestClient) -> None:
     session, headers = complete_onboarding(client)
     _set_user_status(str(session["user"]["id"]), UserStatus.BANNED)
 
     response = client.get("/api/v1/me", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["status"] == "BANNED"
 
-    assert response.status_code == 403
-    assert response.json()["code"] == "ACCOUNT_RESTRICTED"
+    blocked = client.post(
+        "/api/v1/me/consent",
+        headers=headers,
+        json={
+            "ageConfirmed": True,
+            "termsAccepted": True,
+            "privacyAccepted": True,
+            "guidelinesAccepted": True,
+        },
+    )
+    assert blocked.status_code == 403
+    assert blocked.json()["code"] == "ACCOUNT_RESTRICTED"

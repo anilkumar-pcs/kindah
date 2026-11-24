@@ -5,33 +5,37 @@ import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 
+import { AppealResolutionForm } from "@/components/admin/appeal-resolution-form";
+import { ModerationActionForm } from "@/components/admin/moderation-action-form";
 import {
   enableAdminMfa,
   getAdminMfaStatus,
+  listAdminAppeals,
   listAdminAuditLogs,
   listAdminReports,
   listAdminSupportCases,
   resolveSupportCase,
   setupAdminMfa,
   verifyAdminMfa,
+  type AdminAppeal,
   type AdminAuditLog,
   type AdminMfaStatus,
   type AdminReport,
   type AdminSupportCase,
   type MfaSetup,
 } from "@/lib/api/admin";
-import { ModerationActionForm } from "@/components/admin/moderation-action-form";
 import { ApiError } from "@/lib/api/client";
 import { REPORT_REASON_LABELS } from "@/lib/api/safety";
 import { restoreSession, type UserProfile } from "@/lib/auth/session";
 import { SUPPORT_CASE_LABELS } from "@/lib/gifts/labels";
 
 type PageState = "loading" | "guest" | "denied" | "ready" | "error";
-type AdminTab = "reports" | "support" | "audit";
+type AdminTab = "reports" | "support" | "appeals" | "audit";
 
 type AdminData = {
   reports: AdminReport[];
   supportCases: AdminSupportCase[];
+  appeals: AdminAppeal[];
   auditLogs: AdminAuditLog[];
 };
 
@@ -106,12 +110,13 @@ export function AdminConsole() {
   }, []);
 
   async function loadData(token: string) {
-    const [reports, supportCases, auditLogs] = await Promise.all([
+    const [reports, supportCases, appeals, auditLogs] = await Promise.all([
       listAdminReports(token),
       listAdminSupportCases(token),
+      listAdminAppeals(token),
       listAdminAuditLogs(token),
     ]);
-    setData({ reports, supportCases, auditLogs });
+    setData({ reports, supportCases, appeals, auditLogs });
   }
 
   async function handleStartSetup() {
@@ -421,6 +426,7 @@ export function AdminConsole() {
               [
                 ["reports", `Reports (${data.reports.length})`],
                 ["support", `Support cases (${data.supportCases.length})`],
+                ["appeals", `Appeals (${data.appeals.length})`],
                 ["audit", `Audit log (${data.auditLogs.length})`],
               ] as Array<[AdminTab, string]>
             ).map(([value, label]) => (
@@ -562,6 +568,59 @@ export function AdminConsole() {
                           {busy ? "Resolving…" : "Resolve case"}
                         </button>
                       </div>
+                    )}
+                  </article>
+                ))
+              )}
+            </section>
+          )}
+
+          {tab === "appeals" && (
+            <section aria-labelledby="admin-appeals-heading" className="space-y-3">
+              <h2 id="admin-appeals-heading" className="text-xl font-semibold">
+                Appeals queue
+              </h2>
+              {data.appeals.length === 0 ? (
+                <p className="rounded-2xl border border-kindly-border bg-white p-5 text-sm text-kindly-muted">
+                  No open appeals.
+                </p>
+              ) : (
+                data.appeals.map((appeal) => (
+                  <article
+                    key={appeal.id}
+                    className="rounded-2xl border border-kindly-border bg-white p-5 text-sm"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-semibold">
+                        {appeal.userDisplayName ?? "Unknown user"} · {appeal.action}
+                      </span>
+                      <span className="rounded-full bg-kindly-accent-soft px-3 py-1 text-xs font-semibold">
+                        {appeal.status}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-kindly-muted">
+                      Original reason: {appeal.actionReason} · {formatDate(appeal.createdAt)}
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap">{appeal.reason}</p>
+                    <p className="mt-2 text-xs text-kindly-muted">
+                      Appeal {appeal.id.slice(0, 8)} · action {appeal.actionId.slice(0, 8)}
+                    </p>
+                    {appeal.status === "OPEN" || appeal.status === "UNDER_REVIEW" ? (
+                      <AppealResolutionForm
+                        mfaToken={mfaToken ?? ""}
+                        appealId={appeal.id}
+                        onResolved={async () => {
+                          if (mfaToken) {
+                            await loadData(mfaToken);
+                          }
+                        }}
+                      />
+                    ) : (
+                      appeal.resolutionNote && (
+                        <p className="mt-3 rounded-xl bg-green-50 p-3 text-green-900">
+                          Resolution: {appeal.resolutionNote} ({formatDate(appeal.resolvedAt)})
+                        </p>
+                      )
                     )}
                   </article>
                 ))

@@ -343,7 +343,7 @@ class IdentityService:
             )
 
         user = self.session.get(User, session_row.user_id)
-        if user is None or user.status in {UserStatus.BANNED, UserStatus.DELETED}:
+        if user is None or user.status == UserStatus.DELETED:
             session_row.revoked_at = now
             self._audit("SESSION_REVOKED", session_row.user_id, ip_hmac)
             self.session.commit()
@@ -401,7 +401,7 @@ class IdentityService:
             raise self._session_expired()
 
         user = self.session.get(User, user_id)
-        if user is None or user.status in {UserStatus.BANNED, UserStatus.DELETED}:
+        if user is None or user.status == UserStatus.DELETED:
             raise AppError(
                 403,
                 "ACCOUNT_RESTRICTED",

@@ -80,6 +80,22 @@ export type ModerationActionResponse = {
   createdAt: string;
 };
 
+export type AdminAppeal = {
+  id: string;
+  actionId: string;
+  userDisplayName: string | null;
+  action: string;
+  actionReason: string;
+  targetType: string;
+  targetId: string;
+  status: "OPEN" | "UNDER_REVIEW" | "ACCEPTED" | "REJECTED";
+  reason: string;
+  resolutionNote: string | null;
+  resolvedByDisplayName: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+};
+
 export type AdminAuditLog = {
   id: string;
   actorDisplayName: string | null;
@@ -164,6 +180,25 @@ export async function moderateWish(
   input: { action: "HIDE" | "RESTORE" | "REMOVE"; reason: string },
 ): Promise<ModerationActionResponse> {
   return apiFetch<ModerationActionResponse>(`/api/v1/admin/wishes/${wishId}/actions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...mfaHeaders(mfaToken) },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function listAdminAppeals(mfaToken: string): Promise<AdminAppeal[]> {
+  const data = await apiFetch<{ appeals: AdminAppeal[] }>("/api/v1/admin/appeals", {
+    headers: mfaHeaders(mfaToken),
+  });
+  return data.appeals;
+}
+
+export async function resolveAppeal(
+  mfaToken: string,
+  appealId: string,
+  input: { outcome: "ACCEPTED" | "REJECTED"; resolutionNote: string },
+): Promise<AdminAppeal> {
+  return apiFetch<AdminAppeal>(`/api/v1/admin/appeals/${appealId}/resolve`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...mfaHeaders(mfaToken) },
     body: JSON.stringify(input),

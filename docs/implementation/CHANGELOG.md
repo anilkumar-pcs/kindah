@@ -2,6 +2,30 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-24 — Phase 6: moderation appeals and dispute visibility
+
+### Added
+
+- `0010_moderation_appeals` migration with one appeal per action, encrypted appeal/resolution
+  text, resolver and timestamps.
+- User APIs: list own moderation actions/reasons, submit one appeal for RESTRICT/SUSPEND/BAN,
+  list own appeals. `/appeals` page works for restricted, suspended and banned users.
+- Admin APIs and console tab: appeal queue with original action context, ACCEPTED/REJECTED
+  resolution with mandatory note and admin audit entries.
+- Banned accounts may authenticate for own-profile/appeal reads; interactive actions remain
+  blocked by `require_active_auth`.
+- Dispute/support data remains visible only through MFA-protected admin endpoints.
+
+### Verification
+
+- 159 backend tests and 43 frontend tests pass; all lint, format, type and build checks clean.
+- Appeal lifecycle, duplicate rejection, non-admin denial, resolution audit and banned access
+  are covered.
+
+### Open
+
+- P6.8 deletion workflow (retention decision remains external).
+
 ## 2026-11-24 — Phase 6: moderation actions and state guards
 
 ### Added

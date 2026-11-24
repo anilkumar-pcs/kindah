@@ -2,24 +2,36 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db_session
+from app.modules.admin.models import AppealStatus
 from app.modules.admin.schemas import (
+    AdminAppealList,
+    AdminAppealResponse,
     AdminAuditLogList,
     AdminMfaStatusResponse,
+    AppealCreateRequest,
+    AppealList,
+    AppealResolveRequest,
+    AppealResponse,
     MfaEnableRequest,
     MfaEnableResponse,
     MfaSetupResponse,
     MfaVerifyRequest,
     MfaVerifyResponse,
+    ModerationActionList,
     ModerationActionResponse,
     UserModerationActionRequest,
     WishModerationActionRequest,
 )
 from app.modules.admin.service import AdminService
-from app.modules.identity.dependencies import require_admin, require_admin_role
+from app.modules.identity.dependencies import (
+    get_current_auth,
+    require_admin,
+    require_admin_role,
+)
 from app.modules.identity.service import AuthContext
 from app.providers.crypto.base import CryptoProvider
 
@@ -96,6 +108,58 @@ def moderate_wish(
     service: AdminService = Depends(get_admin_service),
 ) -> ModerationActionResponse:
     return service.moderate_wish(auth.user, wish_id, body)
+
+
+@router.get("/me/moderation-actions", response_model=ModerationActionList)
+def list_my_moderation_actions(
+    auth: AuthContext = Depends(get_current_auth),
+    service: AdminService = Depends(get_admin_service),
+) -> ModerationActionList:
+    return service.list_my_actions(auth.user)
+
+
+@router.post(
+    "/me/moderation-actions/{action_id}/appeals",
+    response_model=AppealResponse,
+    status_code=201,
+)
+def create_appeal(
+    action_id: UUID,
+    body: AppealCreateRequest,
+    auth: AuthContext = Depends(get_current_auth),
+    service: AdminService = Depends(get_admin_service),
+) -> AppealResponse:
+    return service.create_appeal(auth.user, action_id, body)
+
+
+@router.get("/me/appeals", response_model=AppealList)
+def list_my_appeals(
+    auth: AuthContext = Depends(get_current_auth),
+    service: AdminService = Depends(get_admin_service),
+) -> AppealList:
+    return service.list_my_appeals(auth.user)
+
+
+@router.get("/admin/appeals", response_model=AdminAppealList)
+def list_admin_appeals(
+    status: AppealStatus | None = Query(default=AppealStatus.OPEN),
+    _admin: AuthContext = Depends(require_admin),
+    service: AdminService = Depends(get_admin_service),
+) -> AdminAppealList:
+    return service.list_admin_appeals(status)
+
+
+@router.post(
+    "/admin/appeals/{appeal_id}/resolve",
+    response_model=AdminAppealResponse,
+)
+def resolve_appeal(
+    appeal_id: UUID,
+    body: AppealResolveRequest,
+    auth: AuthContext = Depends(require_admin),
+    service: AdminService = Depends(get_admin_service),
+) -> AdminAppealResponse:
+    return service.resolve_appeal(auth.user, appeal_id, body)
 
 
 @router.get("/admin/audit-logs", response_model=AdminAuditLogList)

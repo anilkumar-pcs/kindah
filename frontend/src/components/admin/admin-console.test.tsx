@@ -9,11 +9,13 @@ vi.mock("@/lib/auth/session", () => ({
 vi.mock("@/lib/api/admin", () => ({
   enableAdminMfa: vi.fn(),
   getAdminMfaStatus: vi.fn(),
+  listAdminAppeals: vi.fn(),
   listAdminAuditLogs: vi.fn(),
   listAdminReports: vi.fn(),
   listAdminSupportCases: vi.fn(),
   moderateUser: vi.fn(),
   moderateWish: vi.fn(),
+  resolveAppeal: vi.fn(),
   resolveSupportCase: vi.fn(),
   setupAdminMfa: vi.fn(),
   verifyAdminMfa: vi.fn(),
@@ -22,10 +24,12 @@ vi.mock("@/lib/api/admin", () => ({
 import {
   enableAdminMfa,
   getAdminMfaStatus,
+  listAdminAppeals,
   listAdminAuditLogs,
   listAdminReports,
   listAdminSupportCases,
   moderateWish,
+  resolveAppeal,
   resolveSupportCase,
   setupAdminMfa,
   verifyAdminMfa,
@@ -45,6 +49,8 @@ const mockedSupport = vi.mocked(listAdminSupportCases);
 const mockedAudit = vi.mocked(listAdminAuditLogs);
 const mockedResolve = vi.mocked(resolveSupportCase);
 const mockedModerateWish = vi.mocked(moderateWish);
+const mockedAppeals = vi.mocked(listAdminAppeals);
+const mockedResolveAppeal = vi.mocked(resolveAppeal);
 
 function makeUser(role: "USER" | "ADMIN" = "ADMIN"): UserProfile {
   return {
@@ -100,6 +106,7 @@ beforeEach(() => {
   });
   mockedReports.mockResolvedValue([]);
   mockedSupport.mockResolvedValue([]);
+  mockedAppeals.mockResolvedValue([]);
   mockedAudit.mockResolvedValue([]);
 });
 
@@ -233,6 +240,70 @@ describe("AdminConsole", () => {
     expect(mockedModerateWish).toHaveBeenCalledWith("verified-token", "wish-1", {
       action: "HIDE",
       reason: "Clear policy violation.",
+    });
+  });
+
+  it("resolves an appeal from the admin queue", async () => {
+    const user = userEvent.setup();
+    mockedStatus.mockResolvedValue({
+      role: "ADMIN",
+      mfaEnabled: true,
+      mfaRequired: true,
+      recoveryCodesRemaining: 9,
+    });
+    mockedVerify.mockResolvedValue({
+      mfaToken: "verified-token",
+      expiresIn: 900,
+      method: "TOTP",
+    });
+    mockedAppeals.mockResolvedValue([
+      {
+        id: "appeal-1",
+        actionId: "action-1",
+        userDisplayName: "RestrictedUser",
+        action: "RESTRICT",
+        actionReason: "Repeated spam.",
+        targetType: "USER",
+        targetId: "user-2",
+        status: "OPEN",
+        reason: "Please review my context.",
+        resolutionNote: null,
+        resolvedByDisplayName: null,
+        createdAt: "2026-11-24T00:00:00Z",
+        resolvedAt: null,
+      },
+    ]);
+    mockedResolveAppeal.mockResolvedValue({
+      id: "appeal-1",
+      actionId: "action-1",
+      userDisplayName: "RestrictedUser",
+      action: "RESTRICT",
+      actionReason: "Repeated spam.",
+      targetType: "USER",
+      targetId: "user-2",
+      status: "ACCEPTED",
+      reason: "Please review my context.",
+      resolutionNote: "Context accepted.",
+      resolvedByDisplayName: "AdminUser",
+      createdAt: "2026-11-24T00:00:00Z",
+      resolvedAt: "2026-11-24T01:00:00Z",
+    });
+
+    render(<AdminConsole />);
+
+    await user.type(await screen.findByLabelText(/authenticator or recovery code/i), "123456");
+    await user.click(screen.getByRole("button", { name: /open admin console/i }));
+    await user.click(await screen.findByRole("button", { name: /appeals \(1\)/i }));
+
+    expect(await screen.findByText(/please review my context/i)).toBeInTheDocument();
+    expect(screen.getByText(/repeated spam/i)).toBeInTheDocument();
+    await user.type(screen.getByLabelText(/resolution note \(mandatory\)/i), "Context accepted.");
+    await user.click(screen.getByRole("button", { name: /resolve appeal/i }));
+
+    expect(await screen.findByText(/appeal accepted with an audit entry/i)).toBeInTheDocument();
+    expect(mockedResolveAppeal).toHaveBeenCalledWith("verified-token", "appeal-1", {
+      outcome: "ACCEPTED",
+      resolutionNote: "Context accepted.",
     });
   });
 

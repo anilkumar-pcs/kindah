@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import Field
 
 from app.core.schemas import ApiModel
+from app.modules.admin.models import AppealStatus
 from app.modules.identity.models import UserRole
 
 
@@ -61,6 +62,63 @@ class ModerationActionResponse(ApiModel):
     reason: str
     moderator_display_name: str | None
     created_at: datetime
+
+
+class ModerationActionSummaryResponse(ApiModel):
+    id: UUID
+    action: str
+    reason: str
+    appeal_status: AppealStatus | None
+    can_appeal: bool
+    created_at: datetime
+
+
+class ModerationActionList(ApiModel):
+    actions: list[ModerationActionSummaryResponse]
+
+
+class AppealCreateRequest(ApiModel):
+    reason: str = Field(min_length=10, max_length=1000)
+
+
+class AppealResponse(ApiModel):
+    id: UUID
+    action_id: UUID
+    status: AppealStatus
+    reason: str
+    resolution_note: str | None
+    created_at: datetime
+    updated_at: datetime
+    resolved_at: datetime | None
+
+
+class AppealList(ApiModel):
+    appeals: list[AppealResponse]
+
+
+class AdminAppealResponse(ApiModel):
+    id: UUID
+    action_id: UUID
+    user_display_name: str | None
+    action: str
+    action_reason: str
+    target_type: str
+    target_id: UUID
+    status: AppealStatus
+    reason: str
+    resolution_note: str | None
+    resolved_by_display_name: str | None
+    created_at: datetime
+    resolved_at: datetime | None
+
+
+class AdminAppealList(ApiModel):
+    appeals: list[AdminAppealResponse]
+
+
+class AppealResolveRequest(ApiModel):
+    outcome: Literal["ACCEPTED", "REJECTED"]
+    resolution_note: str = Field(min_length=5, max_length=1000)
 
 
 class AdminAuditLogResponse(ApiModel):

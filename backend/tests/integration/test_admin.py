@@ -12,7 +12,7 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 from app.core.security import totp_code
-from app.modules.admin.models import AdminAuditLog, ModerationAction
+from app.modules.admin.models import AdminAuditLog, ModerationAction, ModerationAppeal
 from app.modules.identity.models import User, UserRole, UserStatus
 from app.modules.wishes.models import Wish, WishStatus
 from tests.integration.helpers import admin_mfa_headers, complete_setup
@@ -358,6 +358,123 @@ def test_wish_moderation_state_guards_and_audit(client: TestClient) -> None:
     assert "WISH_RESTORED" in actions
     assert "WISH_REMOVED" in actions
     assert all(entry["requestId"] for entry in audits.json()["logs"])
+
+
+def test_appeal_workflow_admin_resolution_and_banned_access(client: TestClient) -> None:
+    _, admin_headers = _admin_with_mfa(client, "9876502031", "AppealAdmin")
+    _, target_headers, _ = complete_setup(
+        client,
+        phone="9876502032",
+        display_name="AppealTarget",
+        vpa="appealtarget@okaxis",
+    )
+    target_id = str(client.get("/api/v1/me", headers=target_headers).json()["id"])
+
+    warn = client.post(
+        f"/api/v1/admin/users/{target_id}/actions",
+        headers=admin_headers,
+        json={"action": "WARN", "reason": "Warning before restriction."},
+    )
+    assert warn.status_code == 200
+    warn_id = warn.json()["id"]
+
+    actions = client.get("/api/v1/me/moderation-actions", headers=target_headers)
+    assert actions.status_code == 200, actions.text
+    assert actions.json()["actions"][0]["canAppeal"] is False
+    warn_appeal = client.post(
+        f"/api/v1/me/moderation-actions/{warn_id}/appeals",
+        headers=target_headers,
+        json={"reason": "I disagree with this warning entirely."},
+    )
+    assert warn_appeal.status_code == 422
+
+    restricted = client.post(
+        f"/api/v1/admin/users/{target_id}/actions",
+        headers=admin_headers,
+        json={"action": "RESTRICT", "reason": "Repeated inappropriate messages."},
+    )
+    assert restricted.status_code == 200
+    action_id = restricted.json()["id"]
+
+    actions = client.get("/api/v1/me/moderation-actions", headers=target_headers)
+    assert actions.status_code == 200
+    restrict_action = next(item for item in actions.json()["actions"] if item["id"] == action_id)
+    assert restrict_action["canAppeal"] is True
+    assert restrict_action["reason"] == "Repeated inappropriate messages."
+
+    appeal = client.post(
+        f"/api/v1/me/moderation-actions/{action_id}/appeals",
+        headers=target_headers,
+        json={"reason": "Please review my context; I believe this was a mistake."},
+    )
+    assert appeal.status_code == 201, appeal.text
+    appeal_id = appeal.json()["id"]
+    duplicate = client.post(
+        f"/api/v1/me/moderation-actions/{action_id}/appeals",
+        headers=target_headers,
+        json={"reason": "Trying to send a second appeal."},
+    )
+    assert duplicate.status_code == 409
+    assert duplicate.json()["code"] == "APPEAL_EXISTS"
+
+    assert client.get("/api/v1/admin/appeals", headers=target_headers).status_code == 403
+    queue = client.get("/api/v1/admin/appeals", headers=admin_headers)
+    assert queue.status_code == 200, queue.text
+    queued = queue.json()["appeals"]
+    assert len(queued) == 1
+    assert queued[0]["userDisplayName"] == "AppealTarget"
+    assert queued[0]["action"] == "RESTRICT"
+    assert queued[0]["actionReason"] == "Repeated inappropriate messages."
+    assert "Please review my context" in queued[0]["reason"]
+
+    resolved = client.post(
+        f"/api/v1/admin/appeals/{appeal_id}/resolve",
+        headers=admin_headers,
+        json={
+            "outcome": "ACCEPTED",
+            "resolutionNote": "Context reviewed; restriction will be lifted separately.",
+        },
+    )
+    assert resolved.status_code == 200, resolved.text
+    assert resolved.json()["status"] == "ACCEPTED"
+    assert resolved.json()["resolvedByDisplayName"] == "AppealAdmin"
+    again = client.post(
+        f"/api/v1/admin/appeals/{appeal_id}/resolve",
+        headers=admin_headers,
+        json={"outcome": "REJECTED", "resolutionNote": "Already resolved."},
+    )
+    assert again.status_code == 422
+
+    mine = client.get("/api/v1/me/appeals", headers=target_headers)
+    assert mine.status_code == 200
+    assert mine.json()["appeals"][0]["status"] == "ACCEPTED"
+    assert "lifted separately" in mine.json()["appeals"][0]["resolutionNote"]
+    assert client.get("/api/v1/me", headers=target_headers).json()["status"] == "RESTRICTED"
+
+    banned = client.post(
+        f"/api/v1/admin/users/{target_id}/actions",
+        headers=admin_headers,
+        json={"action": "BAN", "reason": "Escalated after review."},
+    )
+    assert banned.status_code == 200
+    ban_appeal = client.post(
+        f"/api/v1/me/moderation-actions/{banned.json()['id']}/appeals",
+        headers=target_headers,
+        json={"reason": "I am appealing the ban decision with new context."},
+    )
+    assert ban_appeal.status_code == 201, ban_appeal.text
+
+    audits = client.get("/api/v1/admin/audit-logs", headers=admin_headers)
+    assert "APPEAL_ACCEPTED" in [entry["action"] for entry in audits.json()["logs"]]
+
+    engine = create_engine(os.environ["DATABASE_URL"])
+    try:
+        with Session(engine) as db:
+            rows = list(db.scalars(select(ModerationAppeal)))
+            assert len(rows) == 2
+            assert all("appealing" not in row.reason_encrypted for row in rows)
+    finally:
+        engine.dispose()
 
 
 def test_non_admin_cannot_use_mfa_or_audit_endpoints(client: TestClient) -> None:

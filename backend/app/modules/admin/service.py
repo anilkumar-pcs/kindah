@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
@@ -22,23 +23,34 @@ from app.core.security import (
 from app.modules.admin.audit import record_admin_audit
 from app.modules.admin.models import (
     AdminAuditLog,
+    AppealStatus,
     ModerationAction,
     ModerationActionType,
+    ModerationAppeal,
     ModerationTargetType,
 )
 from app.modules.admin.rbac import effective_role
 from app.modules.admin.schemas import (
+    AdminAppealList,
+    AdminAppealResponse,
     AdminAuditLogList,
     AdminAuditLogResponse,
     AdminMfaStatusResponse,
+    AppealCreateRequest,
+    AppealList,
+    AppealResolveRequest,
+    AppealResponse,
     MfaEnableResponse,
     MfaSetupResponse,
     MfaVerifyResponse,
+    ModerationActionList,
     ModerationActionResponse,
+    ModerationActionSummaryResponse,
     UserModerationActionRequest,
     WishModerationActionRequest,
 )
 from app.modules.gifts.models import Gift, GiftStatus
+from app.modules.identity.audit import record_audit_event
 from app.modules.identity.models import User, UserRole, UserStatus
 from app.modules.wishes.models import Wish, WishStatus
 from app.providers.crypto.base import CryptoProvider
@@ -393,6 +405,233 @@ class AdminService:
             "INVALID_STATE_TRANSITION",
             "Action not allowed",
             detail,
+        )
+
+    # ------------------------------------------------------------------
+    # Appeals
+    # ------------------------------------------------------------------
+    def list_my_actions(self, user: User) -> ModerationActionList:
+        actions = list(
+            self.session.scalars(
+                select(ModerationAction)
+                .where(
+                    ModerationAction.target_type == ModerationTargetType.USER,
+                    ModerationAction.target_id == user.id,
+                )
+                .order_by(ModerationAction.created_at.desc())
+            )
+        )
+        appeals = {
+            appeal.action_id: appeal
+            for appeal in self.session.scalars(
+                select(ModerationAppeal).where(ModerationAppeal.user_id == user.id)
+            )
+        }
+        return ModerationActionList(
+            actions=[
+                ModerationActionSummaryResponse(
+                    id=action.id,
+                    action=action.action.value,
+                    reason=self.crypto.decrypt(
+                        action.reason_encrypted,
+                        context="moderation.reason",
+                    ),
+                    appeal_status=(appeals[action.id].status if action.id in appeals else None),
+                    can_appeal=(
+                        action.action
+                        in {
+                            ModerationActionType.RESTRICT,
+                            ModerationActionType.SUSPEND,
+                            ModerationActionType.BAN,
+                        }
+                        and action.id not in appeals
+                    ),
+                    created_at=action.created_at,
+                )
+                for action in actions
+            ]
+        )
+
+    def create_appeal(
+        self,
+        user: User,
+        action_id: UUID,
+        request: AppealCreateRequest,
+    ) -> AppealResponse:
+        action = self.session.scalar(
+            select(ModerationAction).where(ModerationAction.id == action_id).with_for_update()
+        )
+        if (
+            action is None
+            or action.target_type != ModerationTargetType.USER
+            or action.target_id != user.id
+        ):
+            raise AppError(404, "NOT_FOUND", "Action not found", "This action is unavailable.")
+        if action.action not in {
+            ModerationActionType.RESTRICT,
+            ModerationActionType.SUSPEND,
+            ModerationActionType.BAN,
+        }:
+            raise AppError(
+                422,
+                "NOT_APPEALABLE",
+                "Action cannot be appealed",
+                "Warnings and reactivations are not appealable.",
+            )
+        existing = self.session.scalar(
+            select(ModerationAppeal.id).where(ModerationAppeal.action_id == action_id)
+        )
+        if existing is not None:
+            raise AppError(
+                409,
+                "APPEAL_EXISTS",
+                "Appeal already submitted",
+                "You have already appealed this action.",
+            )
+        now = datetime.now(UTC)
+        appeal = ModerationAppeal(
+            id=uuid.uuid4(),
+            action_id=action.id,
+            user_id=user.id,
+            status=AppealStatus.OPEN,
+            reason_encrypted=self.crypto.encrypt(
+                request.reason,
+                context="appeal.reason",
+            ),
+            created_at=now,
+            updated_at=now,
+        )
+        self.session.add(appeal)
+        record_audit_event(
+            session=self.session,
+            event_type="APPEAL_SUBMITTED",
+            user_id=user.id,
+            metadata={"appealId": str(appeal.id), "actionId": str(action.id)},
+        )
+        try:
+            self.session.commit()
+        except IntegrityError as exc:
+            self.session.rollback()
+            raise AppError(
+                409,
+                "APPEAL_EXISTS",
+                "Appeal already submitted",
+                "You have already appealed this action.",
+            ) from exc
+        return self._appeal_response(appeal)
+
+    def list_my_appeals(self, user: User) -> AppealList:
+        appeals = list(
+            self.session.scalars(
+                select(ModerationAppeal)
+                .where(ModerationAppeal.user_id == user.id)
+                .order_by(ModerationAppeal.created_at.desc())
+            )
+        )
+        return AppealList(appeals=[self._appeal_response(appeal) for appeal in appeals])
+
+    def list_admin_appeals(self, status: AppealStatus | None = None) -> AdminAppealList:
+        statement = select(ModerationAppeal).order_by(ModerationAppeal.created_at.asc()).limit(100)
+        if status is not None:
+            statement = statement.where(ModerationAppeal.status == status)
+        appeals = list(self.session.scalars(statement))
+        return AdminAppealList(appeals=[self._admin_appeal_response(appeal) for appeal in appeals])
+
+    def resolve_appeal(
+        self,
+        admin: User,
+        appeal_id: UUID,
+        request: AppealResolveRequest,
+    ) -> AdminAppealResponse:
+        appeal = self.session.scalar(
+            select(ModerationAppeal).where(ModerationAppeal.id == appeal_id).with_for_update()
+        )
+        if appeal is None:
+            raise AppError(404, "NOT_FOUND", "Appeal not found", "This appeal is unavailable.")
+        if appeal.status not in {AppealStatus.OPEN, AppealStatus.UNDER_REVIEW}:
+            raise self._invalid_action("This appeal has already been resolved.")
+        now = datetime.now(UTC)
+        appeal.status = AppealStatus(request.outcome)
+        appeal.resolution_encrypted = self.crypto.encrypt(
+            request.resolution_note,
+            context="appeal.resolution",
+        )
+        appeal.resolved_by = admin.id
+        appeal.resolved_at = now
+        appeal.updated_at = now
+        record_admin_audit(
+            session=self.session,
+            crypto=self.crypto,
+            actor_id=admin.id,
+            action=f"APPEAL_{request.outcome}",
+            target_type="APPEAL",
+            target_id=appeal.id,
+            reason=request.resolution_note,
+            metadata={
+                "actionId": str(appeal.action_id),
+                "userId": str(appeal.user_id),
+            },
+        )
+        self.session.commit()
+        return self._admin_appeal_response(appeal, resolver=admin)
+
+    def _appeal_response(self, appeal: ModerationAppeal) -> AppealResponse:
+        return AppealResponse(
+            id=appeal.id,
+            action_id=appeal.action_id,
+            status=appeal.status,
+            reason=self.crypto.decrypt(appeal.reason_encrypted, context="appeal.reason"),
+            resolution_note=(
+                self.crypto.decrypt(
+                    appeal.resolution_encrypted,
+                    context="appeal.resolution",
+                )
+                if appeal.resolution_encrypted
+                else None
+            ),
+            created_at=appeal.created_at,
+            updated_at=appeal.updated_at,
+            resolved_at=appeal.resolved_at,
+        )
+
+    def _admin_appeal_response(
+        self,
+        appeal: ModerationAppeal,
+        *,
+        resolver: User | None = None,
+    ) -> AdminAppealResponse:
+        action = self.session.get(ModerationAction, appeal.action_id)
+        user = self.session.get(User, appeal.user_id)
+        if resolver is None and appeal.resolved_by:
+            resolver = self.session.get(User, appeal.resolved_by)
+        return AdminAppealResponse(
+            id=appeal.id,
+            action_id=appeal.action_id,
+            user_display_name=user.display_name if user else None,
+            action=action.action.value if action else "UNKNOWN",
+            action_reason=(
+                self.crypto.decrypt(
+                    action.reason_encrypted,
+                    context="moderation.reason",
+                )
+                if action
+                else ""
+            ),
+            target_type=action.target_type.value if action else "USER",
+            target_id=action.target_id if action else appeal.user_id,
+            status=appeal.status,
+            reason=self.crypto.decrypt(appeal.reason_encrypted, context="appeal.reason"),
+            resolution_note=(
+                self.crypto.decrypt(
+                    appeal.resolution_encrypted,
+                    context="appeal.resolution",
+                )
+                if appeal.resolution_encrypted
+                else None
+            ),
+            resolved_by_display_name=resolver.display_name if resolver else None,
+            created_at=appeal.created_at,
+            resolved_at=appeal.resolved_at,
         )
 
     def audit_logs(self) -> AdminAuditLogList:

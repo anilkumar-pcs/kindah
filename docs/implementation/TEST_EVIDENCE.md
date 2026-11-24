@@ -421,6 +421,19 @@
 | Privacy checks | Reasons encrypted in both `moderation_actions` and `admin_audit_logs`; API returns them only through MFA-protected admin endpoints; no VPA/phone/UTR in action logs. |
 | Known limitation | DEC-O7 remains an implemented recommended default pending owner confirmation. Appeals and user notifications are P6.7/P6.9. |
 
+### VE-035 — Phase 6 appeals and dispute visibility
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P6.7 |
+| Command | `cd backend && uv run alembic upgrade head && uv run ruff check . && uv run ruff format --check . && uv run mypy app tests && uv run pytest -q`; `cd frontend && npm test && npm run lint && npm run typecheck && npm run build` |
+| Environment | PostgreSQL 16.16; Python 3.12.16; Next.js 16.4.6; Node 26 |
+| Result | **PASS** — `0010_moderation_appeals (head)`; **159 backend tests**, **43 frontend tests**; all lint, format, type and build checks clean |
+| Automated coverage | Warnings are not appealable; one appeal per action (`409` on duplicate); restricted user submits and reads own appeal; non-admin gets `403` on `/admin/appeals`; admin queue includes user, original action/reason and appeal reason; ACCEPTED resolution is audited and cannot be resolved twice; account status is not silently changed by appeal acceptance; banned user can read own moderation actions and file an appeal while interactive actions remain blocked; appeal text encrypted at rest; admin dispute/support data remains MFA-protected. Frontend covers guest, appeal submit and resolved-appeal display plus admin resolution. |
+| Privacy checks | Appeal and resolution text encrypted; `/me` appeal payloads expose only the user’s own actions; admin queues require role + MFA; no phone/VPA/UTR/payment data in appeals. |
+| Known limitation | Appeals do not automatically reverse account actions; staff must apply a separate audited reactivation. Retention/deletion is P6.8. |
+
 ## Summary
 
 | Verification | Result |
@@ -460,6 +473,7 @@
 | Phase 6 auto-hide/queue | PASS — 153 total backend tests, threshold hides once, queue is admin-only |
 | Phase 6 admin/MFA/audit | PASS — 156 total backend tests, 38 frontend tests, full browser admin flow |
 | Phase 6 moderation actions | PASS — 158 total backend tests, 39 frontend tests, browser hide/restore |
+| Phase 6 appeals/disputes | PASS — 159 total backend tests, 43 frontend tests |
 
 ## Rule for future entries
 
