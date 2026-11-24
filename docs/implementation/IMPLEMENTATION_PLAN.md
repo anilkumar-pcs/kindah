@@ -382,9 +382,9 @@ handling and auditable moderator actions.
 -   [x] P6.2 Implement block/unblock and ensure blocked users cannot
     discover or interact with each other as specified.
 -   [x] P6.3 Implement auto-hide threshold and review queue.
--   [ ] P6.4 Implement minimum protected admin/moderator area in the
+-   [x] P6.4 Implement minimum protected admin/moderator area in the
     same application.
--   [ ] P6.5 Implement role checks, admin MFA requirement and
+-   [x] P6.5 Implement role checks, admin MFA requirement and
     append-only admin audit log.
 -   [ ] P6.6 Implement warn/restrict/suspend/ban and wish restore/remove
     actions with state guards.

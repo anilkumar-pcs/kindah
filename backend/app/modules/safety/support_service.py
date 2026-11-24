@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.core.errors import AppError
+from app.modules.admin.audit import record_admin_audit
 from app.modules.gifts.models import Gift
 from app.modules.identity.audit import record_audit_event
 from app.modules.identity.models import User
@@ -148,6 +149,16 @@ class SupportCaseService:
             event_type="SUPPORT_CASE_RESOLVED",
             user_id=admin.id,
             metadata={"caseId": str(case.id), "giftId": str(case.gift_id)},
+        )
+        record_admin_audit(
+            session=self.session,
+            crypto=self.crypto,
+            actor_id=admin.id,
+            action="SUPPORT_CASE_RESOLVED",
+            target_type="SUPPORT_CASE",
+            target_id=case.id,
+            reason=request.resolution_note,
+            metadata={"giftId": str(case.gift_id)},
         )
         self.session.commit()
         return self._admin_response(case)

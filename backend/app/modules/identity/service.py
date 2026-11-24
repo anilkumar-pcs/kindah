@@ -27,6 +27,7 @@ from app.core.security import (
     mask_mobile,
     normalize_indian_mobile,
 )
+from app.modules.admin.rbac import effective_role
 from app.modules.identity.audit import record_audit_event
 from app.modules.identity.models import (
     OtpChallenge,
@@ -528,6 +529,7 @@ class IdentityService:
             avatar=user.avatar,
             city=user.city,
             status=user.status,
+            role=effective_role(self.settings, user),
             onboarding_required=self._onboarding_required(user),
             karma=0,
             streak=0,

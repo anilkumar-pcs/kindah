@@ -394,6 +394,19 @@
 | Output/artefact | Two unique reports plus a duplicate leave the wish OPEN; the third unique report atomically moves it to UNDER_REVIEW; a fourth unique report does not create a second `WISH_AUTO_HIDDEN` audit event. Hidden wish is absent from guest feed and participant detail. `/admin/reports` returns target display name, message preview, status and unique report count; non-admin receives 403; no reporter identity, phone, VPA or report free text is exposed. |
 | Known limitation | Admin queue is API-only until P6.4/P6.5; moderation actions and restore are P6.6. |
 
+### VE-033 — Phase 6 protected admin console, RBAC, MFA and append-only audit
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P6.4, P6.5 |
+| Command | `cd backend && uv run alembic upgrade head && uv run ruff check . && uv run ruff format --check . && uv run mypy app tests && uv run pytest -q`; `cd frontend && npm test && npm run lint && npm run typecheck && npm run build` |
+| Environment | PostgreSQL 16.16; Python 3.12.16; Next.js 16.4.6; Node 26 |
+| Result | **PASS** — `0008_admin_rbac_mfa (head)`; **156 backend tests**, **38 frontend tests**; all lint, format, type and build checks clean |
+| Automated coverage | Role denial for ordinary users; admin role resolution via DB and local allow-list; MFA setup/enable/verify; wrong-code rejection; TOTP step replay rejection; recovery code works once then fails; status remaining count; admin endpoints require a session-bound `X-Admin-MFA`; audit action list excludes secrets; update SQL against `admin_audit_logs` is rejected by the DB trigger; support resolution writes decrypted admin audit reason and request ID. Frontend covers denied role, setup enrollment, returning verification and support resolution. |
+| Browser journey | Local ArjunDonor admin enrolled TOTP (QR/manual secret), received ten one-time recovery codes, unlocked the console, saw the report queue, opened the full support case (participants, amount, masked VPA, UTR, payment reference), resolved it with a note, and viewed `ADMIN_MFA_ENABLED` + `SUPPORT_CASE_RESOLVED` audit entries with request IDs. CORS preflight for `X-Admin-MFA` fixed and regression-tested. |
+| Known limitation | DEC-I13 remains an implemented recommended default pending owner confirmation; production admin activation is blocked. DB-role assignment is operational, not yet an admin role-management UI. Moderation actions/restore are P6.6. |
+
 ## Summary
 
 | Verification | Result |
@@ -431,6 +444,7 @@
 | Phase 5 overall | `DONE` — 15/15 tasks, pending external launch gates only |
 | Phase 6 reporting/blocking | PASS — 152 total backend tests, 34 frontend tests, report/block browser flow |
 | Phase 6 auto-hide/queue | PASS — 153 total backend tests, threshold hides once, queue is admin-only |
+| Phase 6 admin/MFA/audit | PASS — 156 total backend tests, 38 frontend tests, full browser admin flow |
 
 ## Rule for future entries
 

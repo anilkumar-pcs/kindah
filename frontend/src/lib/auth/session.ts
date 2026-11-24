@@ -11,6 +11,7 @@ export type UserProfile = {
   avatar: string | null;
   city: string | null;
   status: UserStatus;
+  role?: "USER" | "MODERATOR" | "ADMIN";
   onboardingRequired: boolean;
   karma: number;
   streak: number;

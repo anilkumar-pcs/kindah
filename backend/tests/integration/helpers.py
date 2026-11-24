@@ -4,8 +4,23 @@ from typing import Any, cast
 
 from fastapi.testclient import TestClient
 
+from app.core.security import totp_code
+
 TEST_PHONE = "9876543210"
 TEST_CODE = "123456"
+
+
+def admin_mfa_headers(client: TestClient, headers: dict[str, str]) -> dict[str, str]:
+    setup = client.post("/api/v1/admin/mfa/setup", headers=headers)
+    assert setup.status_code == 200, setup.text
+    secret = setup.json()["secret"]
+    enable = client.post(
+        "/api/v1/admin/mfa/enable",
+        headers=headers,
+        json={"code": totp_code(secret)},
+    )
+    assert enable.status_code == 200, enable.text
+    return {**headers, "X-Admin-MFA": enable.json()["mfaToken"]}
 
 
 def request_and_verify(

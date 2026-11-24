@@ -7,7 +7,7 @@ from uuid import UUID
 from pydantic import Field, model_validator
 
 from app.core.schemas import ApiModel
-from app.modules.identity.models import UserStatus
+from app.modules.identity.models import UserRole, UserStatus
 
 AvatarCode = Literal["SPARK", "CHAI", "SUN", "LEAF", "MOON", "HEART"]
 AVATAR_CODES: frozenset[str] = frozenset({"SPARK", "CHAI", "SUN", "LEAF", "MOON", "HEART"})
@@ -69,6 +69,7 @@ class UserProfileResponse(ApiModel):
     avatar: str | None
     city: str | None
     status: UserStatus
+    role: UserRole = UserRole.USER
     onboarding_required: bool
     karma: int = 0
     streak: int = 0

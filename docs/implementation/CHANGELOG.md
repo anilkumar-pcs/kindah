@@ -2,6 +2,35 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-24 — Phase 6: protected admin console, RBAC, MFA and audit
+
+### Added
+
+- `0008_admin_rbac_mfa` migration: `user_role`, encrypted TOTP secret, MFA enabled/last-step
+  fields, hashed recovery codes, and append-only `admin_audit_logs` with an update/delete trigger.
+- `USER`/`MODERATOR`/`ADMIN` RBAC with `ADMIN_USER_IDS` retained only as a local/test bootstrap.
+- TOTP setup/enable/verify endpoints with per-step replay rejection, ten single-use recovery
+  codes and a 15-minute session-bound `X-Admin-MFA` token.
+- Protected `/admin` console with MFA enrollment/verification, report queue, full support-case
+  detail, audited resolution and audit-log view.
+- Admin audit entries for MFA enrollment, recovery-code use and support resolution, including
+  request IDs and encrypted resolution reasons.
+- Admin MFA CORS header allowance and regression test.
+
+### Verification
+
+- 156 backend tests and 38 frontend tests pass; all lint, format, type and build checks clean.
+- Full browser admin flow passed, including TOTP enrollment and audited support resolution.
+
+### Decision
+
+- `DEC-I13` TOTP + recovery codes is implemented as the recommended default but remains
+  **pending owner confirmation**; production admin activation stays blocked.
+
+### Open
+
+- P6.6 moderation actions and wish restore/remove.
+
 ## 2026-11-24 — Phase 6: auto-hide and moderator report queue
 
 ### Added

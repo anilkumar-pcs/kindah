@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db_session
 from app.core.errors import AppError
-from app.core.security import constant_time_equals
+from app.core.security import TokenError, constant_time_equals, decode_mfa_token
+from app.modules.admin.rbac import has_admin_access
 from app.modules.identity.models import UserStatus
 from app.modules.identity.service import AuthContext, IdentityService
 from app.providers.crypto.base import CryptoProvider
@@ -14,6 +15,7 @@ from app.providers.sms.base import SmsProvider
 REFRESH_COOKIE_NAME = "kindly_refresh"
 CSRF_COOKIE_NAME = "kindly_csrf"
 CSRF_HEADER_NAME = "X-CSRF-Token"
+ADMIN_MFA_HEADER_NAME = "X-Admin-MFA"
 
 
 def get_identity_service(
@@ -64,17 +66,56 @@ def require_active_auth(
     return auth
 
 
-def require_admin(
+def require_admin_role(
     request: Request,
     auth: AuthContext = Depends(require_active_auth),
 ) -> AuthContext:
     settings = request.app.state.settings
-    if str(auth.user.id) not in settings.admin_user_id_list:
+    if not has_admin_access(settings, auth.user):
         raise AppError(
             403,
             "FORBIDDEN",
             "Admin access required",
-            "This action requires an administrator account.",
+            "This action requires a moderator or administrator account.",
+        )
+    return auth
+
+
+def require_admin(
+    request: Request,
+    auth: AuthContext = Depends(require_admin_role),
+) -> AuthContext:
+    settings = request.app.state.settings
+    if auth.user.mfa_enabled_at is None:
+        raise AppError(
+            403,
+            "MFA_SETUP_REQUIRED",
+            "MFA setup required",
+            "Set up authenticator MFA before using the admin area.",
+        )
+    token = request.headers.get(ADMIN_MFA_HEADER_NAME)
+    if not token:
+        raise AppError(
+            403,
+            "MFA_REQUIRED",
+            "MFA verification required",
+            "Verify an authenticator code before using the admin area.",
+        )
+    try:
+        claims = decode_mfa_token(settings, token)
+    except TokenError as exc:
+        raise AppError(
+            403,
+            "MFA_REQUIRED",
+            "MFA verification required",
+            "The admin MFA token is invalid or expired.",
+        ) from exc
+    if claims.user_id != str(auth.user.id) or claims.session_id != str(auth.session.id):
+        raise AppError(
+            403,
+            "MFA_REQUIRED",
+            "MFA verification required",
+            "The admin MFA token does not match this session.",
         )
     return auth
 

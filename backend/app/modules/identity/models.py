@@ -33,6 +33,12 @@ class UserStatus(StrEnum):
     DELETED = "DELETED"
 
 
+class UserRole(StrEnum):
+    USER = "USER"
+    MODERATOR = "MODERATOR"
+    ADMIN = "ADMIN"
+
+
 class User(Base):
     __tablename__ = "users"
     __table_args__ = (
@@ -64,6 +70,22 @@ class User(Base):
         ),
         nullable=False,
         server_default=UserStatus.ACTIVE.value,
+    )
+    role: Mapped[UserRole] = mapped_column(
+        SAEnum(
+            UserRole,
+            name="user_role",
+            native_enum=True,
+            values_callable=lambda members: [member.value for member in members],
+        ),
+        nullable=False,
+        server_default=UserRole.USER.value,
+    )
+    mfa_secret_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    mfa_enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    mfa_last_used_step: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    mfa_recovery_codes_hashed: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'[]'::jsonb")
     )
     display_name: Mapped[str | None] = mapped_column(String(24), nullable=True)
     display_name_normalized: Mapped[str | None] = mapped_column(

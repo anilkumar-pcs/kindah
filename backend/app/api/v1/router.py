@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
+from app.modules.admin.router import router as admin_router
 from app.modules.discovery.router import router as discovery_router
 from app.modules.gifts.router import router as gifts_router
 from app.modules.identity.router import router as identity_router
@@ -17,6 +18,7 @@ router.include_router(wishes_router)
 router.include_router(discovery_router)
 router.include_router(gifts_router)
 router.include_router(safety_router)
+router.include_router(admin_router)
 
 
 class MetaResponse(BaseModel):

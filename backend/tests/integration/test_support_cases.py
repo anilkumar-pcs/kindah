@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.main import create_app
 from app.modules.identity.models import AuthEvent
-from tests.integration.helpers import complete_setup
+from tests.integration.helpers import admin_mfa_headers, complete_setup
 from tests.integration.test_gifts import _create_gift, _outcome, _setup
 
 pytestmark = pytest.mark.integration
@@ -61,6 +61,7 @@ def test_participant_report_admin_visibility_and_resolution(settings: Settings) 
     admin_settings = settings.model_copy(update={"admin_user_ids": admin_id})
     admin_app = create_app(admin_settings)
     with TestClient(admin_app) as admin_client:
+        admin_headers = admin_mfa_headers(admin_client, admin_headers)
         listing = admin_client.get(
             "/api/v1/admin/support-cases",
             headers=admin_headers,
@@ -96,6 +97,16 @@ def test_participant_report_admin_visibility_and_resolution(settings: Settings) 
             json={"resolutionNote": "Trying to resolve twice."},
         )
         assert again.status_code == 422
+
+        audit = admin_client.get("/api/v1/admin/audit-logs", headers=admin_headers)
+        assert audit.status_code == 200, audit.text
+        support_audits = [
+            entry for entry in audit.json()["logs"] if entry["action"] == "SUPPORT_CASE_RESOLVED"
+        ]
+        assert len(support_audits) == 1
+        assert support_audits[0]["reason"] == "Reviewed with support; no refund or reassignment."
+        assert support_audits[0]["targetId"] == case["id"]
+        assert support_audits[0]["requestId"]
 
         assert (
             admin_client.get(

@@ -12,7 +12,7 @@ from app.main import create_app
 from app.modules.identity.models import AuthEvent
 from app.modules.safety.models import ModerationReport
 from app.modules.wishes.models import Wish, WishStatus
-from tests.integration.helpers import complete_setup
+from tests.integration.helpers import admin_mfa_headers, complete_setup
 from tests.integration.test_discovery import _create_wish
 from tests.integration.test_gifts import _create_gift
 
@@ -268,6 +268,7 @@ def test_three_unique_reports_auto_hide_once_and_enter_admin_queue(
     admin_id = str(admin_session["user"]["id"])
     admin_app = create_app(settings.model_copy(update={"admin_user_ids": admin_id}))
     with TestClient(admin_app) as admin_client:
+        admin_headers = admin_mfa_headers(admin_client, admin_headers)
         queue = admin_client.get("/api/v1/admin/reports", headers=admin_headers)
         assert queue.status_code == 200, queue.text
         reports = queue.json()["reports"]
