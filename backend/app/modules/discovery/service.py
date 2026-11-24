@@ -149,7 +149,11 @@ class DiscoveryService:
                 next_cursor = encode_fresh_cursor(last_wish.created_at, last_wish.id)
             else:
                 assert resolved_seed is not None
-                digest = hashlib.md5(f"{last_wish.id}{resolved_seed}".encode()).hexdigest()
+                # Deterministic feed ordering only, not a security primitive.
+                digest = hashlib.md5(
+                    f"{last_wish.id}{resolved_seed}".encode(),
+                    usedforsecurity=False,
+                ).hexdigest()
                 next_cursor = encode_random_cursor(
                     digest,
                     last_wish.id,

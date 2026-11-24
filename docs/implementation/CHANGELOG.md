@@ -2,6 +2,28 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-24 — Phase 8 hardening started
+
+### Added
+
+- `THREAT_MODEL.md` covering assets, actors, trust boundaries, threats/controls and open gates.
+- Local backup/restore drill, local feed load smoke and Lighthouse mobile accessibility audits
+  recorded in `TEST_EVIDENCE.md`.
+
+### Verification
+
+- `npm audit` 0 vulnerabilities; `pip-audit` no known vulnerabilities; Bandit medium/high clean
+  after marking non-security MD5 ordering explicitly.
+- Restore at `0013_user_badges` preserved users/wishes/gifts/audit.
+- 500 concurrent-ish feed requests: 0 errors, p95 90.3 ms locally.
+- Lighthouse accessibility 100 on `/`, `/sign-in`, `/admin` and `/me`.
+
+### Blocked
+
+- Deployed staging, owner-approved beta assumptions/RPO/RTO, monitoring/on-call, independent
+  security review, KMS/OTP/UPI providers, legal/bank approvals and real-money activation remain
+  external. Phase 8 is not DONE.
+
 ## 2026-11-24 — Phase 7 complete: karma, streaks, share cards and Surprise Me
 
 ### Added

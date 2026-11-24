@@ -2,8 +2,8 @@
 
 **Last updated:** 2026-11-24
 **Current phase:** Phase 8 — Hardening, launch readiness and Bengaluru beta
-**Overall status:** `IN_PROGRESS`
-**Repository state:** Phases 0–7 complete. Phase 8 has not started; production launch gates remain external.
+**Overall status:** `BLOCKED` — external launch/legal/provider gates and owner decisions required
+**Repository state:** Phases 0–7 complete. Phase 8 is in progress: threat model/scans, local restore drill, load smoke and accessibility audits are recorded; deployment, monitoring, beta assumptions and legal/provider gates are external.
 
 ## Phase dashboard
 
@@ -17,7 +17,7 @@
 | 5. Gift & UPI | `DONE` | 15 | 15 | 149 backend + 31 frontend tests; full-stack gift flow and support report verified |
 | 6. Trust & safety | `DONE` | 11 | 11 | 168 backend + 50 frontend tests; local staging payment/dispute exercise |
 | 7. Engagement | `DONE` | 8 | 8 | 173 backend + 53 frontend tests; badge thresholds provisional |
-| 8. Hardening & beta | `NOT_STARTED` | 0 | 12 | External gates blocked |
+| 8. Hardening & beta | `IN_PROGRESS` | 2 | 12 | Threat model/scans done; local restore/load/a11y checks recorded; launch gates blocked |
 
 ## Phase 5 progress
 
@@ -76,6 +76,21 @@ Completed:
 Open:
 - Badge thresholds are provisional pending product confirmation (B-014).
 
+## Phase 8 progress
+
+Completed locally:
+- P8.1 `THREAT_MODEL.md` with assets, actors, trust boundaries, threat/control table and open security gates.
+- P8.2 `npm audit` 0 vulnerabilities, `pip-audit` no known vulnerabilities, Bandit medium/high clean after clarifying non-security MD5 feed ordering, no tracked env/secrets and no container image present.
+- Local hardening checks: PostgreSQL dump/restore drill preserved users/wishes/gifts/audit at `0013_user_badges`; 500 feed requests at concurrency 50 with 0 errors (p95 90.3 ms, local only); Lighthouse mobile accessibility 100 on home, sign-in, admin gate and My Space (My Space best-practices 96 due the expected empty-payment-method 404; CLS 0.98 category score).
+
+Blocked/partial:
+- **P8.3** load test needs owner-agreed beta assumptions and a staging target; local smoke only.
+- **P8.4** OTP/report rate limits and account guards are tested; graceful provider/Redis degradation and abuse review need operational sign-off.
+- **P8.5** local backup/restore passed; owner-approved RPO/RTO and deployed backup policy are absent.
+- **P8.6** no production metrics/dashboards/alerts or on-call ownership configured.
+- **P8.7** Lighthouse accessibility 100 on primary pages; full WCAG 2.2 AA manual/keyboard/screen-reader and mobile-browser matrix not completed.
+- **P8.8–P8.12** deployment/rollback, legal/partner review, UPI device testing, real-money flag approval and beta operation are external/blocked.
+
 ## Remaining external blockers
 
 | ID | Description | Status |
@@ -90,11 +105,16 @@ Open:
 | B-013 | Deployed staging environment and approved RPO/RTO not available; local staging exercise recorded, remote drill pending | `EXTERNAL_BLOCKED` |
 | B-014 | Badge thresholds/rules are an implementation default; owner/product confirmation pending | `OPEN` |
 | B-015 | Exposure-cap policy not validated; no exposure tracking is collected | `OPEN` |
+| B-016 | Independent security review/penetration test and security-owner sign-off pending | `EXTERNAL_BLOCKED` |
+| B-017 | Monitoring/dashboards/alerting, on-call ownership and approved RPO/RTO pending | `EXTERNAL_BLOCKED` |
+| B-018 | Beta load assumptions and deployed staging target not agreed | `EXTERNAL_BLOCKED` |
+| B-019 | Legal/bank/UPI, KMS, production OTP provider and real-money activation approvals pending | `EXTERNAL_BLOCKED` |
 
 ## Recently completed
 
 | Date | Phase/task | Change | Evidence |
 |---|---|---|---|
+| 2026-11-24 | P8.1, P8.2 + local checks | Threat model, scans, restore/load smoke, accessibility audits | `TEST_EVIDENCE.md` VE-041, VE-042 |
 | 2026-11-24 | P7.1–P7.6 | Karma/streak/badges, reactions, share cards, Surprise Me | `TEST_EVIDENCE.md` VE-040 |
 | 2026-11-24 | P6.10, P6.11 | Durable outbox, dead-letter visibility, runbooks, staging exercise | `TEST_EVIDENCE.md` VE-038, VE-039 |
 | 2026-11-24 | P6.9 | Deduplicated in-app notifications and inbox UI | `TEST_EVIDENCE.md` VE-037 |
@@ -117,6 +137,10 @@ Open:
 |---|---|
 | Backend tests | 173 passed (14 gift, 2 support-case, 4 reporting/block/auto-hide, 6 admin security/moderation/appeal, 2 deletion, 3 notifications, 4 outbox, 2 karma, 2 Surprise Me) |
 | Frontend tests | 53 passed (12 test files) |
+| Dependency/security scans | `npm audit` 0; `pip-audit` 0 known; Bandit medium/high clean; no tracked env/secrets |
+| Local restore drill | PASS — dump/restore at `0013_user_badges`; users=3, wishes=3, gifts=1, audit=4 |
+| Local load smoke | 500 requests, 50 concurrency, 0 errors, p95 90.3 ms (not capacity sign-off) |
+| Accessibility smoke | Lighthouse mobile accessibility 100 on `/`, `/sign-in`, `/admin`, `/me` |
 | Backend quality | Ruff, format, mypy clean |
 | Frontend quality | ESLint, Prettier, tsc, production build pass |
 | Migrations | 0001–0013 apply; 0013 badge migration validated at head |
@@ -149,7 +173,7 @@ Implemented: `0006_support_cases`, participant case creation, admin list/detail/
 
 ## Next session handoff
 
-1. Begin Phase 8 with P8.1 threat modelling/security review, P8.2 dependency/secret/static scans and P8.7 accessibility/responsive verification.
-2. P8.3–P8.6 require agreed beta assumptions, load tooling, backup/RPO/RTO and monitoring ownership; P8.8–P8.12 require external deployment/legal/partner gates.
-3. Keep deletion non-destructive until DEC-O8; keep DEC-I13/DEC-O7 and badge thresholds provisional.
-4. Keep real-money handoff disabled; do not claim production readiness.
+1. Obtain owner decisions: DEC-I13 MFA confirmation, DEC-O7 cooldown, badge thresholds (B-014), exposure policy (B-015), RPO/RTO and beta load assumptions.
+2. Provision deployed staging, monitoring/alerts/on-call, KMS/OTP/UPI providers and complete legal/bank approvals before P8.3–P8.12.
+3. Run independent security review and a full WCAG 2.2 AA/manual browser matrix; record findings.
+4. Keep deletion non-destructive until DEC-O8; keep real-money handoff disabled; do not claim production readiness.

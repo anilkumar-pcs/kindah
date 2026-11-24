@@ -498,6 +498,28 @@
 | Surprise Me | Own/blocked/expired/session-skipped wishes excluded; weights are 3× never received, 0.25× received within 14 days, 1× otherwise; frontend records skipped IDs in session storage and navigates to the selected wish. |
 | Known limitation | Badge thresholds (B-014) and exposure-cap policy (B-015) remain provisional/undecided; no push/SMS delivery was added because providers/consent are absent. |
 
+### VE-041 — Phase 8 threat model and security/dependency scans
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P8.1, P8.2 |
+| Command | `cd frontend && npm audit --json`; `cd backend && uvx pip-audit`; `uvx bandit -r app -q -ll`; `git ls-files | grep -E '(^|/)\.env($|\.)'`; `git grep -nE 'BEGIN ... PRIVATE KEY|AKIA...|sk_live_...'` |
+| Result | **PASS for local scope** — `npm audit` 0 vulnerabilities; `pip-audit` no known vulnerabilities; Bandit medium/high clean after marking deterministic feed MD5 `usedforsecurity=False`; only `.env.example` files tracked; no obvious secret patterns |
+| Artefact | `THREAT_MODEL.md` with assets, actors, trust boundaries, threats/controls and open gates |
+| Known limitation | No container image exists; no independent penetration test/security-owner sign-off; production provider/KMS/legal reviews remain external. |
+
+### VE-042 — Phase 8 local restore, load and accessibility checks
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P8.3, P8.5, P8.7 (local smoke only) |
+| Restore | `pg_dump kindah_dev` → restore into `kindah_restore_drill`; counts users=3, wishes=3, gifts=1, audit=4; Alembic `0013_user_badges (head)`; restore DB removed after drill |
+| Load | 500 concurrent-ish GET `/api/v1/wishes?limit=20` at concurrency 50; 0 errors; 888.6 rps; p50 51.1 ms; p95 90.3 ms; p99 109.0 ms; max 149.6 ms (local dev machine, not capacity sign-off) |
+| Accessibility | Lighthouse mobile navigation: `/` 100 accessibility, `/sign-in` 100, `/admin` 100, `/me` 100. `/me` best-practices 96 due expected empty-payment-method 404 and CLS score 0.98; no a11y failures |
+| Known limitation | No owner-approved beta assumptions/RPO/RTO, deployed staging, monitoring/on-call, manual screen-reader/keyboard or mobile-browser matrix. P8.3–P8.7 are not fully signed off. |
+
 ## Summary
 
 | Verification | Result |
@@ -546,6 +568,9 @@
 | Phase 7 karma/streak/badges | PASS — 173 total backend tests, 53 frontend tests |
 | Phase 7 share/Surprise Me | PASS — privacy allow-list, exclusion and weight tests |
 | Phase 7 overall | `DONE` — 8/8 tasks; badge thresholds provisional |
+| Phase 8 threat model/scans | PASS (local scope) — npm/pip/Bandit/secret checks |
+| Phase 8 restore/load/a11y smoke | PASS locally — restore at head, p95 90.3 ms, a11y 100 on 4 pages |
+| Phase 8 overall | `BLOCKED` — deployed staging, monitoring/RPO/RTO, independent security review, legal/provider gates |
 
 ## Rule for future entries
 

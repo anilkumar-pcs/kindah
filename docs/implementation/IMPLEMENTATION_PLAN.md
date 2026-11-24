@@ -455,8 +455,8 @@ for a controlled launch.
 
 **In scope**
 
--   [ ] P8.1 Complete threat modelling and security review.
--   [ ] P8.2 Run dependency, secret, container and static-analysis
+-   [x] P8.1 Complete threat modelling and security review.
+-   [x] P8.2 Run dependency, secret, container and static-analysis
     scans.
 -   [ ] P8.3 Run load tests for feed, authentication, gift creation and
     critical workflows using agreed beta assumptions.
