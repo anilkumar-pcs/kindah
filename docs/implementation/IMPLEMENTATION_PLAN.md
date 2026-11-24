@@ -332,12 +332,12 @@ state machine before polishing the UI.**
     24-hour response deadline.
 -   [x] P5.9 Implement terminal states UNVERIFIED/DISPUTED and ensure no
     automatic reopening after a paid claim.
--   [ ] P5.10 Implement late-payment/old-URI support path; do not
+-   [x] P5.10 Implement late-payment/old-URI support path; do not
     promise platform-controlled reversal/refund.
 -   [x] P5.11 Implement gift history/status for donor and recipient.
 -   [x] P5.12 Implement karma ledger only after recipient confirmation;
     enforce unique idempotency key and no duplicate awards.
--   [ ] P5.13 Add concurrency tests: simultaneous donors, donor outcome
+-   [x] P5.13 Add concurrency tests: simultaneous donors, donor outcome
     vs expiry, recipient confirmation vs timeout, retry and
     re-reservation.
 -   [ ] P5.14 Add end-to-end UI for amount selection, review, UPI

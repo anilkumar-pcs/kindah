@@ -86,6 +86,7 @@ class Settings(BaseSettings):
     unresolved_claim_limit: int = Field(default=2, gt=0, le=10)
     cheer_max_chars: int = Field(default=80, gt=0, le=120)
     handoff_provider: str = "test"
+    admin_user_ids: str = ""
 
     db_connect_timeout_seconds: int = 3
     redis_timeout_seconds: float = 1.0
@@ -131,6 +132,10 @@ class Settings(BaseSettings):
             for term in self.prohibited_wish_terms.split(",")
             if term.strip()
         ]
+
+    @property
+    def admin_user_id_list(self) -> list[str]:
+        return [user_id.strip() for user_id in self.admin_user_ids.split(",") if user_id.strip()]
 
     @property
     def is_production(self) -> bool:

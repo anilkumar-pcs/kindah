@@ -64,6 +64,21 @@ def require_active_auth(
     return auth
 
 
+def require_admin(
+    request: Request,
+    auth: AuthContext = Depends(require_active_auth),
+) -> AuthContext:
+    settings = request.app.state.settings
+    if str(auth.user.id) not in settings.admin_user_id_list:
+        raise AppError(
+            403,
+            "FORBIDDEN",
+            "Admin access required",
+            "This action requires an administrator account.",
+        )
+    return auth
+
+
 def require_csrf(request: Request) -> None:
     header = request.headers.get(CSRF_HEADER_NAME)
     cookie = request.cookies.get(CSRF_COOKIE_NAME)

@@ -456,3 +456,123 @@ def test_paid_survives_expiry_and_times_out_to_unverified(
             assert db.scalar(select(func.count(KarmaEvent.id))) == 0
     finally:
         engine.dispose()
+
+
+def test_paid_vs_expiry_race_is_consistent(
+    client: TestClient,
+    settings: Settings,
+    app: FastAPI,
+) -> None:
+    from threading import Barrier
+
+    _, donor_headers, _, _, wish = _setup(client)
+    gift = _create_gift(client, donor_headers, wish["id"]).json()
+    _set_reservation_expired(gift["giftId"])
+    barrier = Barrier(2)
+
+    def donor_attempt() -> int:
+        with TestClient(app) as thread_client:
+            barrier.wait()
+            return int(_outcome(thread_client, donor_headers, gift["giftId"], "PAID").status_code)
+
+    def expiry_attempt() -> int:
+        barrier.wait()
+        engine = create_engine(os.environ["DATABASE_URL"])
+        try:
+            with Session(engine) as db:
+                return expire_reservations(session=db, settings=settings)
+        finally:
+            engine.dispose()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        donor_future = pool.submit(donor_attempt)
+        expiry_future = pool.submit(expiry_attempt)
+        paid_status = donor_future.result()
+        expired_count = expiry_future.result()
+
+    engine = create_engine(os.environ["DATABASE_URL"])
+    try:
+        with Session(engine) as db:
+            gift_row = db.get(Gift, UUID(gift["giftId"]))
+            wish_row = db.get(Wish, UUID(wish["id"]))
+            assert gift_row is not None and wish_row is not None
+            if paid_status == 200:
+                assert expired_count == 0
+                assert gift_row.status == GiftStatus.DONOR_CLAIMED_PAID
+                assert wish_row.status == WishStatus.PAYMENT_CLAIMED
+            else:
+                assert paid_status == 422
+                assert expired_count == 1
+                assert gift_row.status == GiftStatus.ABANDONED
+                assert wish_row.status == WishStatus.OPEN
+    finally:
+        engine.dispose()
+
+
+def test_confirmation_vs_timeout_race_is_consistent(
+    client: TestClient,
+    settings: Settings,
+    app: FastAPI,
+) -> None:
+    from threading import Barrier
+
+    _, donor_headers, _, recipient_headers, wish = _setup(client)
+    gift = _create_gift(client, donor_headers, wish["id"]).json()
+    assert _outcome(client, donor_headers, gift["giftId"], "PAID").status_code == 200
+
+    engine = create_engine(os.environ["DATABASE_URL"])
+    try:
+        with Session(engine) as db:
+            gift_row = db.get(Gift, UUID(gift["giftId"]))
+            assert gift_row is not None
+            gift_row.recipient_response_deadline = datetime.now(UTC) + timedelta(milliseconds=50)
+            db.commit()
+    finally:
+        engine.dispose()
+
+    barrier = Barrier(2)
+
+    def confirmation_attempt() -> int:
+        with TestClient(app) as thread_client:
+            barrier.wait()
+            return int(
+                _confirm(
+                    thread_client,
+                    recipient_headers,
+                    gift["giftId"],
+                    "RECEIVED",
+                ).status_code
+            )
+
+    def timeout_attempt() -> int:
+        barrier.wait()
+        engine = create_engine(os.environ["DATABASE_URL"])
+        try:
+            with Session(engine) as db:
+                return mark_unverified(session=db, settings=settings)
+        finally:
+            engine.dispose()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        confirmation_future = pool.submit(confirmation_attempt)
+        timeout_future = pool.submit(timeout_attempt)
+        confirmation_status = confirmation_future.result()
+        marked_count = timeout_future.result()
+
+    engine = create_engine(os.environ["DATABASE_URL"])
+    try:
+        with Session(engine) as db:
+            gift_row = db.get(Gift, UUID(gift["giftId"]))
+            wish_row = db.get(Wish, UUID(wish["id"]))
+            assert gift_row is not None and wish_row is not None
+            if confirmation_status == 200:
+                assert marked_count == 0
+                assert gift_row.status == GiftStatus.RECIPIENT_CONFIRMED
+                assert wish_row.status == WishStatus.GRANTED
+            else:
+                assert confirmation_status == 422
+                assert marked_count == 1
+                assert gift_row.status == GiftStatus.UNVERIFIED
+                assert wish_row.status == WishStatus.UNVERIFIED
+    finally:
+        engine.dispose()

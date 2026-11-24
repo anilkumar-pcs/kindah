@@ -28,7 +28,9 @@ This approves:
 
 **2026-11-24 — Phase 5 defaults approval.** The owner stated verbatim: "go ahead with your proposed defaults". This approves `DEC-O2` (10-minute reservation, one extension to 20 minutes total, 24-hour recipient response), `DEC-A02` (generate in-transaction, persist encrypted, expose after commit), `DEC-A03` (literal spec: a new wish is allowed after PAID) and `DEC-A04` (DONOR_PENDING timeout expires the wish and never reopens).
 
-This does **not** approve external legal/provider gates. Other decisions — `DEC-O3`–`DEC-O10`, `DEC-I05`–`DEC-I10`, `DEC-I13`, `DEC-I15`, `DEC-I16`, `DEC-I18`, `DEC-A01` and `DEC-A05` — remain `PENDING` unless separately recorded. External gates remain `EXTERNAL_BLOCKED`.
+**2026-11-24 — Late-payment/admin approval.** The owner stated verbatim: "go with recommended defaults...also all of these details should be accessible and visible to admin....admin should be able to resolve the issue if pointed by users". This approves `DEC-O5` (spec payment labels) and `DEC-A06`: late payments are handled through support only (no refund, reassignment or automatic reopening), and admin/moderator users must be able to see full support-case/gift details and resolve the issue. Full admin RBAC/MFA remains Phase 6.
+
+This does **not** approve external legal/provider gates. Other decisions — `DEC-O3`, `DEC-O4`, `DEC-O6`–`DEC-O10`, `DEC-I05`–`DEC-I10`, `DEC-I13`, `DEC-I15`, `DEC-I16`, `DEC-I18` and `DEC-A01` — remain `PENDING` unless separately recorded. External gates remain `EXTERNAL_BLOCKED`.
 
 ---
 
@@ -39,7 +41,7 @@ This does **not** approve external legal/provider gates. Other decisions — `DE
 | DEC-O2 | Reservation and response timings | 10 min + one extension to 20 min total; 24h recipient response | APPROVED (2026-11-24) | P5.2, P5.7, P5.8 |
 | DEC-O3 | Direct UPI legal/bank position | Keep real money off until written approvals | EXTERNAL_BLOCKED | P5.15, P8.9, P8.11 |
 | DEC-O4 | VPA beneficiary validation | Syntax-only with explicit residual risk | EXTERNAL_BLOCKED | P3.1, P8.9 |
-| DEC-O5 | Payment labels / copy freeze | Use spec's attestation labels | PENDING | P5.5, P5.14 |
+| DEC-O5 | Payment labels / copy freeze | Use spec's attestation labels | APPROVED (2026-11-24) | P5.5, P5.14 |
 | DEC-O6 | Phone change/recovery | Old+new OTP with support fallback | PENDING | P2.2, production auth |
 | DEC-O7 | Cooldown after moderation removal | No cooldown for platform-removed wish | PENDING | P3.7, P6.6 |
 | DEC-O8 | Retention schedule | Configurable; numeric periods only after counsel | EXTERNAL_BLOCKED | P6.8, P8.9 |
@@ -68,6 +70,7 @@ This does **not** approve external legal/provider gates. Other decisions — `DE
 | DEC-A03 | Wish eligibility after donor PAID | Follow literal spec (new wish allowed) | APPROVED (2026-11-24) | P3.7, P5 |
 | DEC-A04 | `DONOR_PENDING` at reservation timeout | Expire wish; never reopen; support path | APPROVED (2026-11-24) | P5.7, P5.10 |
 | DEC-A05 | Visual design direction | Neutral accessible tokens until owner supplies direction | APPROVED (Phase 1) | P1.4, P4.6, P5.14 |
+| DEC-A06 | Late-payment support and admin visibility | Support-only; no refund/reassignment; admin sees details and resolves | APPROVED (2026-11-24) | P5.10, P6.7 |
 
 ---
 
@@ -113,7 +116,7 @@ This does **not** approve external legal/provider gates. Other decisions — `DE
 | Question | Freeze the exact user-facing labels for payment states. |
 | Options | **A.** Spec labels: "Donor says paid", "Awaiting recipient confirmation", "Recipient confirmed", "Disputed"; never "verified". **B.** Alternative wording. |
 | Recommendation | **A.** Freeze before Phase 5 UI; include bank-registered-name disclosure and old-URI warning. |
-| Owner decision | **PENDING** |
+| Owner decision | **APPROVED — 2026-11-24** |
 | Date | 2026-11-23 |
 | Affects | P5.5, P5.14 |
 
@@ -434,6 +437,17 @@ This does **not** approve external legal/provider gates. Other decisions — `DE
 | Affects | P1.4, P4.6, P5.14 |
 
 ---
+
+### DEC-A06 — Late-payment support and admin visibility
+
+| Field | Value |
+|---|---|
+| Question | How are late payments/old-URI issues handled, and what can admin see/do? |
+| Options | **A.** Support-only case; no refund/reassignment/automatic reopening; admin sees case + gift details and resolves with an audited note. **B.** Platform-controlled reversal/refund. **C.** No admin visibility. |
+| Recommendation | **A.** The platform cannot revoke a UPI URI or control recipient funds; support resolves without mutating gift state. |
+| Owner decision | **APPROVED — 2026-11-24** |
+| Date | 2026-11-24 |
+| Affects | P5.10, P6.7 |
 
 ## D. Recording owner decisions
 

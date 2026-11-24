@@ -342,6 +342,18 @@
 | Output/artefact | 12 gift tests: handoff/views, idempotent replay/conflict, two concurrent donors (one 201/one 409), PAID consumes reservation, FAILED after PAID rejected, STILL_PROCESSING once, FAILED release/re-reservation, recipient confirmation + karma once (30 donor/3 recipient), dispute no karma, recipient-only confirmation, expiry reopen, DONOR_PENDING never reopens, PAID survives expiry and becomes UNVERIFIED with no karma |
 | Known limitation | True simultaneous PAID-vs-expiry and confirmation-vs-timeout races are not yet instrumented; P5.10 late-payment support path and P5.14 UI remain open. Phase 5 is **not** DONE. |
 
+### VE-029 — Phase 5 late-payment support, admin resolution and true race tests
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-24 |
+| Phase/task | P5.10, P5.13 |
+| Command | `cd backend && uv run alembic upgrade head && uv run ruff check . && uv run ruff format --check . && uv run mypy app tests && uv run pytest -q` |
+| Environment | PostgreSQL 16.16; Python 3.12.16 |
+| Result | **PASS** — `0006_support_cases (head)`; **149 backend tests passed**; Ruff, format and mypy clean |
+| Output/artefact | 2 support-case integration tests; 14 gift tests including true simultaneous PAID-vs-expiry and recipient-confirmation-vs-timeout races; support API creates participant cases, rejects duplicates/non-participants, denies non-admins, exposes gift/payment detail to admins, masks VPA, rejects double resolution and redacts audit metadata |
+| Known limitation | Admin authorization is an environment allow-list, not production RBAC/MFA (Phase 6). P5.14 gift UI remains open; Phase 5 is **not** DONE. |
+
 ## Summary
 
 | Verification | Result |
@@ -372,8 +384,9 @@
 | Phase 4 frontend tests/build | PASS — 21 passed |
 | Phase 4 browser guest feed/auth gate | PASS |
 | Phase 4 fresh-clone validation | PASS |
-| Phase 5 gift/reservation backend | PASS — 145 tests, 12 gift tests |
-| Phase 5 mandatory race suite | PARTIAL — concurrent donors/idempotency covered; true PAID-vs-expiry and confirmation-vs-timeout races pending |
+| Phase 5 gift/reservation backend | PASS — 149 tests, 14 gift tests |
+| Phase 5 late-payment support/admin | PASS — 2 support-case tests, migration 0006 at head |
+| Phase 5 mandatory race suite | PASS — concurrent donors, idempotency, re-reservation, PAID-vs-expiry, confirmation-vs-timeout |
 | Phase 5 frontend gift UI | NOT STARTED |
 
 ## Rule for future entries

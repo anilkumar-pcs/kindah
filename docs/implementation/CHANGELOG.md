@@ -2,6 +2,36 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-24 — Phase 5: late-payment support, admin resolution and race tests
+
+### Added
+
+- `0006_support_cases` migration: `support_case_type`/`support_case_status` enums and a
+  `support_cases` table with encrypted description/resolution text, participant and resolver
+  foreign keys, and a partial unique index preventing duplicate open cases.
+- `POST /api/v1/gifts/{gift_id}/support-cases` for authenticated gift participants to report
+  late payment, donor claims, recipient disputes or other issues.
+- `GET /api/v1/admin/support-cases` and `POST /api/v1/admin/support-cases/{case_id}/resolve`
+  with `ADMIN_USER_IDS` allow-list authorization, full case/gift visibility, encrypted
+  resolution notes and redacted audit events.
+- `RUNBOOK_LATE_PAYMENT.md` documenting the support-only late-payment policy, admin
+  procedure, data handling and the no-refund/no-reassignment position.
+- True simultaneous race tests for PAID-vs-reservation-expiry and
+  recipient-confirmation-vs-timeout, asserting a single consistent terminal outcome.
+
+### Verification
+
+- 149 backend tests pass; Ruff, format and mypy clean.
+- Migration `0006_support_cases` applied successfully.
+- Support tests cover participant creation, duplicate prevention, non-participant and
+  non-admin denial, admin visibility, VPA/UPI redaction, resolution, double-resolution
+  rejection and audit redaction.
+
+### Open
+
+- P5.14 donor/recipient gift UI.
+- Phase 5 remains **IN_PROGRESS** until P5.14 is complete.
+
 ## 2026-11-24 — Phase 5 in progress: gift, reservation and UPI handoff backend
 
 ### Added

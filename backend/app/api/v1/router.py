@@ -7,6 +7,7 @@ from app.modules.discovery.router import router as discovery_router
 from app.modules.gifts.router import router as gifts_router
 from app.modules.identity.router import router as identity_router
 from app.modules.payment_methods.router import router as payment_methods_router
+from app.modules.safety.router import router as safety_router
 from app.modules.wishes.router import router as wishes_router
 
 router = APIRouter()
@@ -15,6 +16,7 @@ router.include_router(payment_methods_router)
 router.include_router(wishes_router)
 router.include_router(discovery_router)
 router.include_router(gifts_router)
+router.include_router(safety_router)
 
 
 class MetaResponse(BaseModel):
