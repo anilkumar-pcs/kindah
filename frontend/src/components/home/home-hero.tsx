@@ -16,7 +16,7 @@ export function HomeHero() {
       <div className="relative grid gap-8 lg:grid-cols-[1.12fr_0.88fr] lg:items-center lg:gap-10">
         <div>
           <p className="text-[10px] font-extrabold tracking-[0.18em] text-kindly-accent uppercase">
-            Bengaluru · just because
+            Just because
           </p>
           <h1 className="mt-3 max-w-[680px] font-display text-[2.55rem] leading-[0.92] font-semibold tracking-[-0.06em] text-balance text-kindly-ink sm:text-6xl lg:text-[3.7rem] xl:text-[4rem]">
             A little something for someone&rsquo;s day.

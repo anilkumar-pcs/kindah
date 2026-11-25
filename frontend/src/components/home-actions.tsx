@@ -26,10 +26,10 @@ export function HomeActions() {
 
   return (
     <div className="mt-6 flex flex-wrap gap-3">
-      <a href="#open-wishes" className={primaryClass}>
+      <Link href="/discover" className={primaryClass}>
         Find a wish
         <Icon name="arrow-right" className="h-4 w-4" />
-      </a>
+      </Link>
       <Link href={shareHref} className={secondaryClass}>
         Share a wish
       </Link>

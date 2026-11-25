@@ -1,6 +1,6 @@
 import { apiFetch } from "@/lib/api/client";
 import type { GiftStatus } from "@/lib/api/gifts";
-import type { WishStatus } from "@/lib/api/wishes";
+import type { WishMood, WishStatus } from "@/lib/api/wishes";
 
 export type AdminRole = "USER" | "MODERATOR" | "ADMIN";
 
@@ -21,6 +21,40 @@ export type AdminUser = {
   role: "USER" | "MODERATOR" | "ADMIN";
   status: string;
   createdAt: string;
+};
+
+export type AdminUserPage = {
+  users: AdminUser[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+export type AdminWish = {
+  id: string;
+  displayName: string | null;
+  message: string;
+  mood: WishMood;
+  suggestedAmountInr: number | null;
+  city: string | null;
+  status: WishStatus;
+  closedReason: string | null;
+  createdAt: string;
+  expiresAt: string;
+};
+
+export type AdminWishPage = {
+  wishes: AdminWish[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+export type AdminPageParams = {
+  query?: string;
+  status?: string;
+  page?: number;
+  pageSize?: number;
 };
 
 export type AdminMfaStatus = {
@@ -274,6 +308,42 @@ export async function listAdminUsers(mfaToken: string, query?: string): Promise<
     headers: mfaHeaders(mfaToken),
   });
   return data.users;
+}
+
+export async function listAdminUsersPage(
+  mfaToken: string,
+  params: AdminPageParams = {},
+): Promise<AdminUserPage> {
+  const query = new URLSearchParams();
+  if (params.query?.trim()) {
+    query.set("query", params.query.trim());
+  }
+  if (params.status) {
+    query.set("status", params.status);
+  }
+  query.set("page", String(params.page ?? 1));
+  query.set("page_size", String(params.pageSize ?? 20));
+  return apiFetch<AdminUserPage>(`/api/v1/admin/users?${query.toString()}`, {
+    headers: mfaHeaders(mfaToken),
+  });
+}
+
+export async function listAdminWishes(
+  mfaToken: string,
+  params: AdminPageParams = {},
+): Promise<AdminWishPage> {
+  const query = new URLSearchParams();
+  if (params.query?.trim()) {
+    query.set("query", params.query.trim());
+  }
+  if (params.status) {
+    query.set("status", params.status);
+  }
+  query.set("page", String(params.page ?? 1));
+  query.set("page_size", String(params.pageSize ?? 20));
+  return apiFetch<AdminWishPage>(`/api/v1/admin/wishes?${query.toString()}`, {
+    headers: mfaHeaders(mfaToken),
+  });
 }
 
 export async function updateUserRole(

@@ -4,6 +4,8 @@
 **Date:** 2026-11-23
 **Status:** Proposal for owner review. Task IDs P0.x–P8.x map to `IMPLEMENTATION_PLAN.md`; this document adds repository-specific work, dependencies and acceptance criteria without silently expanding or dropping plan scope.
 
+**Post-v1 UX work:** `PRODUCT_UX_ROADMAP.md` is the active board for the owner-requested My Space, discovery, admin, homepage, footer and trust-surface improvements.
+
 ---
 
 ## 1. How to use this backlog

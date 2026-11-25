@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -136,6 +136,7 @@ function makeGift(overrides: Partial<Gift> = {}): Gift {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  window.history.replaceState(null, "", "/");
   mockedRestore.mockResolvedValue(makeUser());
   mockedGetPaymentMethod.mockResolvedValue(null);
   mockedListWishes.mockResolvedValue([]);
@@ -144,19 +145,60 @@ beforeEach(() => {
   mockedGetKarma.mockResolvedValue(makeKarma());
 });
 
+async function openTab(user: ReturnType<typeof userEvent.setup>, name: RegExp) {
+  const tab = await screen.findByRole("tab", { name });
+  await user.click(tab);
+}
+
 describe("MySpace", () => {
+  it("opens on the compact overview and exposes accessible tabs", async () => {
+    render(<MySpace />);
+
+    expect(await screen.findByRole("heading", { name: "ChaiLover" })).toBeInTheDocument();
+    const overview = screen.getByRole("tab", { name: /overview/i });
+    expect(overview).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tabpanel", { name: /overview/i })).toBeVisible();
+    expect(document.getElementById("space-panel-wish")).not.toBeVisible();
+    expect(screen.getByText("Karma & badges")).toBeInTheDocument();
+  });
+
+  it("moves between tabs with the keyboard and updates the deep link", async () => {
+    const user = userEvent.setup();
+    render(<MySpace />);
+
+    const overview = await screen.findByRole("tab", { name: /overview/i });
+    overview.focus();
+    await user.keyboard("{ArrowRight}");
+
+    const wishTab = screen.getByRole("tab", { name: /wish/i });
+    expect(wishTab).toHaveAttribute("aria-selected", "true");
+    expect(window.location.hash).toBe("#wish");
+    expect(screen.getByRole("tabpanel", { name: /wish/i })).toBeVisible();
+  });
+
+  it("honours a deep link to a tab", async () => {
+    window.history.replaceState(null, "", "/me#gifts");
+    render(<MySpace />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: /gifts/i })).toHaveAttribute("aria-selected", "true");
+    });
+    expect(screen.getByRole("tabpanel", { name: /gifts/i })).toBeVisible();
+  });
+
   it("saves a UPI ID and shows only the masked value", async () => {
     const user = userEvent.setup();
     mockedSavePaymentMethod.mockResolvedValue(makePaymentMethod());
 
     render(<MySpace />);
+    await openTab(user, /account/i);
+    const accountPanel = screen.getByRole("tabpanel", { name: /account/i });
 
-    expect(await screen.findByText(/add your upi id above/i)).toBeInTheDocument();
-    await user.type(screen.getByLabelText("UPI ID"), "alice@okhdfc");
-    await user.click(screen.getByLabelText(/bank-registered name/i));
-    await user.click(screen.getByRole("button", { name: /save upi id/i }));
+    await user.type(within(accountPanel).getByLabelText("UPI ID"), "alice@okhdfc");
+    await user.click(within(accountPanel).getByLabelText(/bank-registered name/i));
+    await user.click(within(accountPanel).getByRole("button", { name: /save upi id/i }));
 
-    expect(await screen.findByText("al***@okhdfc")).toBeInTheDocument();
+    expect(await within(accountPanel).findByText("al***@okhdfc")).toBeInTheDocument();
     expect(mockedSavePaymentMethod).toHaveBeenCalledWith("alice@okhdfc", true);
     expect(screen.queryByText("alice@okhdfc")).not.toBeInTheDocument();
   });
@@ -167,6 +209,7 @@ describe("MySpace", () => {
     mockedCreateWish.mockResolvedValue(makeWish());
 
     render(<MySpace />);
+    await openTab(user, /wish/i);
 
     await screen.findByLabelText(/wish message/i);
     await user.type(screen.getByLabelText(/wish message/i), "A warm chai for a long day");
@@ -198,11 +241,13 @@ describe("MySpace", () => {
     );
 
     render(<MySpace />);
+    await openTab(user, /wish/i);
 
     await screen.findByText("Your active wish");
     await user.click(screen.getByRole("button", { name: /withdraw wish/i }));
+    const wishPanel = screen.getByRole("tabpanel", { name: /wish/i });
 
-    expect(await screen.findByText("Cooldown")).toBeInTheDocument();
+    expect(await within(wishPanel).findByText("Cooldown")).toBeInTheDocument();
     expect(mockedWithdrawWish).toHaveBeenCalledWith("22222222-2222-2222-2222-222222222222");
   });
 
@@ -218,14 +263,22 @@ describe("MySpace", () => {
   });
 
   it("lists gifts with the approved status and links to the gift", async () => {
+    const user = userEvent.setup();
     mockedGetPaymentMethod.mockResolvedValue(makePaymentMethod());
     mockedListGifts.mockResolvedValue([makeGift()]);
 
     render(<MySpace />);
+    await openTab(user, /gifts/i);
+    const giftsPanel = screen.getByRole("tabpanel", { name: /gifts/i });
 
-    expect(await screen.findByText("Awaiting recipient confirmation")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /₹25/i })).toHaveAttribute("href", "/gifts/gift-1");
-    expect(screen.getByText(/a kind donor sent this to you/i)).toBeInTheDocument();
+    expect(
+      await within(giftsPanel).findByText("Awaiting recipient confirmation"),
+    ).toBeInTheDocument();
+    expect(within(giftsPanel).getByRole("link", { name: /₹25/i })).toHaveAttribute(
+      "href",
+      "/gifts/gift-1",
+    );
+    expect(within(giftsPanel).getByText(/a kind donor sent this to you/i)).toBeInTheDocument();
   });
 
   it("lists blocked accounts and unblocks one", async () => {
@@ -241,6 +294,7 @@ describe("MySpace", () => {
     mockedUnblockUser.mockResolvedValue(undefined);
 
     render(<MySpace />);
+    await openTab(user, /account/i);
 
     expect(await screen.findByText("BlockedPerson")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /unblock blockedperson/i }));

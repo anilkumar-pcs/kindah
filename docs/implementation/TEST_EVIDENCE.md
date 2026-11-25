@@ -1,6 +1,6 @@
 # Test Evidence — Chillar / Kindly
 
-**Last updated:** 2026-11-24
+**Last updated:** 2026-11-25
 **Environment:** macOS 15.8.3 (arm64); working directory `/Users/pcsanilkumar/Work/kindah`
 **Application state:** Phases 0–7 complete; Phase 8 local hardening complete, with external launch
 gates blocked. Automated test and browser evidence is recorded below.
@@ -606,6 +606,56 @@ gates blocked. Automated test and browser evidence is recorded below.
 | Browser review | Desktop guest sign-in, Home, wish detail, gift flow, My Space, Notifications and admin; mobile Home + bottom tabs; account sheet; no console errors observed on reviewed pages |
 | Known limitation | Full manual WCAG/keyboard/screen-reader and physical-device matrix still belongs to Phase 8 external sign-off. A temporary preview wish was removed after review. |
 
+### VE-049 — Discovery filters, public stats and admin wish tables
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-25 |
+| Phase/task | UX-02, UX-04, UX-06; DEC-A08 safe default |
+| Command | `cd backend && .venv/bin/ruff check app tests && .venv/bin/ruff format --check app tests && .venv/bin/mypy app tests && .venv/bin/pytest -q` |
+| Environment | PostgreSQL 16.16; Python 3.12.16; local test database |
+| Result | **PASS** — 196 backend tests; Ruff/format/mypy clean (110 source files) |
+| Output/artefact | New tests: `test_discovery_filters.py` (search/mood/amount/cursor/exclusions), `test_public_stats.py` (aggregate counts, IST week, seven-day series, area threshold, no private fields), `test_admin.py::test_admin_wish_table_is_searchable_filterable_and_paginated` |
+| Known limitation | One existing Starlette/httpx deprecation warning. Stats are recipient-confirmed attestations, not bank-verified payment volume; area labels are thresholded and aggregate-only. |
+
+### VE-050 — Frontend UX, admin tables and production build
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-25 |
+| Phase/task | UX-01 through UX-06 |
+| Command | `cd frontend && npm test && npm run lint && npm run typecheck && npm run format && npm run build` |
+| Environment | Next.js 16.4.6; React 19; Node 26; Vitest/jsdom |
+| Result | **PASS** — 88 frontend tests across 18 files; ESLint, Prettier, TypeScript and production build clean |
+| Output/artefact | New/updated tests: My Space tabs/deep links (9), DiscoverFeed filters/URL/counts (9), City Pulse chart/table/suppression/retry (4), Admin Console role flow (8), Admin Wish Table (2), footer links/declarations (2); production routes include `/`, `/discover`, `/about`, `/safety`, `/legal` |
+| Known limitation | Full manual screen-reader/WCAG matrix remains outstanding; admin support/appeals/deletion/outbox/audit are still card-first. |
+
+### VE-051 — Desktop/mobile browser review
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-25 |
+| Phase/task | UX-01 through UX-06 |
+| Procedure | Chrome DevTools: `http://localhost:3000/` at 1280px and 390px; `/discover`; `/me` at 390px; `/admin` Users and Wishes tabs; mobile footer scrolled to bottom; console error/warn query |
+| Environment | Local dev server; current local DB with owner and test accounts; signed-in DB `ADMIN` |
+| Result | **PASS** — City Pulse stats/chart/area empty-state render; Discover filters render; compact My Space tabs fit 390px; admin Users/Wishes tables and pagination render; mobile footer clears the fixed tab bar; no console errors/warnings on reviewed pages |
+| Screenshots | `docs/design/screenshots/home-city-pulse.png`, `discover-filters.png`, `my-space-mobile-tabs.png`, `admin-users-table.png`, `admin-wishes-table.png`, `home-mobile-pulse.png`, `footer-mobile.png` |
+| Known limitation | Local synthetic/test data only; no deployed staging, screen-reader or physical-device review. The requested individual A→B realtime map was deliberately not built; see `DEC-A08`. |
+
+### VE-052 — Location copy, compact Discover and remaining admin tables
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-25 |
+| Phase/task | UX-02, UX-04; owner follow-up |
+| Command | `cd frontend && npm test && npm run lint && npm run typecheck && npm run format && npm run build`; browser review at 1280px and 390px |
+| Environment | Next.js 16.4.6; React 19; Vitest/jsdom; local dev stack |
+| Result | **PASS** — 90 frontend tests across 18 files; ESLint, Prettier, TypeScript and production build clean |
+| Output/artefact | Removed all hard-coded Bengaluru branding from `frontend/src`; compact Discover toolbar + Filters disclosure; shared admin queue table for Support, Appeals, Deletion, Outbox and Audit; existing support/appeal action tests updated and a cross-queue table test added |
+| Browser review | Home (desktop/mobile), Discover (desktop/mobile), My Space (mobile), mobile footer, Admin Support table + detail drawer and Audit table; no console errors/warnings |
+| Screenshots | `home-city-pulse.png`, `home-mobile-pulse.png`, `discover-filters.png`, `discover-mobile-compact.png`, `my-space-mobile-tabs.png`, `footer-mobile.png`, `admin-support-table.png`, `admin-support-detail.png`, `admin-audit-table.png`, `admin-users-table.png`, `admin-wishes-table.png` |
+| Known limitation | The five converted queues paginate client-side over bounded admin arrays; server-side pagination remains a scale follow-up. Full screen-reader/WCAG and independent security review remain outstanding. |
+
 ## Summary
 
 | Verification | Result |
@@ -660,6 +710,8 @@ gates blocked. Automated test and browser evidence is recorded below.
 | Profile-menu header correction | PASS — 68 frontend tests across 14 files; single header, profile dropdown, no duplicate primary links |
 | Direction A shell/Home | PASS — 177 backend tests, 72 frontend tests across 15 files; desktop/mobile browser review; build clean |
 | Direction A full rollout | PASS — all consumer/admin screens restyled; 177 backend and 72 frontend tests; browser review and build clean |
+| Post-v1 UX/API delivery | PASS — 196 backend and 88 frontend tests; discovery filters, public stats, admin Users/Wishes tables, footer/trust pages; build and browser review clean |
+| Post-v1 follow-up | PASS — 90 frontend tests; location branding removed; compact Discover; five remaining admin queues table-first; build and browser review clean |
 | Phase 8 threat model/scans | PASS (local scope) — npm/pip/Bandit/secret checks |
 | Phase 8 restore/load/a11y smoke | PASS locally — restore at head, p95 90.3 ms, a11y 100 on 4 pages |
 | Phase 8 overall | `BLOCKED` — deployed staging, monitoring/RPO/RTO, independent security review, legal/provider gates |

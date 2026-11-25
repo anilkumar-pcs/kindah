@@ -1,6 +1,6 @@
 # Decision Log — Chillar / Kindly
 
-**Last updated:** 2026-11-23
+**Last updated:** 2026-11-25
 **Status:** Phase 0 proposals. **No decision in this file is owner-approved unless its Owner decision field says `APPROVED`.** Every other entry is an AI recommendation awaiting owner input or an external dependency.
 
 ## How to use this log
@@ -83,6 +83,7 @@ This does **not** approve external legal/provider gates. Other decisions — `DE
 | DEC-A05 | Visual design direction | Neutral accessible tokens until owner supplies direction | APPROVED (Phase 1) | P1.4, P4.6, P5.14 |
 | DEC-A06 | Late-payment support and admin visibility | Support-only; no refund/reassignment; admin sees details and resolves | APPROVED (2026-11-24) | P5.10, P6.7 |
 | DEC-A07 | Selected visual direction | Direction A — Neighbourhood Postcard (warm paper, deep green, crafted illustration); mobile bottom tabs | APPROVED (2026-11-24) | Design system, frontend redesign |
+| DEC-A08 | Home City Pulse privacy model | Aggregate recipient-confirmed stats, seven-day chart and thresholded area pulse; no individual A→B flow or donor location | IMPLEMENTED SAFE DEFAULT — owner review pending | Home, public stats API |
 
 ---
 
@@ -480,6 +481,18 @@ The `admin_audit_logs` table is append-only via a database trigger.
 | Notes | Preserve the current app until the A design is implemented and reviewed. Mobile web uses the app-like bottom-tab shell; installation as a PWA may remove the browser chrome. |
 | Date | 2026-11-24 |
 | Affects | Design system, consumer screens, mobile navigation shell, PWA theme/manifest |
+
+### DEC-A08 — Home City Pulse privacy model
+
+| Field | Value |
+|---|---|
+| Question | The owner asked for a homepage “map/chart showing flow of money A→B realtime”. How can Home show community activity without exposing individual payment flows? |
+| Options | **A.** Aggregate recipient-confirmed counts, a seven-day chart and thresholded area labels; no individual donor→recipient route or donor location. **B.** Individual realtime A→B payment-flow map. **C.** No activity visualization. |
+| Recommendation | **A.** Kindly does not custody or verify payments, does not collect donor location, and the pseudonymous/private-data model rules out an individual money-flow map. Area labels use recipient wish cities and suppress slices below three confirmed gifts. |
+| Owner decision | **IMPLEMENTED SAFE DEFAULT — owner review pending.** Not recorded as an owner approval. |
+| Owner wording | “map/chart showing flow of money A→B realtime” (2026-11-25 request) |
+| Date | 2026-11-25 |
+| Affects | Home City Pulse, `/api/v1/public/stats`, aggregate copy |
 
 ## D. Recording owner decisions
 

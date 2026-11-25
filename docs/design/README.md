@@ -4,7 +4,8 @@ Standalone mockups for the visual-language decision. Nothing in this folder is i
 application.
 
 **Selected direction:** **A — Neighbourhood Postcard** (2026-11-24). Directions B and C remain
-reference material only. The current app stays untouched until implementation is approved.
+reference material only. Direction A is now implemented across the app; the post-v1 UX pass added
+Home City Pulse, Discover filters, compact My Space, admin Users/Wishes tables and trust surfaces.
 
 ## Open it
 
@@ -23,6 +24,17 @@ Full-page captures are saved in `screenshots/`:
 - `screenshots/app-home-desktop.png`
 - `screenshots/app-home-feed.png`
 - `screenshots/app-home-mobile.png`
+- `screenshots/home-city-pulse.png`
+- `screenshots/home-mobile-pulse.png`
+- `screenshots/discover-filters.png`
+- `screenshots/discover-mobile-compact.png`
+- `screenshots/my-space-mobile-tabs.png`
+- `screenshots/admin-users-table.png`
+- `screenshots/admin-wishes-table.png`
+- `screenshots/admin-support-table.png`
+- `screenshots/admin-support-detail.png`
+- `screenshots/admin-audit-table.png`
+- `screenshots/footer-mobile.png`
 
 ## What is inside
 
@@ -46,5 +58,5 @@ notifications.
 - illustration-led, with no real-user photography inside the product
 - clean interactions with tactile/scrapbook accents rather than a full scrapbook layout
 
-These are explorations only. The current app stays on its existing design until a direction is
-approved.
+The lab remains the design reference; the application now uses Direction A, with the post-v1 UX
+additions documented in `docs/implementation/PRODUCT_UX_ROADMAP.md`.

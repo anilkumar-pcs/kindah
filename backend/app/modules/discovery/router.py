@@ -6,7 +6,12 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db_session
-from app.modules.discovery.schemas import FeedResponse, PublicWish, SurpriseRequest
+from app.modules.discovery.schemas import (
+    FeedResponse,
+    PublicStats,
+    PublicWish,
+    SurpriseRequest,
+)
 from app.modules.discovery.service import DiscoveryService, SortOrder
 from app.modules.identity.dependencies import (
     get_bearer_token,
@@ -14,6 +19,7 @@ from app.modules.identity.dependencies import (
     require_active_auth,
 )
 from app.modules.identity.service import AuthContext, IdentityService
+from app.modules.wishes.models import WishMood
 
 router = APIRouter(tags=["discovery"])
 
@@ -37,6 +43,10 @@ def get_discovery_service(
 @router.get("/wishes", response_model=FeedResponse)
 def list_wishes(
     city: str | None = Query(default=None, max_length=60),
+    q: str | None = Query(default=None, max_length=80),
+    mood: WishMood | None = Query(default=None),
+    amount_min: int | None = Query(default=None, ge=10, le=100),
+    amount_max: int | None = Query(default=None, ge=10, le=100),
     sort: SortOrder = Query(default="fresh"),
     cursor: str | None = Query(default=None, max_length=512),
     seed: str | None = Query(default=None, min_length=4, max_length=32),
@@ -44,14 +54,44 @@ def list_wishes(
     auth: AuthContext | None = Depends(get_optional_auth),
     service: DiscoveryService = Depends(get_discovery_service),
 ) -> FeedResponse:
+    """List public wishes.
+
+    ``q`` is an optional trimmed, case-insensitive, literal substring search
+    over the public wish message and display pseudonym. ``mood`` filters by a
+    public wish mood. ``amount_min``/``amount_max`` filter the publicly exposed
+    suggested amount; wishes without a suggested amount do not match an
+    explicit amount filter. Cursors are bound to these active filters, so
+    changing a filter requires starting from the first page. ``totalCount`` is
+    the number of visible wishes matching the filters, independent of page.
+    """
     return service.feed(
         viewer_id=auth.user.id if auth else None,
         city=city,
+        q=q,
+        mood=mood,
+        amount_min=amount_min,
+        amount_max=amount_max,
         sort=sort,
         cursor=cursor,
         limit=limit,
         seed=seed,
     )
+
+
+@router.get("/public/stats", response_model=PublicStats)
+def public_stats(
+    service: DiscoveryService = Depends(get_discovery_service),
+) -> PublicStats:
+    """Return aggregate Home City Pulse metrics.
+
+    All values are aggregate-only. Confirmed metrics count recipient-confirmed
+    gift attestations, not bank-verified payment volume. The endpoint never
+    returns donor identity, recipient identity, individual donor-to-recipient
+    flows, raw VPA, phone, UTR, or precise user location. "This week" is the
+    current ISO week in Asia/Kolkata; neighbourhood counts are suppressed to
+    zero below three distinct non-blank wish cities.
+    """
+    return service.public_stats()
 
 
 @router.post("/wishes/surprise", response_model=PublicWish)

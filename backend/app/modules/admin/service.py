@@ -42,6 +42,8 @@ from app.modules.admin.schemas import (
     AdminMfaStatusResponse,
     AdminUserList,
     AdminUserSummary,
+    AdminWishList,
+    AdminWishSummary,
     AppealCreateRequest,
     AppealList,
     AppealResolveRequest,
@@ -231,19 +233,89 @@ class AdminService:
             method="RECOVERY",
         )
 
-    def list_users(self, query: str | None = None) -> AdminUserList:
+    def list_users(
+        self,
+        query: str | None = None,
+        status: UserStatus | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> AdminUserList:
+        conditions = [User.status != UserStatus.DELETED]
+        if status is not None and status != UserStatus.DELETED:
+            conditions.append(User.status == status)
+        if query and query.strip():
+            conditions.append(func.lower(User.display_name).contains(query.strip().lower()))
+        total = int(self.session.scalar(select(func.count(User.id)).where(*conditions)) or 0)
         statement = (
             select(User)
-            .where(User.status != UserStatus.DELETED)
-            .order_by(User.created_at.desc())
-            .limit(100)
+            .where(*conditions)
+            .order_by(User.created_at.desc(), User.id.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
         )
-        if query and query.strip():
-            statement = statement.where(
-                func.lower(User.display_name).contains(query.strip().lower())
-            )
         return AdminUserList(
-            users=[self._user_summary(user) for user in self.session.scalars(statement)]
+            users=[self._user_summary(user) for user in self.session.scalars(statement)],
+            total=total,
+            page=page,
+            page_size=page_size,
+        )
+
+    def list_admin_wishes(
+        self,
+        query: str | None = None,
+        status: WishStatus | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> AdminWishList:
+        conditions = []
+        if query and query.strip():
+            term = query.strip().lower()
+            conditions.append(
+                or_(
+                    func.lower(Wish.message).contains(term),
+                    func.lower(User.display_name).contains(term),
+                )
+            )
+        if status is not None:
+            conditions.append(Wish.status == status)
+
+        total = int(
+            self.session.scalar(
+                select(func.count(Wish.id))
+                .select_from(Wish)
+                .join(User, Wish.user_id == User.id)
+                .where(*conditions)
+            )
+            or 0
+        )
+        rows = self.session.execute(
+            select(Wish, User)
+            .join(User, Wish.user_id == User.id)
+            .where(*conditions)
+            .order_by(Wish.created_at.desc(), Wish.id.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        ).all()
+        wishes = [
+            AdminWishSummary(
+                id=wish.id,
+                display_name=user.display_name,
+                message=wish.message,
+                mood=wish.mood,
+                suggested_amount_inr=wish.suggested_amount_inr,
+                city=wish.city,
+                status=wish.status,
+                closed_reason=wish.closed_reason,
+                created_at=wish.created_at,
+                expires_at=wish.expires_at,
+            )
+            for wish, user in rows
+        ]
+        return AdminWishList(
+            wishes=wishes,
+            total=total,
+            page=page,
+            page_size=page_size,
         )
 
     def set_user_role(

@@ -19,7 +19,7 @@ from app.modules.admin.models import AdminAuditLog, ModerationAction, Moderation
 from app.modules.identity.models import User, UserRole, UserStatus
 from app.modules.wishes.models import Wish, WishStatus
 from tests.integration.helpers import admin_mfa_headers, complete_setup
-from tests.integration.test_discovery import _create_wish
+from tests.integration.test_discovery import _create_wish, _insert_wish
 from tests.integration.test_gifts import _create_gift
 
 pytestmark = pytest.mark.integration
@@ -534,6 +534,85 @@ def test_admin_can_search_users_and_change_roles(client: TestClient) -> None:
 
     audits = client.get("/api/v1/admin/audit-logs", headers=admin_headers)
     assert any(entry["action"] == "USER_ROLE_CHANGED" for entry in audits.json()["logs"])
+
+
+def test_admin_wish_table_is_searchable_filterable_and_paginated(
+    client: TestClient,
+) -> None:
+    _, admin_headers = _admin_with_mfa(client, "9876502061", "WishTableAdmin")
+    first_session, first_headers, _ = complete_setup(
+        client,
+        phone="9876502062",
+        display_name="WishTableChai",
+        vpa="wishtablechai@okhdfc",
+    )
+    _create_wish(
+        client,
+        first_headers,
+        message="A warm chai for the admin table",
+    )
+    second_session, second_headers, _ = complete_setup(
+        client,
+        phone="9876502063",
+        display_name="WishTableBook",
+        vpa="wishtablebook@okhdfc",
+    )
+    book_wish = _create_wish(
+        client,
+        second_headers,
+        message="A quiet book for the evening",
+    )
+    removed_id = _insert_wish(
+        user_id=str(second_session["user"]["id"]),
+        status=WishStatus.REMOVED,
+    )
+
+    page = client.get(
+        "/api/v1/admin/wishes",
+        headers=admin_headers,
+        params={"page": 1, "page_size": 2},
+    )
+    assert page.status_code == 200, page.text
+    body = page.json()
+    assert body["total"] >= 3
+    assert body["page"] == 1
+    assert body["pageSize"] == 2
+    assert len(body["wishes"]) == 2
+    assert {
+        "id",
+        "displayName",
+        "message",
+        "mood",
+        "suggestedAmountInr",
+        "city",
+        "status",
+        "closedReason",
+        "createdAt",
+        "expiresAt",
+    } <= set(body["wishes"][0])
+    serialized = str(body).lower()
+    for forbidden in ("phone", "vpa", "utr", "handoff", "moderation"):
+        assert forbidden not in serialized
+
+    search = client.get(
+        "/api/v1/admin/wishes",
+        headers=admin_headers,
+        params={"query": "quiet"},
+    )
+    assert search.status_code == 200, search.text
+    assert search.json()["total"] == 1
+    assert search.json()["wishes"][0]["id"] == book_wish["id"]
+
+    removed = client.get(
+        "/api/v1/admin/wishes",
+        headers=admin_headers,
+        params={"status": "REMOVED"},
+    )
+    assert removed.status_code == 200, removed.text
+    assert removed.json()["total"] == 1
+    assert removed.json()["wishes"][0]["id"] == str(removed_id)
+
+    assert first_session["user"]["id"] != second_session["user"]["id"]
 
 
 def test_badge_definitions_are_admin_configurable(client: TestClient) -> None:

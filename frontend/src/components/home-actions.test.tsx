@@ -43,7 +43,7 @@ describe("HomeActions", () => {
 
     expect(await screen.findByRole("link", { name: /find a wish/i })).toHaveAttribute(
       "href",
-      "#open-wishes",
+      "/discover",
     );
     expect(screen.getByRole("link", { name: "Share a wish" })).toHaveAttribute(
       "href",
@@ -58,7 +58,7 @@ describe("HomeActions", () => {
 
     expect(await screen.findByRole("link", { name: /find a wish/i })).toHaveAttribute(
       "href",
-      "#open-wishes",
+      "/discover",
     );
     expect(screen.getByRole("link", { name: "Share a wish" })).toHaveAttribute("href", "/me");
   });

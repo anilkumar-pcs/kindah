@@ -11,12 +11,14 @@ from app.core.errors import AppError
 
 _HEX_RE = re.compile(r"^[0-9a-f]{32}$")
 _SEED_RE = re.compile(r"^[A-Za-z0-9_-]{4,32}$")
+_FINGERPRINT_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 @dataclass(frozen=True)
 class FreshCursor:
     created_at: datetime
     wish_id: UUID
+    filter_fingerprint: str | None = None
 
 
 @dataclass(frozen=True)
@@ -24,6 +26,7 @@ class RandomCursor:
     hash_value: str
     wish_id: UUID
     seed: str
+    filter_fingerprint: str | None = None
 
 
 def _encode(payload: dict[str, str]) -> str:
@@ -43,8 +46,15 @@ def _decode(value: str) -> dict[str, str]:
     return {str(key): str(item) for key, item in payload.items()}
 
 
-def encode_fresh_cursor(created_at: datetime, wish_id: UUID) -> str:
-    return _encode({"s": "fresh", "t": created_at.isoformat(), "i": str(wish_id)})
+def encode_fresh_cursor(
+    created_at: datetime,
+    wish_id: UUID,
+    filter_fingerprint: str | None = None,
+) -> str:
+    payload = {"s": "fresh", "t": created_at.isoformat(), "i": str(wish_id)}
+    if filter_fingerprint is not None:
+        payload["f"] = filter_fingerprint
+    return _encode(payload)
 
 
 def decode_fresh_cursor(value: str) -> FreshCursor:
@@ -55,13 +65,28 @@ def decode_fresh_cursor(value: str) -> FreshCursor:
         created_at = datetime.fromisoformat(payload["t"])
         if created_at.tzinfo is None:
             created_at = created_at.replace(tzinfo=UTC)
-        return FreshCursor(created_at=created_at, wish_id=UUID(payload["i"]))
+        filter_fingerprint = payload.get("f")
+        if filter_fingerprint is not None and not _FINGERPRINT_RE.fullmatch(filter_fingerprint):
+            raise ValueError("invalid filter fingerprint")
+        return FreshCursor(
+            created_at=created_at,
+            wish_id=UUID(payload["i"]),
+            filter_fingerprint=filter_fingerprint,
+        )
     except (KeyError, ValueError) as exc:
         raise _invalid_cursor() from exc
 
 
-def encode_random_cursor(hash_value: str, wish_id: UUID, seed: str) -> str:
-    return _encode({"s": "random", "h": hash_value, "i": str(wish_id), "d": seed})
+def encode_random_cursor(
+    hash_value: str,
+    wish_id: UUID,
+    seed: str,
+    filter_fingerprint: str | None = None,
+) -> str:
+    payload = {"s": "random", "h": hash_value, "i": str(wish_id), "d": seed}
+    if filter_fingerprint is not None:
+        payload["f"] = filter_fingerprint
+    return _encode(payload)
 
 
 def decode_random_cursor(value: str) -> RandomCursor:
@@ -73,10 +98,14 @@ def decode_random_cursor(value: str) -> RandomCursor:
         seed = payload["d"]
         if not _HEX_RE.fullmatch(hash_value) or not _SEED_RE.fullmatch(seed):
             raise ValueError("invalid cursor values")
+        filter_fingerprint = payload.get("f")
+        if filter_fingerprint is not None and not _FINGERPRINT_RE.fullmatch(filter_fingerprint):
+            raise ValueError("invalid filter fingerprint")
         return RandomCursor(
             hash_value=hash_value,
             wish_id=UUID(payload["i"]),
             seed=seed,
+            filter_fingerprint=filter_fingerprint,
         )
     except (KeyError, ValueError) as exc:
         raise _invalid_cursor() from exc

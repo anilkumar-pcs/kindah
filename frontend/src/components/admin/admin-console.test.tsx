@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -18,7 +18,8 @@ vi.mock("@/lib/api/admin", () => ({
   listAdminOutboxDeadLetters: vi.fn(),
   listAdminReports: vi.fn(),
   listAdminSupportCases: vi.fn(),
-  listAdminUsers: vi.fn(),
+  listAdminUsersPage: vi.fn(),
+  listAdminWishes: vi.fn(),
   moderateUser: vi.fn(),
   moderateWish: vi.fn(),
   resolveAppeal: vi.fn(),
@@ -39,7 +40,8 @@ import {
   listAdminOutboxDeadLetters,
   listAdminReports,
   listAdminSupportCases,
-  listAdminUsers,
+  listAdminUsersPage,
+  listAdminWishes,
   moderateWish,
   resolveAppeal,
   resolveSupportCase,
@@ -65,7 +67,8 @@ const mockedModerateWish = vi.mocked(moderateWish);
 const mockedAppeals = vi.mocked(listAdminAppeals);
 const mockedDeletionRequests = vi.mocked(listAdminDeletionRequests);
 const mockedDeadLetters = vi.mocked(listAdminOutboxDeadLetters);
-const mockedUsers = vi.mocked(listAdminUsers);
+const mockedUserPage = vi.mocked(listAdminUsersPage);
+const mockedWishes = vi.mocked(listAdminWishes);
 const mockedBadges = vi.mocked(listAdminBadges);
 const mockedUpdateRole = vi.mocked(updateUserRole);
 const mockedResolveAppeal = vi.mocked(resolveAppeal);
@@ -127,7 +130,8 @@ beforeEach(() => {
   mockedAppeals.mockResolvedValue([]);
   mockedDeletionRequests.mockResolvedValue([]);
   mockedDeadLetters.mockResolvedValue([]);
-  mockedUsers.mockResolvedValue([]);
+  mockedUserPage.mockResolvedValue({ users: [], total: 0, page: 1, pageSize: 10 });
+  mockedWishes.mockResolvedValue({ wishes: [], total: 0, page: 1, pageSize: 10 });
   mockedBadges.mockResolvedValue([]);
   mockedAudit.mockResolvedValue([]);
 });
@@ -295,15 +299,20 @@ describe("AdminConsole", () => {
       expiresIn: 900,
       method: "TOTP",
     });
-    mockedUsers.mockResolvedValue([
-      {
-        id: "user-2",
-        displayName: "PromoteMe",
-        role: "USER",
-        status: "ACTIVE",
-        createdAt: "2026-11-24T00:00:00Z",
-      },
-    ]);
+    mockedUserPage.mockResolvedValue({
+      users: [
+        {
+          id: "user-2",
+          displayName: "PromoteMe",
+          role: "USER",
+          status: "ACTIVE",
+          createdAt: "2026-11-24T00:00:00Z",
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+    });
     mockedUpdateRole.mockResolvedValue({
       id: "user-2",
       displayName: "PromoteMe",
@@ -316,14 +325,15 @@ describe("AdminConsole", () => {
 
     await user.type(await screen.findByLabelText(/authenticator or recovery code/i), "123456");
     await user.click(screen.getByRole("button", { name: /open admin console/i }));
-    await user.click(await screen.findByRole("button", { name: /users \(1\)/i }));
+    await user.click(await screen.findByRole("button", { name: /^users$/i }));
 
     expect(await screen.findByText("PromoteMe")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /manage promoteme/i }));
     await user.selectOptions(screen.getByLabelText(/database role/i), "ADMIN");
     await user.type(screen.getByLabelText(/reason \(mandatory\)/i), "Owner approved.");
     await user.click(screen.getByRole("button", { name: /update role/i }));
 
-    expect(await screen.findByText(/admin · active/i)).toBeInTheDocument();
+    expect(await screen.findByText(/role updated with an audit entry/i)).toBeInTheDocument();
     expect(mockedUpdateRole).toHaveBeenCalledWith(
       "verified-token",
       "user-2",
@@ -383,9 +393,11 @@ describe("AdminConsole", () => {
     await user.type(await screen.findByLabelText(/authenticator or recovery code/i), "123456");
     await user.click(screen.getByRole("button", { name: /open admin console/i }));
     await user.click(await screen.findByRole("button", { name: /appeals \(1\)/i }));
+    await user.click(await screen.findByRole("button", { name: /open restricteduser/i }));
+    const appealDialog = screen.getByRole("dialog");
 
-    expect(await screen.findByText(/please review my context/i)).toBeInTheDocument();
-    expect(screen.getByText(/repeated spam/i)).toBeInTheDocument();
+    expect(await within(appealDialog).findByText(/please review my context/i)).toBeInTheDocument();
+    expect(within(appealDialog).getByText(/repeated spam/i)).toBeInTheDocument();
     await user.type(screen.getByLabelText(/resolution note \(mandatory\)/i), "Context accepted.");
     await user.click(screen.getByRole("button", { name: /resolve appeal/i }));
 
@@ -394,6 +406,91 @@ describe("AdminConsole", () => {
       outcome: "ACCEPTED",
       resolutionNote: "Context accepted.",
     });
+  });
+
+  it("filters the support queue by case status", async () => {
+    const user = userEvent.setup();
+    mockedStatus.mockResolvedValue({
+      role: "ADMIN",
+      mfaEnabled: false,
+      mfaRequired: false,
+      recoveryCodesRemaining: 0,
+    });
+    mockedSupport.mockResolvedValue([makeCase({ status: "RESOLVED" })]);
+
+    render(<AdminConsole />);
+
+    await user.click(await screen.findByRole("button", { name: /support cases \(1\)/i }));
+    expect(await screen.findByText(/i paid after the timer ended/i)).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText(/case status/i), "OPEN");
+
+    expect(await screen.findByText("No support cases match.")).toBeInTheDocument();
+  });
+
+  it("renders deletion, outbox and audit queues as tables", async () => {
+    const user = userEvent.setup();
+    mockedStatus.mockResolvedValue({
+      role: "ADMIN",
+      mfaEnabled: false,
+      mfaRequired: false,
+      recoveryCodesRemaining: 0,
+    });
+    mockedDeletionRequests.mockResolvedValue([
+      {
+        id: "deletion-1",
+        userDisplayName: "DeleteMe",
+        userStatus: "DELETION_PENDING",
+        status: "REQUESTED",
+        reason: "Taking a break.",
+        requestedAt: "2026-11-24T00:00:00Z",
+        cancelledAt: null,
+      },
+    ]);
+    mockedDeadLetters.mockResolvedValue([
+      {
+        id: "outbox-1",
+        aggregateType: "GIFT",
+        aggregateId: "11111111-1111-1111-1111-111111111111",
+        eventType: "GIFT_CONFIRMED",
+        payload: {},
+        attempts: 3,
+        deadLetterReason: "timeout",
+        createdAt: "2026-11-24T00:00:00Z",
+      },
+    ]);
+    mockedAudit.mockResolvedValue([
+      {
+        id: "audit-1",
+        actorDisplayName: "AdminUser",
+        action: "USER_ROLE_CHANGED",
+        targetType: "USER",
+        targetId: "22222222-2222-2222-2222-222222222222",
+        reason: "Owner approved.",
+        requestId: "req-1",
+        metadata: {},
+        createdAt: "2026-11-24T00:00:00Z",
+      },
+    ]);
+
+    render(<AdminConsole />);
+
+    await user.click(await screen.findByRole("button", { name: /deletion \(1\)/i }));
+    expect(await screen.findByText("DeleteMe")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /open deleteme/i }));
+    expect(screen.getByText(/this queue records requests only/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /close details/i }));
+
+    await user.click(screen.getByRole("button", { name: /outbox \(1\)/i }));
+    const outboxTable = await screen.findByRole("table");
+    expect(within(outboxTable).getByText("GIFT_CONFIRMED")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /open gift_confirmed/i }));
+    expect(screen.getByText("timeout")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /close details/i }));
+
+    await user.click(screen.getByRole("button", { name: /audit log \(1\)/i }));
+    expect(await screen.findByText("USER_ROLE_CHANGED")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /open user_role_changed/i }));
+    expect(screen.getByText("Owner approved.")).toBeInTheDocument();
   });
 
   it("shows full support details and resolves with an audited note", async () => {
@@ -423,10 +520,14 @@ describe("AdminConsole", () => {
     await user.type(await screen.findByLabelText(/authenticator or recovery code/i), "123456");
     await user.click(screen.getByRole("button", { name: /open admin console/i }));
     await user.click(await screen.findByRole("button", { name: /support cases/i }));
+    await user.click(await screen.findByRole("button", { name: /open late payment/i }));
+    const supportDialog = screen.getByRole("dialog");
 
-    expect(await screen.findByText(/i paid after the timer ended/i)).toBeInTheDocument();
-    expect(screen.getByText(/re\*\*\*@okaxis/i)).toBeInTheDocument();
-    expect(screen.getByText(/420011223344/i)).toBeInTheDocument();
+    expect(
+      await within(supportDialog).findByText(/i paid after the timer ended/i),
+    ).toBeInTheDocument();
+    expect(within(supportDialog).getByText(/re\*\*\*@okaxis/i)).toBeInTheDocument();
+    expect(within(supportDialog).getByText(/420011223344/i)).toBeInTheDocument();
 
     await user.type(screen.getByLabelText(/resolution note/i), "Handled by support.");
     await user.click(screen.getByRole("button", { name: /resolve case/i }));

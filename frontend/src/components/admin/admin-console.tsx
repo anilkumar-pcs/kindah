@@ -5,7 +5,15 @@ import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 
-import { AppealResolutionForm } from "@/components/admin/appeal-resolution-form";
+import {
+  AdminAppealsTable,
+  AdminAuditTable,
+  AdminDeletionTable,
+  AdminOutboxTable,
+  AdminSupportTable,
+} from "@/components/admin/admin-queues";
+import { AdminUserTable } from "@/components/admin/admin-user-table";
+import { AdminWishTable } from "@/components/admin/admin-wish-table";
 import { BadgeDefinitionsPanel } from "@/components/admin/badge-definitions-panel";
 import { ModerationActionForm } from "@/components/admin/moderation-action-form";
 import {
@@ -18,9 +26,6 @@ import {
   listAdminOutboxDeadLetters,
   listAdminReports,
   listAdminSupportCases,
-  listAdminUsers,
-  updateUserRole,
-  resolveSupportCase,
   setupAdminMfa,
   verifyAdminMfa,
   type AdminAppeal,
@@ -29,7 +34,6 @@ import {
   type AdminMfaStatus,
   type AdminReport,
   type AdminSupportCase,
-  type AdminUser,
   type BadgeDefinition,
   type MfaSetup,
   type OutboxDeadLetter,
@@ -37,18 +41,24 @@ import {
 import { ApiError } from "@/lib/api/client";
 import { REPORT_REASON_LABELS } from "@/lib/api/safety";
 import { restoreSession, type UserProfile } from "@/lib/auth/session";
-import { SUPPORT_CASE_LABELS } from "@/lib/gifts/labels";
 
 type PageState = "loading" | "guest" | "denied" | "ready" | "error";
 type AdminTab =
-  "reports" | "support" | "appeals" | "deletion" | "users" | "badges" | "outbox" | "audit";
+  | "reports"
+  | "support"
+  | "appeals"
+  | "deletion"
+  | "users"
+  | "wishes"
+  | "badges"
+  | "outbox"
+  | "audit";
 
 type AdminData = {
   reports: AdminReport[];
   supportCases: AdminSupportCase[];
   appeals: AdminAppeal[];
   deletionRequests: AdminDeletionRequest[];
-  users: AdminUser[];
   badges: BadgeDefinition[];
   deadLetters: OutboxDeadLetter[];
   auditLogs: AdminAuditLog[];
@@ -87,11 +97,6 @@ export function AdminConsole() {
   const [tab, setTab] = useState<AdminTab>("reports");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [resolutionDrafts, setResolutionDrafts] = useState<Record<string, string>>({});
-  const [userQuery, setUserQuery] = useState("");
-  const [roleDrafts, setRoleDrafts] = useState<
-    Record<string, { role: "USER" | "MODERATOR" | "ADMIN"; reason: string }>
-  >({});
 
   useEffect(() => {
     let cancelled = false;
@@ -134,31 +139,21 @@ export function AdminConsole() {
   }, []);
 
   async function loadData(token: string) {
-    const [
-      reports,
-      supportCases,
-      appeals,
-      deletionRequests,
-      users,
-      badges,
-      deadLetters,
-      auditLogs,
-    ] = await Promise.all([
-      listAdminReports(token),
-      listAdminSupportCases(token),
-      listAdminAppeals(token),
-      listAdminDeletionRequests(token),
-      listAdminUsers(token),
-      listAdminBadges(token),
-      listAdminOutboxDeadLetters(token),
-      listAdminAuditLogs(token),
-    ]);
+    const [reports, supportCases, appeals, deletionRequests, badges, deadLetters, auditLogs] =
+      await Promise.all([
+        listAdminReports(token),
+        listAdminSupportCases(token),
+        listAdminAppeals(token),
+        listAdminDeletionRequests(token),
+        listAdminBadges(token),
+        listAdminOutboxDeadLetters(token),
+        listAdminAuditLogs(token),
+      ]);
     setData({
       reports,
       supportCases,
       appeals,
       deletionRequests,
-      users,
       badges,
       deadLetters,
       auditLogs,
@@ -213,90 +208,6 @@ export function AdminConsole() {
         setMfaToken(null);
       }
       setError(errorMessage(verifyError));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleResolve(caseId: string) {
-    if (!mfaToken) {
-      return;
-    }
-    const note = (resolutionDrafts[caseId] ?? "").trim();
-    if (note.length < 5) {
-      setError("Resolution note must be at least 5 characters.");
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      const updated = await resolveSupportCase(mfaToken, caseId, note);
-      setData((current) =>
-        current
-          ? {
-              ...current,
-              supportCases: current.supportCases.map((item) =>
-                item.id === updated.id ? updated : item,
-              ),
-            }
-          : current,
-      );
-      setResolutionDrafts((current) => ({ ...current, [caseId]: "" }));
-      const auditLogs = await listAdminAuditLogs(mfaToken);
-      setData((current) => (current ? { ...current, auditLogs } : current));
-    } catch (resolveError) {
-      if (isMfaError(resolveError)) {
-        setMfaToken(null);
-      }
-      setError(errorMessage(resolveError));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleUserSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!mfaToken) {
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      const users = await listAdminUsers(mfaToken, userQuery.trim() || undefined);
-      setData((current) => (current ? { ...current, users } : current));
-    } catch (searchError) {
-      setError(errorMessage(searchError));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleRoleUpdate(target: AdminUser) {
-    if (!mfaToken) {
-      return;
-    }
-    const draft = roleDrafts[target.id] ?? { role: target.role, reason: "" };
-    if (draft.reason.trim().length < 5) {
-      setError("A reason of at least 5 characters is required for a role change.");
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      const updated = await updateUserRole(mfaToken, target.id, draft.role, draft.reason.trim());
-      setData((current) =>
-        current
-          ? {
-              ...current,
-              users: current.users.map((item) => (item.id === updated.id ? updated : item)),
-            }
-          : current,
-      );
-      setRoleDrafts((current) => ({ ...current, [target.id]: { role: updated.role, reason: "" } }));
-      const auditLogs = await listAdminAuditLogs(mfaToken);
-      setData((current) => (current ? { ...current, auditLogs } : current));
-    } catch (updateError) {
-      setError(errorMessage(updateError));
     } finally {
       setBusy(false);
     }
@@ -522,7 +433,8 @@ export function AdminConsole() {
                 ["support", `Support cases (${data.supportCases.length})`],
                 ["appeals", `Appeals (${data.appeals.length})`],
                 ["deletion", `Deletion (${data.deletionRequests.length})`],
-                ["users", `Users (${data.users.length})`],
+                ["users", "Users"],
+                ["wishes", "Wishes"],
                 ["badges", `Badges (${data.badges.length})`],
                 ["outbox", `Outbox (${data.deadLetters.length})`],
                 ["audit", `Audit log (${data.auditLogs.length})`],
@@ -592,274 +504,52 @@ export function AdminConsole() {
           )}
 
           {tab === "support" && (
-            <section aria-labelledby="admin-support-heading" className="space-y-3">
-              <h2
-                id="admin-support-heading"
-                className="font-display text-2xl font-semibold tracking-[-0.04em]"
-              >
-                Support cases
-              </h2>
-              {data.supportCases.length === 0 ? (
-                <p className="kindly-card p-5 text-sm text-kindly-muted">No support cases.</p>
-              ) : (
-                data.supportCases.map((item) => (
-                  <article key={item.id} className="kindly-card p-5 text-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-semibold">
-                        {SUPPORT_CASE_LABELS[item.caseType]} · ₹{item.amountInr}
-                      </span>
-                      <span className="rounded-full bg-kindly-accent-soft px-3 py-1 text-xs font-semibold">
-                        {item.status}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-kindly-muted">
-                      Gift {item.giftStatus} · wish {item.wishStatus} · payment{" "}
-                      {item.paymentRefCode}
-                    </p>
-                    <p className="mt-2 whitespace-pre-wrap">{item.description}</p>
-                    <dl className="mt-3 grid gap-1 text-xs text-kindly-muted sm:grid-cols-2">
-                      <div>
-                        Reporter: {item.reporterDisplayName ?? "—"} · Donor:{" "}
-                        {item.donorDisplayName ?? "—"} · Recipient:{" "}
-                        {item.recipientDisplayName ?? "—"}
-                      </div>
-                      <div>
-                        Masked VPA: {item.recipientMaskedVpa ?? "—"} · UTR:{" "}
-                        {item.utrReference ?? "—"}
-                      </div>
-                    </dl>
-                    {item.resolutionNote ? (
-                      <p className="mt-3 rounded-xl bg-green-50 p-3 text-green-900">
-                        Resolution: {item.resolutionNote} ({formatDate(item.resolvedAt)})
-                      </p>
-                    ) : (
-                      <div className="mt-3 space-y-2">
-                        <label htmlFor={`resolution-${item.id}`} className="kindly-label">
-                          Resolution note
-                        </label>
-                        <textarea
-                          id={`resolution-${item.id}`}
-                          rows={2}
-                          maxLength={1000}
-                          value={resolutionDrafts[item.id] ?? ""}
-                          onChange={(event) =>
-                            setResolutionDrafts((current) => ({
-                              ...current,
-                              [item.id]: event.target.value,
-                            }))
-                          }
-                          className="w-full rounded-xl border border-kindly-border px-3 py-2 text-sm"
-                        />
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => handleResolve(item.id)}
-                          className="kindly-btn-primary"
-                        >
-                          {busy ? "Resolving…" : "Resolve case"}
-                        </button>
-                      </div>
-                    )}
-                  </article>
-                ))
-              )}
-            </section>
+            <AdminSupportTable
+              cases={data.supportCases}
+              mfaToken={mfaToken ?? ""}
+              onChanged={async () => {
+                if (mfaToken) {
+                  await loadData(mfaToken);
+                }
+              }}
+            />
           )}
 
           {tab === "appeals" && (
-            <section aria-labelledby="admin-appeals-heading" className="space-y-3">
-              <h2
-                id="admin-appeals-heading"
-                className="font-display text-2xl font-semibold tracking-[-0.04em]"
-              >
-                Appeals queue
-              </h2>
-              {data.appeals.length === 0 ? (
-                <p className="kindly-card p-5 text-sm text-kindly-muted">No open appeals.</p>
-              ) : (
-                data.appeals.map((appeal) => (
-                  <article key={appeal.id} className="kindly-card p-5 text-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-semibold">
-                        {appeal.userDisplayName ?? "Unknown user"} · {appeal.action}
-                      </span>
-                      <span className="rounded-full bg-kindly-accent-soft px-3 py-1 text-xs font-semibold">
-                        {appeal.status}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-kindly-muted">
-                      Original reason: {appeal.actionReason} · {formatDate(appeal.createdAt)}
-                    </p>
-                    <p className="mt-2 whitespace-pre-wrap">{appeal.reason}</p>
-                    <p className="mt-2 text-xs text-kindly-muted">
-                      Appeal {appeal.id.slice(0, 8)} · action {appeal.actionId.slice(0, 8)}
-                    </p>
-                    {appeal.status === "OPEN" || appeal.status === "UNDER_REVIEW" ? (
-                      <AppealResolutionForm
-                        mfaToken={mfaToken ?? ""}
-                        appealId={appeal.id}
-                        onResolved={async () => {
-                          if (mfaToken) {
-                            await loadData(mfaToken);
-                          }
-                        }}
-                      />
-                    ) : (
-                      appeal.resolutionNote && (
-                        <p className="mt-3 rounded-xl bg-green-50 p-3 text-green-900">
-                          Resolution: {appeal.resolutionNote} ({formatDate(appeal.resolvedAt)})
-                        </p>
-                      )
-                    )}
-                  </article>
-                ))
-              )}
-            </section>
+            <AdminAppealsTable
+              appeals={data.appeals}
+              mfaToken={mfaToken ?? ""}
+              onChanged={async () => {
+                if (mfaToken) {
+                  await loadData(mfaToken);
+                }
+              }}
+            />
           )}
 
-          {tab === "deletion" && (
-            <section aria-labelledby="admin-deletion-heading" className="space-y-3">
-              <h2
-                id="admin-deletion-heading"
-                className="font-display text-2xl font-semibold tracking-[-0.04em]"
-              >
-                Account deletion requests
-              </h2>
-              <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                Requests are recorded only. Do not delete or anonymise financial/audit records until
-                counsel-approved retention is in place.
-              </p>
-              {data.deletionRequests.length === 0 ? (
-                <p className="kindly-card p-5 text-sm text-kindly-muted">
-                  No open deletion requests.
-                </p>
-              ) : (
-                data.deletionRequests.map((item) => (
-                  <article key={item.id} className="kindly-card p-5 text-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-semibold">
-                        {item.userDisplayName ?? "Unknown user"} · {item.userStatus}
-                      </span>
-                      <span className="rounded-full bg-kindly-accent-soft px-3 py-1 text-xs font-semibold">
-                        {item.status}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-kindly-muted">
-                      Requested {formatDate(item.requestedAt)}
-                      {item.cancelledAt ? ` · cancelled ${formatDate(item.cancelledAt)}` : ""}
-                    </p>
-                    {item.reason && <p className="mt-2">{item.reason}</p>}
-                  </article>
-                ))
-              )}
-            </section>
-          )}
+          {tab === "deletion" && <AdminDeletionTable requests={data.deletionRequests} />}
 
           {tab === "users" && (
-            <section aria-labelledby="admin-users-heading" className="space-y-3">
-              <h2
-                id="admin-users-heading"
-                className="font-display text-2xl font-semibold tracking-[-0.04em]"
-              >
-                Users and roles
-              </h2>
-              <form onSubmit={handleUserSearch} className="flex flex-wrap items-end gap-2">
-                <div className="min-w-48 flex-1">
-                  <label htmlFor="admin-user-search" className="kindly-label">
-                    Search by display name
-                  </label>
-                  <input
-                    id="admin-user-search"
-                    type="text"
-                    maxLength={60}
-                    value={userQuery}
-                    onChange={(event) => setUserQuery(event.target.value)}
-                    className="kindly-input mt-1"
-                  />
-                </div>
-                <button type="submit" disabled={busy} className="kindly-btn-secondary">
-                  Search
-                </button>
-              </form>
-              {data.users.length === 0 ? (
-                <p className="kindly-card p-5 text-sm text-kindly-muted">No matching users.</p>
-              ) : (
-                data.users.map((item) => {
-                  const draft = roleDrafts[item.id] ?? { role: item.role, reason: "" };
-                  return (
-                    <article key={item.id} className="kindly-card p-5 text-sm">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="font-semibold">{item.displayName ?? "Unnamed user"}</span>
-                        <span className="rounded-full bg-kindly-accent-soft px-3 py-1 text-xs font-semibold">
-                          {item.role} · {item.status}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-xs text-kindly-muted">
-                        User {item.id.slice(0, 8)} · joined {formatDate(item.createdAt)}
-                      </p>
-                      <div className="mt-3 flex flex-wrap items-end gap-2">
-                        <div>
-                          <label htmlFor={`role-${item.id}`} className="block text-xs font-medium">
-                            Database role
-                          </label>
-                          <select
-                            id={`role-${item.id}`}
-                            value={draft.role}
-                            onChange={(event) =>
-                              setRoleDrafts((current) => ({
-                                ...current,
-                                [item.id]: {
-                                  role: event.target.value as AdminUser["role"],
-                                  reason: current[item.id]?.reason ?? "",
-                                },
-                              }))
-                            }
-                            className="kindly-input mt-1"
-                          >
-                            <option value="USER">USER</option>
-                            <option value="MODERATOR">MODERATOR</option>
-                            <option value="ADMIN">ADMIN</option>
-                          </select>
-                        </div>
-                        <div className="min-w-48 flex-1">
-                          <label
-                            htmlFor={`role-reason-${item.id}`}
-                            className="block text-xs font-medium"
-                          >
-                            Reason (mandatory)
-                          </label>
-                          <input
-                            id={`role-reason-${item.id}`}
-                            type="text"
-                            minLength={5}
-                            maxLength={1000}
-                            value={draft.reason}
-                            onChange={(event) =>
-                              setRoleDrafts((current) => ({
-                                ...current,
-                                [item.id]: {
-                                  role: current[item.id]?.role ?? item.role,
-                                  reason: event.target.value,
-                                },
-                              }))
-                            }
-                            className="kindly-input mt-1"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          disabled={busy || item.id === user?.id}
-                          onClick={() => handleRoleUpdate(item)}
-                          className="kindly-btn-primary"
-                        >
-                          {item.id === user?.id ? "This is you" : "Update role"}
-                        </button>
-                      </div>
-                    </article>
-                  );
-                })
-              )}
-            </section>
+            <AdminUserTable
+              mfaToken={mfaToken ?? ""}
+              currentUserId={user?.id ?? ""}
+              onChanged={async () => {
+                if (mfaToken) {
+                  await loadData(mfaToken);
+                }
+              }}
+            />
+          )}
+
+          {tab === "wishes" && (
+            <AdminWishTable
+              mfaToken={mfaToken ?? ""}
+              onChanged={async () => {
+                if (mfaToken) {
+                  await loadData(mfaToken);
+                }
+              }}
+            />
           )}
 
           {tab === "badges" && (
@@ -874,76 +564,9 @@ export function AdminConsole() {
             />
           )}
 
-          {tab === "outbox" && (
-            <section aria-labelledby="admin-outbox-heading" className="space-y-3">
-              <h2
-                id="admin-outbox-heading"
-                className="font-display text-2xl font-semibold tracking-[-0.04em]"
-              >
-                Outbox dead letters
-              </h2>
-              <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                Dead-lettered events need investigation. Domain state is already committed; retry
-                only through an approved idempotent handler.
-              </p>
-              {data.deadLetters.length === 0 ? (
-                <p className="kindly-card p-5 text-sm text-kindly-muted">
-                  No dead-lettered events.
-                </p>
-              ) : (
-                data.deadLetters.map((item) => (
-                  <article key={item.id} className="kindly-card p-5 text-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-semibold">{item.eventType}</span>
-                      <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900">
-                        {item.attempts} attempts
-                      </span>
-                    </div>
-                    <p className="mt-2 text-kindly-muted">
-                      {item.aggregateType} · {item.aggregateId.slice(0, 8)} ·{" "}
-                      {formatDate(item.createdAt)}
-                    </p>
-                    <p className="mt-2">Reason: {item.deadLetterReason ?? "—"}</p>
-                  </article>
-                ))
-              )}
-            </section>
-          )}
+          {tab === "outbox" && <AdminOutboxTable deadLetters={data.deadLetters} />}
 
-          {tab === "audit" && (
-            <section aria-labelledby="admin-audit-heading" className="space-y-3">
-              <h2
-                id="admin-audit-heading"
-                className="font-display text-2xl font-semibold tracking-[-0.04em]"
-              >
-                Append-only audit log
-              </h2>
-              {data.auditLogs.length === 0 ? (
-                <p className="kindly-card p-5 text-sm text-kindly-muted">No audit events.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {data.auditLogs.map((entry) => (
-                    <li key={entry.id} className="kindly-card p-4 text-sm">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="font-semibold">{entry.action}</span>
-                        <span className="text-xs text-kindly-muted">
-                          {formatDate(entry.createdAt)}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-kindly-muted">
-                        {entry.actorDisplayName ?? "System"} · {entry.targetType}
-                        {entry.targetId ? ` · ${entry.targetId.slice(0, 8)}` : ""}
-                      </p>
-                      {entry.reason && <p className="mt-2">{entry.reason}</p>}
-                      <p className="mt-1 text-xs text-kindly-muted">
-                        Request {entry.requestId ?? "—"}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          )}
+          {tab === "audit" && <AdminAuditTable logs={data.auditLogs} />}
         </>
       )}
     </div>

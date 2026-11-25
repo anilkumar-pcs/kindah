@@ -15,6 +15,7 @@ from app.modules.admin.schemas import (
     AdminMfaStatusResponse,
     AdminUserList,
     AdminUserSummary,
+    AdminWishList,
     AppealCreateRequest,
     AppealList,
     AppealResolveRequest,
@@ -43,7 +44,9 @@ from app.modules.identity.dependencies import (
     require_admin,
     require_admin_role,
 )
+from app.modules.identity.models import UserStatus
 from app.modules.identity.service import AuthContext
+from app.modules.wishes.models import WishStatus
 from app.providers.crypto.base import CryptoProvider
 
 router = APIRouter(tags=["admin"])
@@ -134,10 +137,13 @@ def deactivate_badge_definition(
 @router.get("/admin/users", response_model=AdminUserList)
 def list_users(
     query: str | None = Query(default=None, max_length=60),
+    status: UserStatus | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
     _auth: AuthContext = Depends(require_admin),
     service: AdminService = Depends(get_admin_service),
 ) -> AdminUserList:
-    return service.list_users(query)
+    return service.list_users(query, status, page, page_size)
 
 
 @router.patch("/admin/users/{user_id}/role", response_model=AdminUserSummary)
@@ -161,6 +167,18 @@ def moderate_user(
     service: AdminService = Depends(get_admin_service),
 ) -> ModerationActionResponse:
     return service.moderate_user(auth.user, user_id, body)
+
+
+@router.get("/admin/wishes", response_model=AdminWishList)
+def list_admin_wishes(
+    query: str | None = Query(default=None, max_length=80),
+    status: WishStatus | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    _auth: AuthContext = Depends(require_admin),
+    service: AdminService = Depends(get_admin_service),
+) -> AdminWishList:
+    return service.list_admin_wishes(query, status, page, page_size)
 
 
 @router.post(

@@ -9,6 +9,7 @@ from pydantic import Field, model_validator
 from app.core.schemas import ApiModel
 from app.modules.admin.models import AppealStatus, DeletionRequestStatus
 from app.modules.identity.models import UserRole, UserStatus
+from app.modules.wishes.models import WishMood, WishStatus
 
 
 class AdminUserSummary(ApiModel):
@@ -21,6 +22,29 @@ class AdminUserSummary(ApiModel):
 
 class AdminUserList(ApiModel):
     users: list[AdminUserSummary]
+    total: int = Field(default=0, ge=0)
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=20, ge=1, le=100)
+
+
+class AdminWishSummary(ApiModel):
+    id: UUID
+    display_name: str | None
+    message: str
+    mood: WishMood
+    suggested_amount_inr: int | None
+    city: str | None
+    status: WishStatus
+    closed_reason: str | None
+    created_at: datetime
+    expires_at: datetime
+
+
+class AdminWishList(ApiModel):
+    wishes: list[AdminWishSummary]
+    total: int = Field(default=0, ge=0)
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=20, ge=1, le=100)
 
 
 class UserRoleUpdateRequest(ApiModel):

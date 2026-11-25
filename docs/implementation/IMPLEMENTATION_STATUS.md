@@ -1,9 +1,9 @@
 # Chillar / Kindly — Implementation Status
 
-**Last updated:** 2026-11-24
+**Last updated:** 2026-11-25
 **Current phase:** Phase 8 — Hardening, launch readiness and Bengaluru beta
 **Overall status:** `BLOCKED` — external launch/legal/provider gates and owner decisions required
-**Repository state:** Phases 0–7 complete. Phase 8 is in progress: threat model/scans, local restore drill, load smoke and accessibility audits are recorded; deployment, monitoring, beta assumptions and legal/provider gates are external.
+**Repository state:** Phases 0–7 complete. Phase 8 local hardening is recorded. A post-v1 UX workstream delivered compact My Space, discovery filters, admin Users/Wishes tables, Home City Pulse and trust surfaces; external deployment/legal/provider gates remain blocked.
 
 ## Phase dashboard
 
@@ -18,6 +18,20 @@
 | 6. Trust & safety | `DONE` | 11 | 11 | 168 backend + 50 frontend tests; local staging payment/dispute exercise |
 | 7. Engagement | `DONE` | 8 | 8 | 176 backend + 54 frontend tests; badge definitions DB-configurable |
 | 8. Hardening & beta | `IN_PROGRESS` | 2 | 12 | Threat model/scans done; local restore/load/a11y checks recorded; launch gates blocked |
+
+## Post-v1 UX workstream — 2026-11-25
+
+Active board: `PRODUCT_UX_ROADMAP.md`.
+
+| Task | Status | Evidence |
+|---|---|---|
+| UX-01 Compact My Space tabs | `DONE` | 9 component tests; mobile browser screenshot |
+| UX-02 Discovery search/filters/pagination | `DONE` | 196 backend tests; 9 DiscoverFeed tests; URL state and bounded cursors |
+| UX-03 Home/Discover split | `DONE` | Home `/`, Discover `/discover`; mobile tabs and header Updates |
+| UX-04 Admin table-first console | `DONE` | Users/Wishes server-paginated; Support/Appeals/Deletion/Outbox/Audit converted to shared tables with search/filter/pagination and details; server pagination for the five bounded queues remains a scale follow-up |
+| UX-05 Footer and trust surfaces | `DONE` | `/about`, `/safety`, `/legal`; responsive footer; draft-review notice |
+| UX-06 Home City Pulse | `DONE` | aggregate stats, seven-day chart/table, thresholded area pulse; no individual A→B flow (`DEC-A08` pending owner review) |
+| UX-07 Cross-cutting QA | `IN_PROGRESS` | automated gates + desktop/mobile browser pass; full a11y/security review pending |
 
 ## Phase 5 progress
 
@@ -114,6 +128,8 @@ Blocked/partial:
 
 | Date | Phase/task | Change | Evidence |
 |---|---|---|---|
+| 2026-11-25 | UX follow-up | Removed location branding; compact Discover; all five remaining admin queues table-first | `TEST_EVIDENCE.md` VE-052 |
+| 2026-11-25 | Post-v1 UX | Compact My Space tabs, discovery filters, admin Users/Wishes tables, City Pulse, footer/trust pages | `TEST_EVIDENCE.md` VE-049–VE-051 |
 | 2026-11-24 | Owner follow-up | Direction A applied across all consumer, account, gift and admin screens | `TEST_EVIDENCE.md` VE-048 |
 | 2026-11-24 | Owner follow-up | Direction A design system, mobile bottom-tab shell and redesigned Home | `TEST_EVIDENCE.md` VE-047 |
 | 2026-11-24 | Owner follow-up | Replaced duplicate account header with profile dropdown: Appeals, Account deletion, Sign out | `TEST_EVIDENCE.md` VE-046 |
@@ -141,8 +157,8 @@ Blocked/partial:
 
 | Check | Result |
 |---|---|
-| Backend tests | 177 passed (14 gift, 2 support-case, 4 reporting/block/auto-hide, 9 admin security/moderation/appeal/role, 2 deletion, 3 notifications, 4 outbox, 3 karma/badge config, 2 Surprise Me) |
-| Frontend tests | 72 passed (15 test files) |
+| Backend tests | 196 passed (adds discovery filter/cursor, public aggregate stats and admin wish-table coverage) |
+| Frontend tests | 90 passed (18 test files) |
 | Dependency/security scans | `npm audit` 0; `pip-audit` 0 known; Bandit medium/high clean; no tracked env/secrets |
 | Local restore drill | PASS — dump/restore at `0014_badge_definitions`; users=3, badge_definitions=5, wishes=3, gifts=1 |
 | Local load smoke | 500 requests, 50 concurrency, 0 errors, p95 90.3 ms (not capacity sign-off) |
@@ -171,6 +187,9 @@ Blocked/partial:
 | Onboarding/wish/account UX | PASS — avatar context/fixed-set copy; post-auth redirect; owner wish message and direct gift CTA; city/service panels removed; account actions in profile dropdown with no duplicate nav |
 | Direction A shell/Home | PASS — shared tokens/fonts/icons; mobile bottom tabs and account sheet; editorial Home hero and wish feed; desktop/mobile browser review |
 | Direction A full rollout | PASS — consumer, account, gift and admin screens restyled; 72 frontend tests; desktop/mobile browser review |
+| Post-v1 discovery/stats | PASS — API search/mood/amount filters, cursor-bound filters, `totalCount`, aggregate City Pulse with thresholded areas |
+| Post-v1 admin tables | PASS — Users/Wishes server-paginated; Support/Appeals/Deletion/Outbox/Audit table-first with search/filter/pagination/detail; no private columns |
+| Post-v1 My Space/footer | PASS — compact tabs/deep links at 390px; About/Safety/Legal drafts; mobile footer clears bottom tabs |
 | Phase 7 overall | `DONE` — 8/8 tasks; badge definitions DB-configurable |
 | Phase 5 overall | `DONE` — 15/15 tasks |
 
@@ -188,5 +207,6 @@ Implemented: `0006_support_cases`, participant case creation, admin list/detail/
 
 1. Confirm the owner account remains DB `ADMIN`; use the visible admin console link or `/admin`, then the admin Users tab for further role changes.
 2. Revisit DEC-I13 before production: owner accepted role-only admin access, so account-compromise risk must be covered by deployment controls or MFA re-enabled.
-3. Provision deployed staging, monitoring/alerts/on-call, KMS/OTP/UPI providers and complete legal/bank approvals before P8.3–P8.12.
-4. Run independent security review and a full WCAG 2.2 AA/manual browser matrix; keep deletion non-destructive and real-money handoff disabled.
+3. Review `DEC-A08`: the Home map is intentionally aggregate-only; an individual A→B money-flow map would conflict with the pseudonymous/private-data model and is not implemented.
+4. Provision deployed staging, monitoring/alerts/on-call, KMS/OTP/UPI providers and complete legal/bank approvals before P8.3–P8.12.
+5. Run independent security review and a full WCAG 2.2 AA/manual browser matrix; keep deletion non-destructive and real-money handoff disabled.

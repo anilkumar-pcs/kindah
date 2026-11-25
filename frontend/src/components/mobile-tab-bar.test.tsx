@@ -60,9 +60,9 @@ describe("MobileTabBar", () => {
     expect(
       await screen.findByRole("navigation", { name: /mobile navigation/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Discover" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Discover" })).toHaveAttribute("href", "/discover");
     expect(screen.getByRole("link", { name: "My Space" })).toHaveAttribute("href", "/me");
-    expect(screen.getByRole("link", { name: "Updates" })).toHaveAttribute("href", "/notifications");
 
     await user.click(screen.getByRole("button", { name: "Account" }));
 
@@ -73,6 +73,17 @@ describe("MobileTabBar", () => {
       "/account-deletion",
     );
     expect(screen.getByRole("link", { name: "Admin console" })).toHaveAttribute("href", "/admin");
+  });
+
+  it("keeps Discover active while viewing a wish", async () => {
+    nav.pathname = "/wishes/wish-1";
+    render(<MobileTabBar />);
+
+    expect(await screen.findByRole("link", { name: "Discover" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("link", { name: "Home" })).not.toHaveAttribute("aria-current");
   });
 
   it("offers sign-in to guests with a return path", async () => {

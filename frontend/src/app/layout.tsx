@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, Caveat, Plus_Jakarta_Sans } from "next/font/google
 import { Suspense, type ReactNode } from "react";
 
 import { MobileTabBar } from "@/components/mobile-tab-bar";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader, SiteHeaderFallback } from "@/components/site-header";
 
 import "./globals.css";
@@ -64,9 +65,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <Suspense fallback={null}>
           <MobileTabBar />
         </Suspense>
-        <footer className="hidden border-t border-kindly-border px-4 py-6 text-center text-sm text-kindly-muted md:block">
-          <p>Small acts of kindness. No campaigns, no targets, no proof-of-use.</p>
-        </footer>
+        <SiteFooter />
       </body>
     </html>
   );

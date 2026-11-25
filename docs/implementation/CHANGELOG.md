@@ -2,6 +2,55 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-25 — Neutral location copy, compact Discover and complete admin tables
+
+### Changed
+
+- Removed hard-coded Bengaluru branding and location claims from the header, footer, Home hero, About, Discover metadata and draft legal copy. User-entered wish cities remain user data and are unchanged.
+- Compacted Discover: search is a single-row toolbar, mood/amount controls live behind a Filters disclosure, and Surprise Me is a small header action. The result count and wish collection now appear substantially higher.
+- Converted Support, Appeals, Deletion, Outbox and Audit admin queues to the shared table-first pattern with search, filters, pagination and detail drawers. Support and appeal resolution keep their existing audited forms and MFA boundary.
+- Preserved the non-destructive deletion warning and outbox replay warning in the new tables.
+
+### Verification
+
+- 196 backend tests pass unchanged; Ruff, format and mypy clean.
+- 90 frontend tests across 18 files pass; ESLint, Prettier, TypeScript and production build clean.
+- Browser review: Home, Discover desktop/mobile, My Space mobile, footer mobile and Support/Audit admin tables/detail drawers; no console errors.
+- Updated screenshots: `home-city-pulse.png`, `home-mobile-pulse.png`, `discover-filters.png`, `discover-mobile-compact.png`, `my-space-mobile-tabs.png`, `footer-mobile.png`, `admin-support-table.png`, `admin-support-detail.png`, `admin-audit-table.png`, `admin-users-table.png`, `admin-wishes-table.png`.
+
+### Scope note
+
+- The five converted queues use client-side search/filter/pagination over the existing bounded admin payloads. Server-side pagination for these domains remains a scale follow-up.
+- Legal copy and real-money production gates remain external.
+
+## 2026-11-25 — Compact My Space, discovery filters, admin tables, City Pulse and trust surfaces
+
+### Added
+
+- **Home City Pulse:** public `GET /api/v1/public/stats` with aggregate members, wishes, all-time/weekly recipient-confirmed gifts, seven-day series, community streak and thresholded area labels. Home shows stat tiles, a CSS bar chart with table alternative and a privacy-safe area pulse. No individual donor→recipient flow or donor location is exposed (`DEC-A08`, owner review pending).
+- **Discovery search/filters:** `q`, `mood`, `amount_min`, `amount_max`, additive `totalCount`, filter-bound cursors and URL-state filters on `/discover`; warm empty/error states and result counts.
+- **My Space tabs:** compact Overview/Wish/Gifts/Account hub with hash deep links, keyboard navigation, summary tiles, recent gifts, inline account links and forms kept inside focused tabs.
+- **Admin tables:** MFA-protected paginated/searchable Users and Wishes endpoints plus table UI with detail drawers, role changes, guarded status actions and audited wish moderation.
+- **Trust surfaces:** Direction A footer, `/about`, `/safety` and `/legal` draft declarations covering direct-UPI limits, no charity/wallet/escrow status, 18+ eligibility, privacy outline, accessibility status and counsel-review notice.
+
+### Changed
+
+- Split Home `/` from Discover `/discover`; Home now carries the hero, City Pulse and little-loop explanation.
+- Mobile tabs are Home, Discover, My Space and Account; Updates moved to the mobile header bell.
+- Profile navigation and footer now reflect the split; admin Users/Wishes moved from card lists to server-paginated tables.
+
+### Verification
+
+- 196 backend tests pass; Ruff, format and mypy clean.
+- 88 frontend tests across 18 files pass; ESLint, Prettier, TypeScript and production build clean.
+- Browser review at desktop and 390px: Home/City Pulse, Discover filters, My Space tabs, admin Users/Wishes tables and mobile footer; no console errors.
+- Screenshots: `docs/design/screenshots/home-city-pulse.png`, `discover-filters.png`, `my-space-mobile-tabs.png`, `admin-users-table.png`, `admin-wishes-table.png`, `home-mobile-pulse.png`, `footer-mobile.png`.
+
+### Scope note
+
+- Admin support/appeals/deletion/outbox/audit remain card-first; Users and Wishes are the table-first entities delivered in this slice.
+- Legal copy is a working draft and must be replaced after counsel review. Real-money production handoff remains disabled.
+
 ## 2026-11-24 — Direction A applied across the app
 
 ### Changed

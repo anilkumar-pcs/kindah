@@ -17,14 +17,41 @@ export type FeedPage = {
   wishes: PublicWish[];
   nextCursor: string | null;
   seed: string | null;
+  totalCount: number;
 };
 
 export type FeedParams = {
   sort: "fresh" | "random";
   city?: string;
+  q?: string;
+  mood?: WishMood;
+  amountMin?: number;
+  amountMax?: number;
   cursor?: string;
   seed?: string;
   limit?: number;
+};
+
+export type PublicStats = {
+  wishesSharedCount: number;
+  memberCount: number;
+  openWishCount: number;
+  confirmedGiftCountAllTime: number;
+  confirmedGiftValueInrAllTime: number;
+  confirmedGiftCountThisWeek: number;
+  confirmedGiftValueInrThisWeek: number;
+  activeNeighbourhoodCountThisWeek: number;
+  communityStreakDays: number;
+  weeklyConfirmedGifts: Array<{
+    date: string;
+    count: number;
+    valueInr: number;
+  }>;
+  activeNeighbourhoods: Array<{
+    label: string;
+    confirmedGiftCount: number;
+  }>;
+  generatedAt: string;
 };
 
 export async function listPublicWishes(params: FeedParams): Promise<FeedPage> {
@@ -34,6 +61,18 @@ export async function listPublicWishes(params: FeedParams): Promise<FeedPage> {
   if (params.city) {
     query.set("city", params.city);
   }
+  if (params.q) {
+    query.set("q", params.q);
+  }
+  if (params.mood) {
+    query.set("mood", params.mood);
+  }
+  if (params.amountMin !== undefined) {
+    query.set("amount_min", String(params.amountMin));
+  }
+  if (params.amountMax !== undefined) {
+    query.set("amount_max", String(params.amountMax));
+  }
   if (params.cursor) {
     query.set("cursor", params.cursor);
   }
@@ -41,6 +80,10 @@ export async function listPublicWishes(params: FeedParams): Promise<FeedPage> {
     query.set("seed", params.seed);
   }
   return apiFetch<FeedPage>(`/api/v1/wishes?${query.toString()}`);
+}
+
+export async function getPublicStats(): Promise<PublicStats> {
+  return apiFetch<PublicStats>("/api/v1/public/stats");
 }
 
 export async function getPublicWish(wishId: string): Promise<PublicWish> {

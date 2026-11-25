@@ -9,16 +9,19 @@ import { logout, type UserProfile } from "@/lib/auth/session";
 import { useSessionUser } from "@/lib/auth/use-session-user";
 
 const tabs: Array<{ href: string; label: string; icon: IconName }> = [
-  { href: "/", label: "Discover", icon: "compass" },
+  { href: "/", label: "Home", icon: "sun" },
+  { href: "/discover", label: "Discover", icon: "compass" },
   { href: "/me", label: "My Space", icon: "heart" },
-  { href: "/notifications", label: "Updates", icon: "bell" },
 ];
 
 const hiddenPrefixes = ["/sign-in", "/reauth", "/gifts/new"];
 
 function isActive(pathname: string, href: string): boolean {
   if (href === "/") {
-    return pathname === "/" || pathname.startsWith("/wishes/");
+    return pathname === "/";
+  }
+  if (href === "/discover") {
+    return pathname === "/discover" || pathname.startsWith("/wishes/");
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }

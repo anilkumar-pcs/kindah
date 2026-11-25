@@ -9,7 +9,7 @@ import { logout, type UserProfile } from "@/lib/auth/session";
 import { useSessionUser } from "@/lib/auth/use-session-user";
 
 const primaryLinks = [
-  { href: "/", label: "Discover" },
+  { href: "/discover", label: "Discover" },
   { href: "/me", label: "My space" },
   { href: "/notifications", label: "Notifications" },
 ] as const;
@@ -23,7 +23,13 @@ function initialFor(user: UserProfile): string {
 }
 
 function isActive(pathname: string, href: string): boolean {
-  return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+  if (href === "/") {
+    return pathname === "/";
+  }
+  if (href === "/discover") {
+    return pathname === "/discover" || pathname.startsWith("/wishes/");
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export function SiteHeaderFallback() {
@@ -208,9 +214,20 @@ export function SiteHeader() {
           )}
         </div>
 
-        <span className="rounded-full border border-kindly-border bg-kindly-card px-3 py-1 text-[9px] font-extrabold tracking-[0.12em] text-kindly-muted uppercase md:hidden">
-          Bengaluru beta
-        </span>
+        <div className="flex items-center gap-1.5 md:hidden">
+          <Link
+            href="/notifications"
+            aria-label="Updates"
+            aria-current={isActive(pathname, "/notifications") ? "page" : undefined}
+            className={`grid h-9 w-9 place-items-center rounded-full border ${
+              isActive(pathname, "/notifications")
+                ? "border-kindly-accent bg-kindly-accent-soft text-kindly-accent"
+                : "border-kindly-border bg-kindly-card text-kindly-muted"
+            }`}
+          >
+            <Icon name="bell" className="h-4 w-4" />
+          </Link>
+        </div>
       </div>
     </header>
   );
