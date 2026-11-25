@@ -191,8 +191,8 @@ export function AdminWishTable({ mfaToken, onChanged }: Props) {
         </p>
       )}
 
-      <div className="overflow-x-auto rounded-2xl border border-kindly-border bg-kindly-card">
-        <table className="w-full min-w-[760px] text-left text-sm">
+      <div className="overflow-hidden rounded-2xl border border-kindly-border bg-kindly-card">
+        <table className="hidden w-full min-w-[760px] text-left text-sm md:table">
           <caption className="sr-only">Wishes and moderation status</caption>
           <thead className="border-b border-kindly-border bg-kindly-cream/70 text-[10px] tracking-[0.12em] text-kindly-muted uppercase">
             <tr>
@@ -241,16 +241,37 @@ export function AdminWishTable({ mfaToken, onChanged }: Props) {
                 </td>
               </tr>
             ))}
-            {!loading && data?.wishes.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-3 py-8 text-center text-sm text-kindly-muted">
-                  No matching wishes.
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
+        <ul className="divide-y divide-kindly-border/60 md:hidden" aria-busy={loading}>
+          {data?.wishes.map((wish) => (
+            <li key={wish.id} className="space-y-2 p-3">
+              <p className="font-semibold">{wish.message}</p>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-kindly-muted">
+                <span>{wish.displayName ?? "—"}</span>
+                <span>·</span>
+                <span className="capitalize">{statusLabel(wish.status)}</span>
+                <span>·</span>
+                <span>{formatDate(wish.createdAt)}</span>
+              </div>
+              <button
+                type="button"
+                aria-label={`Manage wish ${wish.id.slice(0, 8)}`}
+                onClick={() => setSelected(wish)}
+                className="kindly-btn-secondary !min-h-9 w-full !text-xs"
+              >
+                Manage
+              </button>
+            </li>
+          ))}
+        </ul>
       </div>
+
+      {!loading && data?.wishes.length === 0 && (
+        <p className="rounded-2xl border border-kindly-border bg-kindly-card p-6 text-center text-sm text-kindly-muted">
+          No matching wishes.
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-kindly-muted">
         <p>

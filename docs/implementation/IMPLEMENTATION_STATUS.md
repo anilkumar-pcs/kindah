@@ -28,7 +28,7 @@ Active board: `PRODUCT_UX_ROADMAP.md`.
 | UX-01 Compact My Space tabs | `DONE` | 9 component tests; mobile browser screenshot |
 | UX-02 Discovery search/filters/pagination | `DONE` | 196 backend tests; 9 DiscoverFeed tests; URL state and bounded cursors |
 | UX-03 Home/Discover split | `DONE` | Home `/`, Discover `/discover`; mobile tabs and header Updates |
-| UX-04 Admin table-first console | `DONE` | All seven queues server-paginated/searchable with details and guarded actions; shared queue table has mobile card rows; Users/Wishes mobile cards, bulk actions and full a11y review remain |
+| UX-04 Admin table-first console | `DONE` | All seven queues server-paginated/searchable with details, guarded actions and mobile card rows; bulk actions and full a11y review remain |
 | UX-05 Footer and trust surfaces | `DONE` | `/about`, `/safety`, `/legal`; responsive footer; draft-review notice |
 | UX-06 Home City Pulse | `DONE` | aggregate stats, seven-day chart/table, thresholded area pulse; no individual A→B flow (`DEC-A08` pending owner review) |
 | UX-07 Cross-cutting QA | `IN_PROGRESS` | automated gates + desktop/mobile browser pass; full a11y/security review pending |
@@ -128,6 +128,7 @@ Blocked/partial:
 
 | Date | Phase/task | Change | Evidence |
 |---|---|---|---|
+| 2026-11-25 | UX follow-up | Mobile card rows for admin Users/Wishes; all admin tables responsive | `TEST_EVIDENCE.md` VE-054 |
 | 2026-11-25 | UX follow-up | Server-paginated/searchable admin queues and mobile card rows | `TEST_EVIDENCE.md` VE-053 |
 | 2026-11-25 | UX follow-up | Removed location branding; compact Discover; all five remaining admin queues table-first | `TEST_EVIDENCE.md` VE-052 |
 | 2026-11-25 | Post-v1 UX | Compact My Space tabs, discovery filters, admin Users/Wishes tables, City Pulse, footer/trust pages | `TEST_EVIDENCE.md` VE-049–VE-051 |

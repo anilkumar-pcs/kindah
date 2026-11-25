@@ -356,8 +356,9 @@ describe("AdminConsole", () => {
     await user.click(screen.getByRole("button", { name: /open admin console/i }));
     await user.click(await screen.findByRole("button", { name: /^users$/i }));
 
-    expect(await screen.findByText("PromoteMe")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /manage promoteme/i }));
+    const usersTable = await screen.findByRole("table");
+    expect(within(usersTable).getByText("PromoteMe")).toBeInTheDocument();
+    await user.click(within(usersTable).getByRole("button", { name: /manage promoteme/i }));
     await user.selectOptions(screen.getByLabelText(/database role/i), "ADMIN");
     await user.type(screen.getByLabelText(/reason \(mandatory\)/i), "Owner approved.");
     await user.click(screen.getByRole("button", { name: /update role/i }));

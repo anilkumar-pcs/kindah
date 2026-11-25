@@ -110,7 +110,7 @@
 - Pagination/filter state is URL-addressable.
 - Admin APIs and UI tests cover empty, loading, error and permission states.
 
-**Status:** DONE for the table-first conversion — Users/Wishes and all five operational queues use server pagination/search/filters with detail drawers and guarded actions. The shared queue table has mobile card rows; Users/Wishes mobile cards, bulk actions and full accessibility review remain.
+**Status:** DONE for the table-first conversion — Users/Wishes and all five operational queues use server pagination/search/filters with detail drawers, guarded actions and mobile card rows. Bulk actions and the full accessibility review remain.
 
 ### UX-05 — Footer and trust surfaces
 
@@ -181,7 +181,7 @@ Lane A and Lane B can proceed independently. Lane C backend work can proceed in 
 
 - **Done:** UX-01, UX-02, UX-03, UX-04 (table-first conversion), UX-05 and UX-06.
 - **In progress:** UX-07 — automated and browser QA done; full screen-reader/WCAG and independent security review remain.
-- **Next safe slice:** add mobile card rows for Users/Wishes, bulk actions with mandatory reasons, then run the full accessibility/privacy pass.
+- **Next safe slice:** add bulk actions with mandatory reasons, then run the full accessibility/privacy pass.
 - **Location copy:** all hard-coded Bengaluru branding/location claims were removed from user-facing surfaces; user-entered wish cities remain user data.
 - **Evidence:** `TEST_EVIDENCE.md` VE-049–VE-051; screenshots under `docs/design/screenshots/`.
 - **Owner review flag:** `DEC-A08` records that Home uses aggregate recipient-confirmed activity rather than an individual A→B money-flow map.

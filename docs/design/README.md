@@ -30,6 +30,7 @@ Full-page captures are saved in `screenshots/`:
 - `screenshots/discover-mobile-compact.png`
 - `screenshots/my-space-mobile-tabs.png`
 - `screenshots/admin-users-table.png`
+- `screenshots/admin-users-mobile-cards.png`
 - `screenshots/admin-wishes-table.png`
 - `screenshots/admin-support-table.png`
 - `screenshots/admin-support-detail.png`

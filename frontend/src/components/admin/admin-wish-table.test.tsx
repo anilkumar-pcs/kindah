@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -56,7 +56,8 @@ describe("AdminWishTable", () => {
 
     render(<AdminWishTable mfaToken="verified-token" onChanged={onChanged} />);
 
-    expect(await screen.findByText("A warm chai for a long day")).toBeInTheDocument();
+    const table = await screen.findByRole("table");
+    expect(within(table).getByText("A warm chai for a long day")).toBeInTheDocument();
     expect(screen.getByText("1 total")).toBeInTheDocument();
     expect(mockedList).toHaveBeenCalledWith("verified-token", {
       query: "",
@@ -75,7 +76,7 @@ describe("AdminWishTable", () => {
       });
     });
 
-    await user.click(screen.getByRole("button", { name: /manage wish/i }));
+    await user.click(within(table).getByRole("button", { name: /manage wish/i }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     await user.type(
       screen.getByLabelText(/reason \(mandatory\)/i),
@@ -97,7 +98,7 @@ describe("AdminWishTable", () => {
 
     render(<AdminWishTable mfaToken="verified-token" onChanged={vi.fn()} />);
 
-    await screen.findByText("A warm chai for a long day");
+    await screen.findByRole("table");
     await user.type(screen.getByLabelText(/search wish or pseudonym/i), "nothing");
     await user.click(screen.getByRole("button", { name: /^search$/i }));
 

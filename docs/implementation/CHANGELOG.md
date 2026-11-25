@@ -2,6 +2,25 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-25 — Mobile cards complete the admin tables
+
+### Changed
+
+- Added mobile card rows to the server-paginated Users and Wishes admin tables.
+- Kept desktop data tables; mobile users now see labelled compact cards with the same status, identity and Manage action.
+- Removed horizontal table scrolling from those two admin surfaces at mobile width.
+
+### Verification
+
+- 197 backend tests remain green; Ruff, format and mypy clean.
+- 90 frontend tests across 18 files pass; ESLint, Prettier, TypeScript and production build clean.
+- Browser review at 390px: admin Users cards render with search/status controls and the fixed bottom navigation; no console errors.
+- Screenshot: `docs/design/screenshots/admin-users-mobile-cards.png`.
+
+### Scope note
+
+- Bulk actions and the full manual accessibility/privacy pass remain.
+
 ## 2026-11-25 — Server-paginated admin queues and mobile cards
 
 ### Changed

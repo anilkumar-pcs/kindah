@@ -670,6 +670,20 @@ gates blocked. Automated test and browser evidence is recorded below.
 | Screenshot | `docs/design/screenshots/admin-support-mobile-cards.png`; refreshed `admin-support-table.png` |
 | Known limitation | Users/Wishes still use desktop table/horizontal scroll on mobile; encrypted free-text fields are not server-searchable; full screen-reader/WCAG and independent security review remain outstanding. |
 
+### VE-054 — Mobile card rows for admin Users and Wishes
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-25 |
+| Phase/task | UX-04 follow-up |
+| Command | `cd frontend && npm test && npm run lint && npm run typecheck && npm run format && npm run build` |
+| Environment | Next.js 16.4.6; React 19; Vitest/jsdom; local dev stack |
+| Result | **PASS** — 90 frontend tests across 18 files; ESLint, Prettier, TypeScript and production build clean |
+| Output/artefact | Users/Wishes admin tables keep desktop tables and add labelled mobile cards with Manage actions; empty states shared across both renderings |
+| Browser review | 390px admin Users tab: mobile cards, search/status controls and bottom navigation render; no console errors/warnings |
+| Screenshot | `docs/design/screenshots/admin-users-mobile-cards.png` |
+| Known limitation | Bulk actions and the full screen-reader/WCAG/security review remain outstanding. |
+
 ## Summary
 
 | Verification | Result |
@@ -727,6 +741,7 @@ gates blocked. Automated test and browser evidence is recorded below.
 | Post-v1 UX/API delivery | PASS — 196 backend and 88 frontend tests; discovery filters, public stats, admin Users/Wishes tables, footer/trust pages; build and browser review clean |
 | Post-v1 follow-up | PASS — 90 frontend tests; location branding removed; compact Discover; five remaining admin queues table-first; build and browser review clean |
 | Post-v1 admin pagination | PASS — 197 backend and 90 frontend tests; server-paginated queues and mobile cards; build and browser review clean |
+| Post-v1 admin mobile cards | PASS — Users/Wishes mobile cards; 90 frontend tests; build and browser review clean |
 | Phase 8 threat model/scans | PASS (local scope) — npm/pip/Bandit/secret checks |
 | Phase 8 restore/load/a11y smoke | PASS locally — restore at head, p95 90.3 ms, a11y 100 on 4 pages |
 | Phase 8 overall | `BLOCKED` — deployed staging, monitoring/RPO/RTO, independent security review, legal/provider gates |
