@@ -94,6 +94,9 @@ class AdminReportList(ApiModel):
 
 class AdminSupportCaseList(ApiModel):
     cases: list[AdminSupportCaseResponse]
+    total: int = Field(default=0, ge=0)
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=20, ge=1, le=100)
 
 
 class SupportCaseResolveRequest(ApiModel):

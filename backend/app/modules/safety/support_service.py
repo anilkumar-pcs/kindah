@@ -4,7 +4,7 @@ import uuid
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -22,6 +22,7 @@ from app.modules.safety.models import (
     SupportCaseType,
 )
 from app.modules.safety.schemas import (
+    AdminSupportCaseList,
     AdminSupportCaseResponse,
     SupportCaseCreateRequest,
     SupportCaseResolveRequest,
@@ -111,11 +112,38 @@ class SupportCaseService:
     def list_admin(
         self,
         status: SupportCaseStatus | None = None,
-    ) -> list[AdminSupportCaseResponse]:
-        statement = select(SupportCase).order_by(SupportCase.created_at.desc()).limit(100)
+        query: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> AdminSupportCaseList:
+        conditions = []
         if status is not None:
-            statement = statement.where(SupportCase.status == status)
-        return [self._admin_response(case) for case in self.session.scalars(statement)]
+            conditions.append(SupportCase.status == status)
+        if query and query.strip():
+            conditions.append(func.lower(User.display_name).contains(query.strip().lower()))
+        total = int(
+            self.session.scalar(
+                select(func.count(SupportCase.id))
+                .select_from(SupportCase)
+                .join(User, SupportCase.reporter_id == User.id)
+                .where(*conditions)
+            )
+            or 0
+        )
+        statement = (
+            select(SupportCase)
+            .join(User, SupportCase.reporter_id == User.id)
+            .where(*conditions)
+            .order_by(SupportCase.created_at.desc(), SupportCase.id.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        return AdminSupportCaseList(
+            cases=[self._admin_response(case) for case in self.session.scalars(statement)],
+            total=total,
+            page=page,
+            page_size=page_size,
+        )
 
     def resolve(
         self,

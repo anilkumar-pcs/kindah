@@ -2,6 +2,27 @@
 
 Meaningful implementation milestones, migrations, API contract changes and deviations from the specification. Newest first.
 
+## 2026-11-25 — Server-paginated admin queues and mobile cards
+
+### Changed
+
+- Added MFA-protected server-side `query`, status/type filter, `page` and `page_size` support to Support, Appeals, Deletion, Outbox and Audit endpoints, with additive `total/page/pageSize` response fields.
+- Switched the five admin queue tables from bounded client-side arrays to server page fetches. Search now matches safe plaintext fields only; encrypted support descriptions, appeal text, deletion reasons and audit reasons are not searchable server-side.
+- Added mobile card rows and mobile pagination to the shared queue table. Desktop keeps the data table.
+- Preserved guarded support/appeal resolution, non-destructive deletion messaging, outbox replay warnings and audit refresh after actions.
+
+### Verification
+
+- 197 backend tests pass; Ruff, format and mypy clean.
+- 90 frontend tests across 18 files pass; ESLint, Prettier, TypeScript and production build clean.
+- Browser review: admin Support table via server fetch and mobile card layout; no console errors.
+- Screenshot: `docs/design/screenshots/admin-support-mobile-cards.png`; refreshed `admin-support-table.png`.
+
+### Scope note
+
+- Users and Wishes tables remain server-paginated but still use desktop table/horizontal scroll on mobile; mobile card rows for those two, bulk actions and full accessibility review remain.
+- Legal copy and real-money production gates remain external.
+
 ## 2026-11-25 — Neutral location copy, compact Discover and complete admin tables
 
 ### Changed

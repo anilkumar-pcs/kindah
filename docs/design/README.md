@@ -33,6 +33,7 @@ Full-page captures are saved in `screenshots/`:
 - `screenshots/admin-wishes-table.png`
 - `screenshots/admin-support-table.png`
 - `screenshots/admin-support-detail.png`
+- `screenshots/admin-support-mobile-cards.png`
 - `screenshots/admin-audit-table.png`
 - `screenshots/footer-mobile.png`
 

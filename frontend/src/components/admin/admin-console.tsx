@@ -505,7 +505,6 @@ export function AdminConsole() {
 
           {tab === "support" && (
             <AdminSupportTable
-              cases={data.supportCases}
               mfaToken={mfaToken ?? ""}
               onChanged={async () => {
                 if (mfaToken) {
@@ -517,7 +516,6 @@ export function AdminConsole() {
 
           {tab === "appeals" && (
             <AdminAppealsTable
-              appeals={data.appeals}
               mfaToken={mfaToken ?? ""}
               onChanged={async () => {
                 if (mfaToken) {
@@ -527,7 +525,7 @@ export function AdminConsole() {
             />
           )}
 
-          {tab === "deletion" && <AdminDeletionTable requests={data.deletionRequests} />}
+          {tab === "deletion" && <AdminDeletionTable mfaToken={mfaToken ?? ""} />}
 
           {tab === "users" && (
             <AdminUserTable
@@ -564,9 +562,9 @@ export function AdminConsole() {
             />
           )}
 
-          {tab === "outbox" && <AdminOutboxTable deadLetters={data.deadLetters} />}
+          {tab === "outbox" && <AdminOutboxTable mfaToken={mfaToken ?? ""} />}
 
-          {tab === "audit" && <AdminAuditTable logs={data.auditLogs} />}
+          {tab === "audit" && <AdminAuditTable mfaToken={mfaToken ?? ""} />}
         </>
       )}
     </div>

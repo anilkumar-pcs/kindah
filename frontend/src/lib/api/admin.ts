@@ -57,6 +57,46 @@ export type AdminPageParams = {
   pageSize?: number;
 };
 
+export type AdminQueuePageParams = AdminPageParams & {
+  eventType?: string;
+  targetType?: string;
+};
+
+export type AdminSupportCasePage = {
+  cases: AdminSupportCase[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+export type AdminAppealPage = {
+  appeals: AdminAppeal[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+export type AdminDeletionRequestPage = {
+  requests: AdminDeletionRequest[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+export type OutboxDeadLetterPage = {
+  deadLetters: OutboxDeadLetter[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+export type AdminAuditLogPage = {
+  logs: AdminAuditLog[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 export type AdminMfaStatus = {
   role: AdminRole;
   mfaEnabled: boolean;
@@ -222,6 +262,24 @@ export async function listAdminSupportCases(mfaToken: string): Promise<AdminSupp
     headers: mfaHeaders(mfaToken),
   });
   return data.cases;
+}
+
+export async function listAdminSupportCasesPage(
+  mfaToken: string,
+  params: AdminQueuePageParams = {},
+): Promise<AdminSupportCasePage> {
+  const query = new URLSearchParams();
+  if (params.query?.trim()) {
+    query.set("query", params.query.trim());
+  }
+  if (params.status) {
+    query.set("status", params.status);
+  }
+  query.set("page", String(params.page ?? 1));
+  query.set("page_size", String(params.pageSize ?? 10));
+  return apiFetch<AdminSupportCasePage>(`/api/v1/admin/support-cases?${query.toString()}`, {
+    headers: mfaHeaders(mfaToken),
+  });
 }
 
 export async function resolveSupportCase(
@@ -399,4 +457,76 @@ export async function listAdminAuditLogs(mfaToken: string): Promise<AdminAuditLo
     headers: mfaHeaders(mfaToken),
   });
   return data.logs;
+}
+
+export async function listAdminAppealsPage(
+  mfaToken: string,
+  params: AdminQueuePageParams = {},
+): Promise<AdminAppealPage> {
+  const query = new URLSearchParams();
+  if (params.query?.trim()) {
+    query.set("query", params.query.trim());
+  }
+  if (params.status) {
+    query.set("status", params.status);
+  }
+  query.set("page", String(params.page ?? 1));
+  query.set("page_size", String(params.pageSize ?? 10));
+  return apiFetch<AdminAppealPage>(`/api/v1/admin/appeals?${query.toString()}`, {
+    headers: mfaHeaders(mfaToken),
+  });
+}
+
+export async function listAdminDeletionRequestsPage(
+  mfaToken: string,
+  params: AdminQueuePageParams = {},
+): Promise<AdminDeletionRequestPage> {
+  const query = new URLSearchParams();
+  if (params.query?.trim()) {
+    query.set("query", params.query.trim());
+  }
+  if (params.status) {
+    query.set("status", params.status);
+  }
+  query.set("page", String(params.page ?? 1));
+  query.set("page_size", String(params.pageSize ?? 10));
+  return apiFetch<AdminDeletionRequestPage>(`/api/v1/admin/deletion-requests?${query.toString()}`, {
+    headers: mfaHeaders(mfaToken),
+  });
+}
+
+export async function listAdminOutboxDeadLettersPage(
+  mfaToken: string,
+  params: AdminQueuePageParams = {},
+): Promise<OutboxDeadLetterPage> {
+  const query = new URLSearchParams();
+  if (params.query?.trim()) {
+    query.set("query", params.query.trim());
+  }
+  if (params.eventType) {
+    query.set("event_type", params.eventType);
+  }
+  query.set("page", String(params.page ?? 1));
+  query.set("page_size", String(params.pageSize ?? 10));
+  return apiFetch<OutboxDeadLetterPage>(`/api/v1/admin/outbox/dead-letters?${query.toString()}`, {
+    headers: mfaHeaders(mfaToken),
+  });
+}
+
+export async function listAdminAuditLogsPage(
+  mfaToken: string,
+  params: AdminQueuePageParams = {},
+): Promise<AdminAuditLogPage> {
+  const query = new URLSearchParams();
+  if (params.query?.trim()) {
+    query.set("query", params.query.trim());
+  }
+  if (params.targetType) {
+    query.set("target_type", params.targetType);
+  }
+  query.set("page", String(params.page ?? 1));
+  query.set("page_size", String(params.pageSize ?? 10));
+  return apiFetch<AdminAuditLogPage>(`/api/v1/admin/audit-logs?${query.toString()}`, {
+    headers: mfaHeaders(mfaToken),
+  });
 }

@@ -155,6 +155,9 @@ class AdminAppealResponse(ApiModel):
 
 class AdminAppealList(ApiModel):
     appeals: list[AdminAppealResponse]
+    total: int = Field(default=0, ge=0)
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=20, ge=1, le=100)
 
 
 class AppealResolveRequest(ApiModel):
@@ -186,6 +189,9 @@ class AdminDeletionRequestResponse(ApiModel):
 
 class AdminDeletionRequestList(ApiModel):
     requests: list[AdminDeletionRequestResponse]
+    total: int = Field(default=0, ge=0)
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=20, ge=1, le=100)
 
 
 class OutboxDeadLetterResponse(ApiModel):
@@ -201,6 +207,9 @@ class OutboxDeadLetterResponse(ApiModel):
 
 class OutboxDeadLetterList(ApiModel):
     dead_letters: list[OutboxDeadLetterResponse]
+    total: int = Field(default=0, ge=0)
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=20, ge=1, le=100)
 
 
 BadgeRuleType = Literal["CONFIRMED_SENT", "THANKS_RECEIVED", "STREAK_DAYS"]
@@ -258,3 +267,6 @@ class AdminAuditLogResponse(ApiModel):
 
 class AdminAuditLogList(ApiModel):
     logs: list[AdminAuditLogResponse]
+    total: int = Field(default=0, ge=0)
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=20, ge=1, le=100)

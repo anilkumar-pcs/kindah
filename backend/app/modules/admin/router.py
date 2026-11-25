@@ -226,11 +226,14 @@ def list_my_appeals(
 
 @router.get("/admin/appeals", response_model=AdminAppealList)
 def list_admin_appeals(
-    status: AppealStatus | None = Query(default=AppealStatus.OPEN),
+    status: AppealStatus | None = Query(default=None),
+    query: str | None = Query(default=None, max_length=80),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
     _admin: AuthContext = Depends(require_admin),
     service: AdminService = Depends(get_admin_service),
 ) -> AdminAppealList:
-    return service.list_admin_appeals(status)
+    return service.list_admin_appeals(status, query, page, page_size)
 
 
 @router.post(
@@ -273,24 +276,35 @@ def cancel_deletion(
 
 @router.get("/admin/deletion-requests", response_model=AdminDeletionRequestList)
 def list_admin_deletion_requests(
-    status: DeletionRequestStatus | None = Query(default=DeletionRequestStatus.REQUESTED),
+    status: DeletionRequestStatus | None = Query(default=None),
+    query: str | None = Query(default=None, max_length=80),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
     _admin: AuthContext = Depends(require_admin),
     service: AdminService = Depends(get_admin_service),
 ) -> AdminDeletionRequestList:
-    return service.list_admin_deletion_requests(status)
+    return service.list_admin_deletion_requests(status, query, page, page_size)
 
 
 @router.get("/admin/outbox/dead-letters", response_model=OutboxDeadLetterList)
 def list_outbox_dead_letters(
+    query: str | None = Query(default=None, max_length=80),
+    event_type: str | None = Query(default=None, max_length=64),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
     _auth: AuthContext = Depends(require_admin),
     service: AdminService = Depends(get_admin_service),
 ) -> OutboxDeadLetterList:
-    return service.list_outbox_dead_letters()
+    return service.list_outbox_dead_letters(query, event_type, page, page_size)
 
 
 @router.get("/admin/audit-logs", response_model=AdminAuditLogList)
 def list_audit_logs(
+    query: str | None = Query(default=None, max_length=80),
+    target_type: str | None = Query(default=None, max_length=32),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
     _auth: AuthContext = Depends(require_admin),
     service: AdminService = Depends(get_admin_service),
 ) -> AdminAuditLogList:
-    return service.audit_logs()
+    return service.audit_logs(query, target_type, page, page_size)

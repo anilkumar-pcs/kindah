@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import type { FormEvent, ReactNode } from "react";
 
 import { Icon } from "@/components/ui/icon";
 
@@ -11,25 +11,38 @@ export type QueueColumn<T> = {
   className?: string;
 };
 
-export type QueueFilter<T> = {
+export type QueueFilter = {
   label: string;
   options: Array<{ value: string; label: string }>;
-  predicate: (row: T, value: string) => boolean;
+};
+
+export type QueueSourceParams = {
+  query: string;
+  filter: string;
+  page: number;
+  pageSize: number;
+};
+
+export type QueuePage<T> = {
+  rows: T[];
+  total: number;
+  page: number;
+  pageSize: number;
 };
 
 type Props<T extends { id: string }> = {
   title: string;
   description: string;
-  rows: T[];
+  source: (params: QueueSourceParams) => Promise<QueuePage<T>>;
   columns: Array<QueueColumn<T>>;
-  searchText: (row: T) => string;
   getKey: (row: T) => string;
   detailTitle: (row: T) => string;
   renderDetail: (row: T) => ReactNode;
-  filter?: QueueFilter<T>;
+  filter?: QueueFilter;
   emptyMessage: string;
   note?: ReactNode;
   pageSize?: number;
+  refreshKey?: number;
 };
 
 function formatCount(value: number, noun: string): string {
@@ -39,9 +52,8 @@ function formatCount(value: number, noun: string): string {
 export function AdminQueueTable<T extends { id: string }>({
   title,
   description,
-  rows,
+  source,
   columns,
-  searchText,
   getKey,
   detailTitle,
   renderDetail,
@@ -49,13 +61,42 @@ export function AdminQueueTable<T extends { id: string }>({
   emptyMessage,
   note,
   pageSize = 10,
+  refreshKey = 0,
 }: Props<T>) {
-  const [search, setSearch] = useState("");
+  const [data, setData] = useState<QueuePage<T> | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchDraft, setSearchDraft] = useState("");
+  const [query, setQuery] = useState("");
   const [filterValue, setFilterValue] = useState("");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<T | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const slug = title.toLowerCase().replaceAll(" ", "-");
+
+  useEffect(() => {
+    let cancelled = false;
+    source({ query, filter: filterValue, page, pageSize })
+      .then((result) => {
+        if (!cancelled) {
+          setError(null);
+          setData(result);
+        }
+      })
+      .catch((loadError: unknown) => {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : "Could not load this queue.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [source, query, filterValue, page, pageSize, refreshKey]);
 
   useEffect(() => {
     if (!selected) {
@@ -76,13 +117,16 @@ export function AdminQueueTable<T extends { id: string }>({
     };
   }, [selected]);
 
-  const term = search.trim().toLowerCase();
-  const filtered = rows
-    .filter((row) => !term || searchText(row).toLowerCase().includes(term))
-    .filter((row) => !filter || !filterValue || filter.predicate(row, filterValue));
-  const totalPages = Math.max(Math.ceil(filtered.length / pageSize), 1);
-  const safePage = Math.min(page, totalPages);
-  const visible = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setPage(1);
+    setQuery(searchDraft.trim());
+  }
+
+  const totalPages = data ? Math.max(Math.ceil(data.total / data.pageSize), 1) : 1;
+  const currentPage = data?.page ?? 1;
+  const rows = data?.rows ?? [];
 
   return (
     <section aria-labelledby={`admin-${slug}-heading`} className="space-y-3">
@@ -97,11 +141,16 @@ export function AdminQueueTable<T extends { id: string }>({
           <p className="mt-1 max-w-2xl text-sm text-kindly-muted">{description}</p>
         </div>
         <span className="text-xs font-semibold text-kindly-muted">
-          {formatCount(filtered.length, "row")}
+          {formatCount(data?.total ?? 0, "row")}
         </span>
       </div>
 
-      <div className="flex flex-wrap items-end gap-2 rounded-2xl border border-kindly-border bg-kindly-card p-3">
+      <form
+        onSubmit={submitSearch}
+        role="search"
+        aria-label={`Search ${title.toLowerCase()}`}
+        className="flex flex-wrap items-end gap-2 rounded-2xl border border-kindly-border bg-kindly-card p-3"
+      >
         <div className="min-w-48 flex-1">
           <label htmlFor={`admin-${slug}-search`} className="kindly-label">
             Search
@@ -109,11 +158,8 @@ export function AdminQueueTable<T extends { id: string }>({
           <input
             id={`admin-${slug}-search`}
             type="search"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
+            value={searchDraft}
+            onChange={(event) => setSearchDraft(event.target.value)}
             className="kindly-input mt-1"
             placeholder={`Search ${title.toLowerCase()}`}
           />
@@ -127,6 +173,7 @@ export function AdminQueueTable<T extends { id: string }>({
               id={`admin-${slug}-filter`}
               value={filterValue}
               onChange={(event) => {
+                setLoading(true);
                 setFilterValue(event.target.value);
                 setPage(1);
               }}
@@ -140,12 +187,21 @@ export function AdminQueueTable<T extends { id: string }>({
             </select>
           </div>
         )}
-      </div>
+        <button type="submit" disabled={loading} className="kindly-btn-secondary">
+          Search
+        </button>
+      </form>
 
       {note}
 
+      {error && (
+        <p role="alert" className="kindly-status-error">
+          {error}
+        </p>
+      )}
+
       <div className="overflow-x-auto rounded-2xl border border-kindly-border bg-kindly-card">
-        <table className="w-full min-w-[720px] text-left text-sm">
+        <table className="hidden w-full min-w-[720px] text-left text-sm md:table">
           <caption className="sr-only">{title}</caption>
           <thead className="border-b border-kindly-border bg-kindly-cream/70 text-[10px] tracking-[0.12em] text-kindly-muted uppercase">
             <tr>
@@ -163,8 +219,8 @@ export function AdminQueueTable<T extends { id: string }>({
               </th>
             </tr>
           </thead>
-          <tbody>
-            {visible.map((row) => (
+          <tbody aria-busy={loading}>
+            {rows.map((row) => (
               <tr key={getKey(row)} className="border-b border-kindly-border/60 last:border-0">
                 {columns.map((column) => (
                   <td key={column.header} className={`px-3 py-2.5 ${column.className ?? ""}`}>
@@ -183,37 +239,67 @@ export function AdminQueueTable<T extends { id: string }>({
                 </td>
               </tr>
             ))}
-            {visible.length === 0 && (
-              <tr>
-                <td
-                  colSpan={columns.length + 1}
-                  className="px-3 py-8 text-center text-sm text-kindly-muted"
-                >
-                  {emptyMessage}
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
+
+        <ul className="divide-y divide-kindly-border/60 md:hidden" aria-busy={loading}>
+          {rows.map((row) => (
+            <li key={getKey(row)} className="space-y-2 p-3">
+              <div className="space-y-1">
+                {columns.map((column) => (
+                  <div
+                    key={column.header}
+                    className="flex items-start justify-between gap-3 text-sm"
+                  >
+                    <span className="shrink-0 text-[10px] font-extrabold tracking-[0.1em] text-kindly-muted uppercase">
+                      {column.header}
+                    </span>
+                    <span className="min-w-0 text-right">{column.render(row)}</span>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelected(row)}
+                aria-label={`Open ${detailTitle(row)}`}
+                className="kindly-btn-secondary !min-h-9 w-full !text-xs"
+              >
+                Open
+              </button>
+            </li>
+          ))}
+        </ul>
       </div>
+
+      {!loading && rows.length === 0 && (
+        <p className="rounded-2xl border border-kindly-border bg-kindly-card p-6 text-center text-sm text-kindly-muted">
+          {emptyMessage}
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-kindly-muted">
         <p>
-          Page {safePage} of {totalPages} · {pageSize} per page
+          Page {currentPage} of {totalPages} · {data?.pageSize ?? pageSize} per page
         </p>
         <div className="flex gap-1">
           <button
             type="button"
-            onClick={() => setPage((current) => Math.max(current - 1, 1))}
-            disabled={safePage <= 1}
+            onClick={() => {
+              setLoading(true);
+              setPage((current) => Math.max(current - 1, 1));
+            }}
+            disabled={!data || currentPage <= 1 || loading}
             className="kindly-btn-secondary !min-h-9 !px-3 !text-xs"
           >
             Previous
           </button>
           <button
             type="button"
-            onClick={() => setPage((current) => Math.min(current + 1, totalPages))}
-            disabled={safePage >= totalPages}
+            onClick={() => {
+              setLoading(true);
+              setPage((current) => Math.min(current + 1, totalPages));
+            }}
+            disabled={!data || currentPage >= totalPages || loading}
             className="kindly-btn-secondary !min-h-9 !px-3 !text-xs"
           >
             Next

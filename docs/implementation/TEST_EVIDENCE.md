@@ -656,6 +656,20 @@ gates blocked. Automated test and browser evidence is recorded below.
 | Screenshots | `home-city-pulse.png`, `home-mobile-pulse.png`, `discover-filters.png`, `discover-mobile-compact.png`, `my-space-mobile-tabs.png`, `footer-mobile.png`, `admin-support-table.png`, `admin-support-detail.png`, `admin-audit-table.png`, `admin-users-table.png`, `admin-wishes-table.png` |
 | Known limitation | The five converted queues paginate client-side over bounded admin arrays; server-side pagination remains a scale follow-up. Full screen-reader/WCAG and independent security review remain outstanding. |
 
+### VE-053 — Server-paginated admin queues and mobile cards
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-25 |
+| Phase/task | UX-04 follow-up |
+| Command | `cd backend && .venv/bin/ruff check app tests && .venv/bin/ruff format --check app tests && .venv/bin/mypy app tests && .venv/bin/pytest -q`; `cd frontend && npm test && npm run lint && npm run typecheck && npm run format && npm run build` |
+| Environment | PostgreSQL 16.16; Python 3.12.16; Next.js 16.4.6; local dev stack |
+| Result | **PASS** — 197 backend tests; 90 frontend tests across 18 files; all lint/format/type/build checks clean |
+| Output/artefact | Additive `total/page/pageSize` on Support/Appeals/Deletion/Outbox/Audit APIs with `query`, status/type, `page`, `page_size`; server page fetchers in frontend; mobile card rows in shared queue table; queue pagination integration test |
+| Browser review | Admin Support table loaded through the server endpoint; 390px mobile card layout rendered; no console errors/warnings |
+| Screenshot | `docs/design/screenshots/admin-support-mobile-cards.png`; refreshed `admin-support-table.png` |
+| Known limitation | Users/Wishes still use desktop table/horizontal scroll on mobile; encrypted free-text fields are not server-searchable; full screen-reader/WCAG and independent security review remain outstanding. |
+
 ## Summary
 
 | Verification | Result |
@@ -712,6 +726,7 @@ gates blocked. Automated test and browser evidence is recorded below.
 | Direction A full rollout | PASS — all consumer/admin screens restyled; 177 backend and 72 frontend tests; browser review and build clean |
 | Post-v1 UX/API delivery | PASS — 196 backend and 88 frontend tests; discovery filters, public stats, admin Users/Wishes tables, footer/trust pages; build and browser review clean |
 | Post-v1 follow-up | PASS — 90 frontend tests; location branding removed; compact Discover; five remaining admin queues table-first; build and browser review clean |
+| Post-v1 admin pagination | PASS — 197 backend and 90 frontend tests; server-paginated queues and mobile cards; build and browser review clean |
 | Phase 8 threat model/scans | PASS (local scope) — npm/pip/Bandit/secret checks |
 | Phase 8 restore/load/a11y smoke | PASS locally — restore at head, p95 90.3 ms, a11y 100 on 4 pages |
 | Phase 8 overall | `BLOCKED` — deployed staging, monitoring/RPO/RTO, independent security review, legal/provider gates |

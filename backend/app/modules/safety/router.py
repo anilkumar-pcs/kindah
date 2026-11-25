@@ -173,10 +173,13 @@ def list_reports(
 )
 def list_support_cases(
     status: SupportCaseStatus | None = Query(default=None),
+    query: str | None = Query(default=None, max_length=80),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
     _admin: AuthContext = Depends(require_admin),
     service: SupportCaseService = Depends(get_support_service),
 ) -> AdminSupportCaseList:
-    return AdminSupportCaseList(cases=service.list_admin(status))
+    return service.list_admin(status, query, page, page_size)
 
 
 @router.post(

@@ -1,17 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import type { FormEvent } from "react";
 
-import { AdminQueueTable } from "@/components/admin/admin-queue-table";
+import {
+  AdminQueueTable,
+  type QueueFilter,
+  type QueueSourceParams,
+} from "@/components/admin/admin-queue-table";
 import { AppealResolutionForm } from "@/components/admin/appeal-resolution-form";
 import {
+  listAdminAppealsPage,
+  listAdminAuditLogsPage,
+  listAdminDeletionRequestsPage,
+  listAdminOutboxDeadLettersPage,
+  listAdminSupportCasesPage,
   resolveSupportCase,
-  type AdminAppeal,
-  type AdminAuditLog,
-  type AdminDeletionRequest,
   type AdminSupportCase,
-  type OutboxDeadLetter,
 } from "@/lib/api/admin";
 import { ApiError } from "@/lib/api/client";
 import { SUPPORT_CASE_LABELS } from "@/lib/gifts/labels";
@@ -34,7 +39,7 @@ function StatusPill({ value }: { value: string }) {
   );
 }
 
-function statusFilter(label: string, options: string[]) {
+function statusFilter(label: string, options: string[]): QueueFilter {
   return {
     label,
     options: [
@@ -44,7 +49,6 @@ function statusFilter(label: string, options: string[]) {
         label: value.replaceAll("_", " ").toLowerCase(),
       })),
     ],
-    predicate: (row: { status: string }, value: string) => row.status === value,
   };
 }
 
@@ -176,23 +180,45 @@ function SupportCaseDetail({
 }
 
 export function AdminSupportTable({
-  cases,
   mfaToken,
   onChanged,
 }: {
-  cases: AdminSupportCase[];
   mfaToken: string;
   onChanged: () => Promise<void>;
 }) {
+  const [refreshKey, setRefreshKey] = useState(0);
+  const source = useCallback(
+    async ({ query, filter, page, pageSize }: QueueSourceParams) => {
+      const result = await listAdminSupportCasesPage(mfaToken, {
+        query,
+        status: filter || undefined,
+        page,
+        pageSize,
+      });
+      return {
+        rows: result.cases,
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+      };
+    },
+    [mfaToken],
+  );
+  const handleChanged = useCallback(async () => {
+    setRefreshKey((current) => current + 1);
+    await onChanged();
+  }, [onChanged]);
+
   return (
     <AdminQueueTable
       title="Support cases"
       description="Search payment and gift support cases, open the detail and resolve with an audited note."
-      rows={cases}
+      source={source}
+      refreshKey={refreshKey}
       columns={[
         {
           header: "Case",
-          render: (item) => (
+          render: (item: AdminSupportCase) => (
             <div>
               <p className="font-semibold">
                 {SUPPORT_CASE_LABELS[item.caseType]} · ₹{item.amountInr}
@@ -203,28 +229,25 @@ export function AdminSupportTable({
         },
         {
           header: "Reporter",
-          render: (item) => item.reporterDisplayName ?? "—",
+          render: (item: AdminSupportCase) => item.reporterDisplayName ?? "—",
         },
         {
           header: "Status",
-          render: (item) => <StatusPill value={item.status} />,
+          render: (item: AdminSupportCase) => <StatusPill value={item.status} />,
         },
         {
           header: "Created",
-          render: (item) => (
+          render: (item: AdminSupportCase) => (
             <span className="text-xs text-kindly-muted">{formatDate(item.createdAt)}</span>
           ),
         },
       ]}
-      searchText={(item) =>
-        `${item.caseType} ${item.status} ${item.reporterDisplayName ?? ""} ${
-          item.donorDisplayName ?? ""
-        } ${item.recipientDisplayName ?? ""} ${item.description} ${item.paymentRefCode}`
+      getKey={(item: AdminSupportCase) => item.id}
+      detailTitle={(item: AdminSupportCase) =>
+        `${SUPPORT_CASE_LABELS[item.caseType]} · ${item.id.slice(0, 8)}`
       }
-      getKey={(item) => item.id}
-      detailTitle={(item) => `${SUPPORT_CASE_LABELS[item.caseType]} · ${item.id.slice(0, 8)}`}
-      renderDetail={(item) => (
-        <SupportCaseDetail item={item} mfaToken={mfaToken} onChanged={onChanged} />
+      renderDetail={(item: AdminSupportCase) => (
+        <SupportCaseDetail item={item} mfaToken={mfaToken} onChanged={handleChanged} />
       )}
       filter={statusFilter("Case status", ["OPEN", "UNDER_REVIEW", "RESOLVED", "CLOSED"])}
       emptyMessage="No support cases match."
@@ -233,19 +256,41 @@ export function AdminSupportTable({
 }
 
 export function AdminAppealsTable({
-  appeals,
   mfaToken,
   onChanged,
 }: {
-  appeals: AdminAppeal[];
   mfaToken: string;
   onChanged: () => Promise<void>;
 }) {
+  const [refreshKey, setRefreshKey] = useState(0);
+  const source = useCallback(
+    async ({ query, filter, page, pageSize }: QueueSourceParams) => {
+      const result = await listAdminAppealsPage(mfaToken, {
+        query,
+        status: filter || undefined,
+        page,
+        pageSize,
+      });
+      return {
+        rows: result.appeals,
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+      };
+    },
+    [mfaToken],
+  );
+  const handleChanged = useCallback(async () => {
+    setRefreshKey((current) => current + 1);
+    await onChanged();
+  }, [onChanged]);
+
   return (
     <AdminQueueTable
       title="Appeals"
       description="Review moderated users' appeals and resolve them with a mandatory audited note."
-      rows={appeals}
+      source={source}
+      refreshKey={refreshKey}
       columns={[
         {
           header: "User / action",
@@ -273,11 +318,6 @@ export function AdminAppealsTable({
           ),
         },
       ]}
-      searchText={(item) =>
-        `${item.userDisplayName ?? ""} ${item.action} ${item.actionReason} ${item.reason} ${
-          item.status
-        }`
-      }
       getKey={(item) => item.id}
       detailTitle={(item) => `${item.userDisplayName ?? "Unknown user"} · ${item.action}`}
       renderDetail={(item) => (
@@ -315,7 +355,11 @@ export function AdminAppealsTable({
             <p className="mt-1 whitespace-pre-wrap">{item.reason}</p>
           </div>
           {item.status === "OPEN" || item.status === "UNDER_REVIEW" ? (
-            <AppealResolutionForm mfaToken={mfaToken} appealId={item.id} onResolved={onChanged} />
+            <AppealResolutionForm
+              mfaToken={mfaToken}
+              appealId={item.id}
+              onResolved={handleChanged}
+            />
           ) : (
             item.resolutionNote && (
               <p className="rounded-2xl bg-green-50 p-3 text-green-900">
@@ -331,12 +375,29 @@ export function AdminAppealsTable({
   );
 }
 
-export function AdminDeletionTable({ requests }: { requests: AdminDeletionRequest[] }) {
+export function AdminDeletionTable({ mfaToken }: { mfaToken: string }) {
+  const source = useCallback(
+    async ({ query, filter, page, pageSize }: QueueSourceParams) => {
+      const result = await listAdminDeletionRequestsPage(mfaToken, {
+        query,
+        status: filter || undefined,
+        page,
+        pageSize,
+      });
+      return {
+        rows: result.requests,
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+      };
+    },
+    [mfaToken],
+  );
   return (
     <AdminQueueTable
       title="Deletion requests"
       description="Review non-destructive account deletion requests. Financial and audit records are not deleted here."
-      rows={requests}
+      source={source}
       columns={[
         {
           header: "User",
@@ -358,9 +419,6 @@ export function AdminDeletionTable({ requests }: { requests: AdminDeletionReques
           ),
         },
       ]}
-      searchText={(item) =>
-        `${item.userDisplayName ?? ""} ${item.userStatus} ${item.status} ${item.reason ?? ""}`
-      }
       getKey={(item) => item.id}
       detailTitle={(item) => item.userDisplayName ?? "Deletion request"}
       renderDetail={(item) => (
@@ -416,13 +474,29 @@ export function AdminDeletionTable({ requests }: { requests: AdminDeletionReques
   );
 }
 
-export function AdminOutboxTable({ deadLetters }: { deadLetters: OutboxDeadLetter[] }) {
-  const eventTypes = Array.from(new Set(deadLetters.map((item) => item.eventType)));
+export function AdminOutboxTable({ mfaToken }: { mfaToken: string }) {
+  const source = useCallback(
+    async ({ query, filter, page, pageSize }: QueueSourceParams) => {
+      const result = await listAdminOutboxDeadLettersPage(mfaToken, {
+        query,
+        eventType: filter || undefined,
+        page,
+        pageSize,
+      });
+      return {
+        rows: result.deadLetters,
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+      };
+    },
+    [mfaToken],
+  );
   return (
     <AdminQueueTable
       title="Outbox dead letters"
       description="Inspect failed outbox events. Domain state is already committed; retries belong in an approved idempotent handler."
-      rows={deadLetters}
+      source={source}
       columns={[
         {
           header: "Event",
@@ -447,9 +521,6 @@ export function AdminOutboxTable({ deadLetters }: { deadLetters: OutboxDeadLette
           ),
         },
       ]}
-      searchText={(item) =>
-        `${item.eventType} ${item.aggregateType} ${item.aggregateId} ${item.deadLetterReason ?? ""}`
-      }
       getKey={(item) => item.id}
       detailTitle={(item) => item.eventType}
       renderDetail={(item) => (
@@ -488,26 +559,34 @@ export function AdminOutboxTable({ deadLetters }: { deadLetters: OutboxDeadLette
           </div>
         </div>
       )}
-      filter={{
-        label: "Event type",
-        options: [
-          { value: "", label: "All" },
-          ...eventTypes.map((value) => ({ value, label: value })),
-        ],
-        predicate: (item, value) => item.eventType === value,
-      }}
       emptyMessage="No dead-lettered events match."
     />
   );
 }
 
-export function AdminAuditTable({ logs }: { logs: AdminAuditLog[] }) {
-  const targetTypes = Array.from(new Set(logs.map((item) => item.targetType)));
+export function AdminAuditTable({ mfaToken }: { mfaToken: string }) {
+  const source = useCallback(
+    async ({ query, filter, page, pageSize }: QueueSourceParams) => {
+      const result = await listAdminAuditLogsPage(mfaToken, {
+        query,
+        targetType: filter || undefined,
+        page,
+        pageSize,
+      });
+      return {
+        rows: result.logs,
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+      };
+    },
+    [mfaToken],
+  );
   return (
     <AdminQueueTable
       title="Audit log"
       description="Append-only admin actions with actor, target, request ID and reason."
-      rows={logs}
+      source={source}
       columns={[
         {
           header: "Action",
@@ -533,11 +612,6 @@ export function AdminAuditTable({ logs }: { logs: AdminAuditLog[] }) {
           ),
         },
       ]}
-      searchText={(item) =>
-        `${item.action} ${item.actorDisplayName ?? ""} ${item.targetType} ${
-          item.targetId ?? ""
-        } ${item.reason ?? ""} ${item.requestId ?? ""}`
-      }
       getKey={(item) => item.id}
       detailTitle={(item) => item.action}
       renderDetail={(item) => (
@@ -585,9 +659,12 @@ export function AdminAuditTable({ logs }: { logs: AdminAuditLog[] }) {
         label: "Target type",
         options: [
           { value: "", label: "All" },
-          ...targetTypes.map((value) => ({ value, label: value })),
+          { value: "USER", label: "USER" },
+          { value: "WISH", label: "WISH" },
+          { value: "SUPPORT_CASE", label: "SUPPORT CASE" },
+          { value: "GIFT", label: "GIFT" },
+          { value: "OUTBOX_EVENT", label: "OUTBOX EVENT" },
         ],
-        predicate: (item, value) => item.targetType === value,
       }}
       emptyMessage="No audit events match."
     />

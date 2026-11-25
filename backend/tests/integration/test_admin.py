@@ -615,6 +615,61 @@ def test_admin_wish_table_is_searchable_filterable_and_paginated(
     assert first_session["user"]["id"] != second_session["user"]["id"]
 
 
+def test_admin_queue_endpoints_are_paginated(client: TestClient) -> None:
+    _, admin_headers = _admin_with_mfa(client, "9876502071", "QueuePageAdmin")
+    target_session, _, _ = complete_setup(
+        client,
+        phone="9876502072",
+        display_name="QueuePageTarget",
+        vpa="queuepagetarget@okhdfc",
+    )
+    target_id = str(target_session["user"]["id"])
+    for reason in ("First warning reason.", "Second warning reason."):
+        warning = client.post(
+            f"/api/v1/admin/users/{target_id}/actions",
+            headers=admin_headers,
+            json={"action": "WARN", "reason": reason},
+        )
+        assert warning.status_code == 200, warning.text
+
+    contracts = [
+        ("/api/v1/admin/support-cases", "cases"),
+        ("/api/v1/admin/appeals", "appeals"),
+        ("/api/v1/admin/deletion-requests", "requests"),
+        ("/api/v1/admin/outbox/dead-letters", "deadLetters"),
+        ("/api/v1/admin/audit-logs", "logs"),
+    ]
+    for path, key in contracts:
+        response = client.get(
+            path,
+            headers=admin_headers,
+            params={"page": 1, "page_size": 1},
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert isinstance(body[key], list)
+        assert body["page"] == 1
+        assert body["pageSize"] == 1
+        assert body["total"] >= len(body[key])
+
+    audit_page = client.get(
+        "/api/v1/admin/audit-logs",
+        headers=admin_headers,
+        params={"page": 1, "page_size": 1},
+    ).json()
+    assert audit_page["total"] >= 2
+    assert len(audit_page["logs"]) == 1
+
+    filtered_audit = client.get(
+        "/api/v1/admin/audit-logs",
+        headers=admin_headers,
+        params={"query": "user_warned"},
+    )
+    assert filtered_audit.status_code == 200, filtered_audit.text
+    assert filtered_audit.json()["total"] >= 2
+    assert all(entry["action"] == "USER_WARNED" for entry in filtered_audit.json()["logs"])
+
+
 def test_badge_definitions_are_admin_configurable(client: TestClient) -> None:
     _, admin_headers = _admin_with_mfa(client, "9876502051", "BadgeAdmin")
     code = f"TEST_{uuid.uuid4().hex[:8].upper()}"

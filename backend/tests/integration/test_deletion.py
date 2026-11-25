@@ -108,7 +108,11 @@ def test_deletion_request_is_non_destructive_cancellable_and_admin_visible(
     assert can_post.status_code == 409
     assert can_post.json()["code"] == "COOLDOWN_ACTIVE"
     assert (
-        client.get("/api/v1/admin/deletion-requests", headers=admin_headers).json()["requests"]
+        client.get(
+            "/api/v1/admin/deletion-requests",
+            headers=admin_headers,
+            params={"status": "REQUESTED"},
+        ).json()["requests"]
         == []
     )
 

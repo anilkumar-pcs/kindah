@@ -8,6 +8,7 @@ from uuid import UUID
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.config import Settings
 from app.core.errors import AppError
@@ -850,12 +851,42 @@ class AdminService:
         )
         return AppealList(appeals=[self._appeal_response(appeal) for appeal in appeals])
 
-    def list_admin_appeals(self, status: AppealStatus | None = None) -> AdminAppealList:
-        statement = select(ModerationAppeal).order_by(ModerationAppeal.created_at.asc()).limit(100)
+    def list_admin_appeals(
+        self,
+        status: AppealStatus | None = None,
+        query: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> AdminAppealList:
+        conditions = []
         if status is not None:
-            statement = statement.where(ModerationAppeal.status == status)
+            conditions.append(ModerationAppeal.status == status)
+        if query and query.strip():
+            conditions.append(func.lower(User.display_name).contains(query.strip().lower()))
+        total = int(
+            self.session.scalar(
+                select(func.count(ModerationAppeal.id))
+                .select_from(ModerationAppeal)
+                .join(User, ModerationAppeal.user_id == User.id)
+                .where(*conditions)
+            )
+            or 0
+        )
+        statement = (
+            select(ModerationAppeal)
+            .join(User, ModerationAppeal.user_id == User.id)
+            .where(*conditions)
+            .order_by(ModerationAppeal.created_at.desc(), ModerationAppeal.id.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
         appeals = list(self.session.scalars(statement))
-        return AdminAppealList(appeals=[self._admin_appeal_response(appeal) for appeal in appeals])
+        return AdminAppealList(
+            appeals=[self._admin_appeal_response(appeal) for appeal in appeals],
+            total=total,
+            page=page,
+            page_size=page_size,
+        )
 
     def resolve_appeal(
         self,
@@ -1078,31 +1109,41 @@ class AdminService:
     def list_admin_deletion_requests(
         self,
         status: DeletionRequestStatus | None = None,
+        query: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
     ) -> AdminDeletionRequestList:
-        statement = (
-            select(AccountDeletionRequest)
-            .order_by(AccountDeletionRequest.requested_at.desc())
-            .limit(100)
-        )
+        conditions = []
         if status is not None:
-            statement = statement.where(AccountDeletionRequest.status == status)
-        rows = list(self.session.scalars(statement))
-        users = {
-            user.id: user
-            for user in self.session.scalars(
-                select(User).where(User.id.in_({row.user_id for row in rows}))
+            conditions.append(AccountDeletionRequest.status == status)
+        if query and query.strip():
+            conditions.append(func.lower(User.display_name).contains(query.strip().lower()))
+        total = int(
+            self.session.scalar(
+                select(func.count(AccountDeletionRequest.id))
+                .select_from(AccountDeletionRequest)
+                .join(User, AccountDeletionRequest.user_id == User.id)
+                .where(*conditions)
             )
-        }
+            or 0
+        )
+        rows = self.session.execute(
+            select(AccountDeletionRequest, User)
+            .join(User, AccountDeletionRequest.user_id == User.id)
+            .where(*conditions)
+            .order_by(
+                AccountDeletionRequest.requested_at.desc(),
+                AccountDeletionRequest.id.desc(),
+            )
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        ).all()
         return AdminDeletionRequestList(
             requests=[
                 AdminDeletionRequestResponse(
                     id=row.id,
-                    user_display_name=(
-                        users[row.user_id].display_name if row.user_id in users else None
-                    ),
-                    user_status=(
-                        users[row.user_id].status if row.user_id in users else UserStatus.DELETED
-                    ),
+                    user_display_name=user.display_name,
+                    user_status=user.status,
                     status=row.status,
                     reason=(
                         self.crypto.decrypt(
@@ -1115,8 +1156,11 @@ class AdminService:
                     requested_at=row.requested_at,
                     cancelled_at=row.cancelled_at,
                 )
-                for row in rows
-            ]
+                for row, user in rows
+            ],
+            total=total,
+            page=page,
+            page_size=page_size,
         )
 
     def _has_active_transactions(self, user_id: UUID) -> bool:
@@ -1153,13 +1197,33 @@ class AdminService:
             cancelled_at=row.cancelled_at,
         )
 
-    def list_outbox_dead_letters(self) -> OutboxDeadLetterList:
+    def list_outbox_dead_letters(
+        self,
+        query: str | None = None,
+        event_type: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> OutboxDeadLetterList:
+        conditions: list[ColumnElement[bool]] = [OutboxEvent.dead_letter_reason.is_not(None)]
+        if event_type:
+            conditions.append(OutboxEvent.event_type == event_type)
+        if query and query.strip():
+            term = query.strip().lower()
+            conditions.append(
+                or_(
+                    func.lower(OutboxEvent.event_type).contains(term),
+                    func.lower(OutboxEvent.aggregate_type).contains(term),
+                    func.lower(OutboxEvent.dead_letter_reason).contains(term),
+                )
+            )
+        total = int(self.session.scalar(select(func.count(OutboxEvent.id)).where(*conditions)) or 0)
         rows = list(
             self.session.scalars(
                 select(OutboxEvent)
-                .where(OutboxEvent.dead_letter_reason.is_not(None))
-                .order_by(OutboxEvent.created_at.desc())
-                .limit(100)
+                .where(*conditions)
+                .order_by(OutboxEvent.created_at.desc(), OutboxEvent.id.desc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
             )
         )
         return OutboxDeadLetterList(
@@ -1175,13 +1239,49 @@ class AdminService:
                     created_at=row.created_at,
                 )
                 for row in rows
-            ]
+            ],
+            total=total,
+            page=page,
+            page_size=page_size,
         )
 
-    def audit_logs(self) -> AdminAuditLogList:
+    def audit_logs(
+        self,
+        query: str | None = None,
+        target_type: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> AdminAuditLogList:
+        conditions = []
+        if target_type:
+            conditions.append(AdminAuditLog.target_type == target_type)
+        if query and query.strip():
+            term = query.strip().lower()
+            conditions.append(
+                or_(
+                    func.lower(AdminAuditLog.action).contains(term),
+                    func.lower(AdminAuditLog.target_type).contains(term),
+                    func.lower(AdminAuditLog.request_id).contains(term),
+                    func.lower(User.display_name).contains(term),
+                )
+            )
+        total = int(
+            self.session.scalar(
+                select(func.count(AdminAuditLog.id))
+                .select_from(AdminAuditLog)
+                .join(User, AdminAuditLog.actor_id == User.id)
+                .where(*conditions)
+            )
+            or 0
+        )
         entries = list(
             self.session.scalars(
-                select(AdminAuditLog).order_by(AdminAuditLog.created_at.desc()).limit(100)
+                select(AdminAuditLog)
+                .join(User, AdminAuditLog.actor_id == User.id)
+                .where(*conditions)
+                .order_by(AdminAuditLog.created_at.desc(), AdminAuditLog.id.desc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
             )
         )
         actor_ids = {entry.actor_id for entry in entries}
@@ -1212,7 +1312,10 @@ class AdminService:
                     created_at=entry.created_at,
                 )
                 for entry in entries
-            ]
+            ],
+            total=total,
+            page=page,
+            page_size=page_size,
         )
 
     def _mfa_token(self, user: User, session_id: UUID) -> tuple[str, datetime]:

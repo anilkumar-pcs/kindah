@@ -12,12 +12,17 @@ vi.mock("@/lib/api/admin", () => ({
   createAdminBadge: vi.fn(),
   deactivateAdminBadge: vi.fn(),
   listAdminAppeals: vi.fn(),
+  listAdminAppealsPage: vi.fn(),
   listAdminAuditLogs: vi.fn(),
+  listAdminAuditLogsPage: vi.fn(),
   listAdminBadges: vi.fn(),
   listAdminDeletionRequests: vi.fn(),
+  listAdminDeletionRequestsPage: vi.fn(),
   listAdminOutboxDeadLetters: vi.fn(),
+  listAdminOutboxDeadLettersPage: vi.fn(),
   listAdminReports: vi.fn(),
   listAdminSupportCases: vi.fn(),
+  listAdminSupportCasesPage: vi.fn(),
   listAdminUsersPage: vi.fn(),
   listAdminWishes: vi.fn(),
   moderateUser: vi.fn(),
@@ -34,12 +39,17 @@ import {
   enableAdminMfa,
   getAdminMfaStatus,
   listAdminAppeals,
+  listAdminAppealsPage,
   listAdminAuditLogs,
+  listAdminAuditLogsPage,
   listAdminBadges,
   listAdminDeletionRequests,
+  listAdminDeletionRequestsPage,
   listAdminOutboxDeadLetters,
+  listAdminOutboxDeadLettersPage,
   listAdminReports,
   listAdminSupportCases,
+  listAdminSupportCasesPage,
   listAdminUsersPage,
   listAdminWishes,
   moderateWish,
@@ -48,7 +58,11 @@ import {
   setupAdminMfa,
   updateUserRole,
   verifyAdminMfa,
+  type AdminAppeal,
+  type AdminAuditLog,
+  type AdminDeletionRequest,
   type AdminSupportCase,
+  type OutboxDeadLetter,
 } from "@/lib/api/admin";
 import { restoreSession, type UserProfile } from "@/lib/auth/session";
 
@@ -61,12 +75,17 @@ const mockedEnable = vi.mocked(enableAdminMfa);
 const mockedVerify = vi.mocked(verifyAdminMfa);
 const mockedReports = vi.mocked(listAdminReports);
 const mockedSupport = vi.mocked(listAdminSupportCases);
+const mockedSupportPage = vi.mocked(listAdminSupportCasesPage);
 const mockedAudit = vi.mocked(listAdminAuditLogs);
+const mockedAuditPage = vi.mocked(listAdminAuditLogsPage);
 const mockedResolve = vi.mocked(resolveSupportCase);
 const mockedModerateWish = vi.mocked(moderateWish);
 const mockedAppeals = vi.mocked(listAdminAppeals);
+const mockedAppealsPage = vi.mocked(listAdminAppealsPage);
 const mockedDeletionRequests = vi.mocked(listAdminDeletionRequests);
+const mockedDeletionPage = vi.mocked(listAdminDeletionRequestsPage);
 const mockedDeadLetters = vi.mocked(listAdminOutboxDeadLetters);
+const mockedDeadLettersPage = vi.mocked(listAdminOutboxDeadLettersPage);
 const mockedUserPage = vi.mocked(listAdminUsersPage);
 const mockedWishes = vi.mocked(listAdminWishes);
 const mockedBadges = vi.mocked(listAdminBadges);
@@ -127,13 +146,23 @@ beforeEach(() => {
   });
   mockedReports.mockResolvedValue([]);
   mockedSupport.mockResolvedValue([]);
+  mockedSupportPage.mockResolvedValue({ cases: [], total: 0, page: 1, pageSize: 10 });
   mockedAppeals.mockResolvedValue([]);
+  mockedAppealsPage.mockResolvedValue({ appeals: [], total: 0, page: 1, pageSize: 10 });
   mockedDeletionRequests.mockResolvedValue([]);
+  mockedDeletionPage.mockResolvedValue({ requests: [], total: 0, page: 1, pageSize: 10 });
   mockedDeadLetters.mockResolvedValue([]);
+  mockedDeadLettersPage.mockResolvedValue({
+    deadLetters: [],
+    total: 0,
+    page: 1,
+    pageSize: 10,
+  });
   mockedUserPage.mockResolvedValue({ users: [], total: 0, page: 1, pageSize: 10 });
   mockedWishes.mockResolvedValue({ wishes: [], total: 0, page: 1, pageSize: 10 });
   mockedBadges.mockResolvedValue([]);
   mockedAudit.mockResolvedValue([]);
+  mockedAuditPage.mockResolvedValue({ logs: [], total: 0, page: 1, pageSize: 10 });
 });
 
 describe("AdminConsole", () => {
@@ -355,23 +384,28 @@ describe("AdminConsole", () => {
       expiresIn: 900,
       method: "TOTP",
     });
-    mockedAppeals.mockResolvedValue([
-      {
-        id: "appeal-1",
-        actionId: "action-1",
-        userDisplayName: "RestrictedUser",
-        action: "RESTRICT",
-        actionReason: "Repeated spam.",
-        targetType: "USER",
-        targetId: "user-2",
-        status: "OPEN",
-        reason: "Please review my context.",
-        resolutionNote: null,
-        resolvedByDisplayName: null,
-        createdAt: "2026-11-24T00:00:00Z",
-        resolvedAt: null,
-      },
-    ]);
+    const appeal: AdminAppeal = {
+      id: "appeal-1",
+      actionId: "action-1",
+      userDisplayName: "RestrictedUser",
+      action: "RESTRICT",
+      actionReason: "Repeated spam.",
+      targetType: "USER",
+      targetId: "user-2",
+      status: "OPEN",
+      reason: "Please review my context.",
+      resolutionNote: null,
+      resolvedByDisplayName: null,
+      createdAt: "2026-11-24T00:00:00Z",
+      resolvedAt: null,
+    };
+    mockedAppeals.mockResolvedValue([appeal]);
+    mockedAppealsPage.mockResolvedValue({
+      appeals: [appeal],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+    });
     mockedResolveAppeal.mockResolvedValue({
       id: "appeal-1",
       actionId: "action-1",
@@ -393,7 +427,8 @@ describe("AdminConsole", () => {
     await user.type(await screen.findByLabelText(/authenticator or recovery code/i), "123456");
     await user.click(screen.getByRole("button", { name: /open admin console/i }));
     await user.click(await screen.findByRole("button", { name: /appeals \(1\)/i }));
-    await user.click(await screen.findByRole("button", { name: /open restricteduser/i }));
+    const appealTable = await screen.findByRole("table");
+    await user.click(within(appealTable).getByRole("button", { name: /open restricteduser/i }));
     const appealDialog = screen.getByRole("dialog");
 
     expect(await within(appealDialog).findByText(/please review my context/i)).toBeInTheDocument();
@@ -416,12 +451,18 @@ describe("AdminConsole", () => {
       mfaRequired: false,
       recoveryCodesRemaining: 0,
     });
-    mockedSupport.mockResolvedValue([makeCase({ status: "RESOLVED" })]);
+    const resolvedCase = makeCase({ status: "RESOLVED" });
+    mockedSupport.mockResolvedValue([resolvedCase]);
+    mockedSupportPage.mockImplementation(async (_token, params) => {
+      const cases = params?.status === "OPEN" ? [] : [resolvedCase];
+      return { cases, total: cases.length, page: 1, pageSize: 10 };
+    });
 
     render(<AdminConsole />);
 
     await user.click(await screen.findByRole("button", { name: /support cases \(1\)/i }));
-    expect(await screen.findByText(/i paid after the timer ended/i)).toBeInTheDocument();
+    const table = await screen.findByRole("table");
+    expect(within(table).getByText(/i paid after the timer ended/i)).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText(/case status/i), "OPEN");
 
     expect(await screen.findByText("No support cases match.")).toBeInTheDocument();
@@ -435,61 +476,78 @@ describe("AdminConsole", () => {
       mfaRequired: false,
       recoveryCodesRemaining: 0,
     });
-    mockedDeletionRequests.mockResolvedValue([
-      {
-        id: "deletion-1",
-        userDisplayName: "DeleteMe",
-        userStatus: "DELETION_PENDING",
-        status: "REQUESTED",
-        reason: "Taking a break.",
-        requestedAt: "2026-11-24T00:00:00Z",
-        cancelledAt: null,
-      },
-    ]);
-    mockedDeadLetters.mockResolvedValue([
-      {
-        id: "outbox-1",
-        aggregateType: "GIFT",
-        aggregateId: "11111111-1111-1111-1111-111111111111",
-        eventType: "GIFT_CONFIRMED",
-        payload: {},
-        attempts: 3,
-        deadLetterReason: "timeout",
-        createdAt: "2026-11-24T00:00:00Z",
-      },
-    ]);
-    mockedAudit.mockResolvedValue([
-      {
-        id: "audit-1",
-        actorDisplayName: "AdminUser",
-        action: "USER_ROLE_CHANGED",
-        targetType: "USER",
-        targetId: "22222222-2222-2222-2222-222222222222",
-        reason: "Owner approved.",
-        requestId: "req-1",
-        metadata: {},
-        createdAt: "2026-11-24T00:00:00Z",
-      },
-    ]);
+    const deletionRequest: AdminDeletionRequest = {
+      id: "deletion-1",
+      userDisplayName: "DeleteMe",
+      userStatus: "DELETION_PENDING",
+      status: "REQUESTED",
+      reason: "Taking a break.",
+      requestedAt: "2026-11-24T00:00:00Z",
+      cancelledAt: null,
+    };
+    const deadLetter: OutboxDeadLetter = {
+      id: "outbox-1",
+      aggregateType: "GIFT",
+      aggregateId: "11111111-1111-1111-1111-111111111111",
+      eventType: "GIFT_CONFIRMED",
+      payload: {},
+      attempts: 3,
+      deadLetterReason: "timeout",
+      createdAt: "2026-11-24T00:00:00Z",
+    };
+    const auditLog: AdminAuditLog = {
+      id: "audit-1",
+      actorDisplayName: "AdminUser",
+      action: "USER_ROLE_CHANGED",
+      targetType: "USER",
+      targetId: "22222222-2222-2222-2222-222222222222",
+      reason: "Owner approved.",
+      requestId: "req-1",
+      metadata: {},
+      createdAt: "2026-11-24T00:00:00Z",
+    };
+    mockedDeletionRequests.mockResolvedValue([deletionRequest]);
+    mockedDeletionPage.mockResolvedValue({
+      requests: [deletionRequest],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+    });
+    mockedDeadLetters.mockResolvedValue([deadLetter]);
+    mockedDeadLettersPage.mockResolvedValue({
+      deadLetters: [deadLetter],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+    });
+    mockedAudit.mockResolvedValue([auditLog]);
+    mockedAuditPage.mockResolvedValue({
+      logs: [auditLog],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+    });
 
     render(<AdminConsole />);
 
     await user.click(await screen.findByRole("button", { name: /deletion \(1\)/i }));
-    expect(await screen.findByText("DeleteMe")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /open deleteme/i }));
+    const deletionTable = await screen.findByRole("table");
+    expect(within(deletionTable).getByText("DeleteMe")).toBeInTheDocument();
+    await user.click(within(deletionTable).getByRole("button", { name: /open deleteme/i }));
     expect(screen.getByText(/this queue records requests only/i)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /close details/i }));
 
     await user.click(screen.getByRole("button", { name: /outbox \(1\)/i }));
     const outboxTable = await screen.findByRole("table");
     expect(within(outboxTable).getByText("GIFT_CONFIRMED")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /open gift_confirmed/i }));
+    await user.click(within(outboxTable).getByRole("button", { name: /open gift_confirmed/i }));
     expect(screen.getByText("timeout")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /close details/i }));
 
     await user.click(screen.getByRole("button", { name: /audit log \(1\)/i }));
-    expect(await screen.findByText("USER_ROLE_CHANGED")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /open user_role_changed/i }));
+    const auditTable = await screen.findByRole("table");
+    expect(within(auditTable).getByText("USER_ROLE_CHANGED")).toBeInTheDocument();
+    await user.click(within(auditTable).getByRole("button", { name: /open user_role_changed/i }));
     expect(screen.getByText("Owner approved.")).toBeInTheDocument();
   });
 
@@ -506,7 +564,14 @@ describe("AdminConsole", () => {
       expiresIn: 900,
       method: "TOTP",
     });
-    mockedSupport.mockResolvedValue([makeCase()]);
+    const supportCase = makeCase();
+    mockedSupport.mockResolvedValue([supportCase]);
+    mockedSupportPage.mockResolvedValue({
+      cases: [supportCase],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+    });
     mockedResolve.mockResolvedValue(
       makeCase({
         status: "RESOLVED",
@@ -520,7 +585,8 @@ describe("AdminConsole", () => {
     await user.type(await screen.findByLabelText(/authenticator or recovery code/i), "123456");
     await user.click(screen.getByRole("button", { name: /open admin console/i }));
     await user.click(await screen.findByRole("button", { name: /support cases/i }));
-    await user.click(await screen.findByRole("button", { name: /open late payment/i }));
+    const supportTable = await screen.findByRole("table");
+    await user.click(within(supportTable).getByRole("button", { name: /open late payment/i }));
     const supportDialog = screen.getByRole("dialog");
 
     expect(

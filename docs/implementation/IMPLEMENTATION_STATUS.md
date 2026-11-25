@@ -28,7 +28,7 @@ Active board: `PRODUCT_UX_ROADMAP.md`.
 | UX-01 Compact My Space tabs | `DONE` | 9 component tests; mobile browser screenshot |
 | UX-02 Discovery search/filters/pagination | `DONE` | 196 backend tests; 9 DiscoverFeed tests; URL state and bounded cursors |
 | UX-03 Home/Discover split | `DONE` | Home `/`, Discover `/discover`; mobile tabs and header Updates |
-| UX-04 Admin table-first console | `DONE` | Users/Wishes server-paginated; Support/Appeals/Deletion/Outbox/Audit converted to shared tables with search/filter/pagination and details; server pagination for the five bounded queues remains a scale follow-up |
+| UX-04 Admin table-first console | `DONE` | All seven queues server-paginated/searchable with details and guarded actions; shared queue table has mobile card rows; Users/Wishes mobile cards, bulk actions and full a11y review remain |
 | UX-05 Footer and trust surfaces | `DONE` | `/about`, `/safety`, `/legal`; responsive footer; draft-review notice |
 | UX-06 Home City Pulse | `DONE` | aggregate stats, seven-day chart/table, thresholded area pulse; no individual A→B flow (`DEC-A08` pending owner review) |
 | UX-07 Cross-cutting QA | `IN_PROGRESS` | automated gates + desktop/mobile browser pass; full a11y/security review pending |
@@ -128,6 +128,7 @@ Blocked/partial:
 
 | Date | Phase/task | Change | Evidence |
 |---|---|---|---|
+| 2026-11-25 | UX follow-up | Server-paginated/searchable admin queues and mobile card rows | `TEST_EVIDENCE.md` VE-053 |
 | 2026-11-25 | UX follow-up | Removed location branding; compact Discover; all five remaining admin queues table-first | `TEST_EVIDENCE.md` VE-052 |
 | 2026-11-25 | Post-v1 UX | Compact My Space tabs, discovery filters, admin Users/Wishes tables, City Pulse, footer/trust pages | `TEST_EVIDENCE.md` VE-049–VE-051 |
 | 2026-11-24 | Owner follow-up | Direction A applied across all consumer, account, gift and admin screens | `TEST_EVIDENCE.md` VE-048 |
@@ -157,7 +158,7 @@ Blocked/partial:
 
 | Check | Result |
 |---|---|
-| Backend tests | 196 passed (adds discovery filter/cursor, public aggregate stats and admin wish-table coverage) |
+| Backend tests | 197 passed (adds discovery filter/cursor, public aggregate stats, admin wish-table and queue-pagination coverage) |
 | Frontend tests | 90 passed (18 test files) |
 | Dependency/security scans | `npm audit` 0; `pip-audit` 0 known; Bandit medium/high clean; no tracked env/secrets |
 | Local restore drill | PASS — dump/restore at `0014_badge_definitions`; users=3, badge_definitions=5, wishes=3, gifts=1 |
@@ -188,7 +189,7 @@ Blocked/partial:
 | Direction A shell/Home | PASS — shared tokens/fonts/icons; mobile bottom tabs and account sheet; editorial Home hero and wish feed; desktop/mobile browser review |
 | Direction A full rollout | PASS — consumer, account, gift and admin screens restyled; 72 frontend tests; desktop/mobile browser review |
 | Post-v1 discovery/stats | PASS — API search/mood/amount filters, cursor-bound filters, `totalCount`, aggregate City Pulse with thresholded areas |
-| Post-v1 admin tables | PASS — Users/Wishes server-paginated; Support/Appeals/Deletion/Outbox/Audit table-first with search/filter/pagination/detail; no private columns |
+| Post-v1 admin tables | PASS — all seven queues server-paginated/searchable with detail drawers; mobile card rows for operational queues; no private columns |
 | Post-v1 My Space/footer | PASS — compact tabs/deep links at 390px; About/Safety/Legal drafts; mobile footer clears bottom tabs |
 | Phase 7 overall | `DONE` — 8/8 tasks; badge definitions DB-configurable |
 | Phase 5 overall | `DONE` — 15/15 tasks |
